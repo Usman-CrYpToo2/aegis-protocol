@@ -72,8 +72,11 @@ jobs:
         run: yarn install --frozen-lockfile
 
       # The TypeScript tests load target/deploy/*.so and target/idl/*.json, so build first.
+      # Program keypairs are private keys and are never committed, so CI would generate fresh
+      # ones that do not match declare_id!. The tests load each program at its declared ID and
+      # never need the keypair, so the check is skipped.
       - name: Build programs
-        run: anchor build
+        run: anchor build --ignore-keys
 
       - name: Rust unit tests
         run: cargo test -p aegis --lib
