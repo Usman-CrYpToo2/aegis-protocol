@@ -1,0 +1,3011 @@
+{
+  "address": "6yEnqdEjX3zBBDkzhwTRGJwv1jRaN4QE4gywmgdcfPBZ",
+  "metadata": {
+    "name": "transfer_restrictions",
+    "version": "0.2.0",
+    "spec": "0.1.0",
+    "description": "Transfer restrictions for Solana tokens",
+    "repository": "https://github.com/upsideos/upsideos-solana-rwa"
+  },
+  "instructions": [
+    {
+      "name": "enforce_transfer_restrictions",
+      "discriminator": [
+        77,
+        50,
+        36,
+        109,
+        250,
+        175,
+        122,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "source_account"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "destination_account"
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "security_associated_account_from",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "source_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "security_associated_account_to",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "destination_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_rule",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "security_associated_account_from.group",
+                "account": "SecurityAssociatedAccount"
+              },
+              {
+                "kind": "account",
+                "path": "security_associated_account_to.group",
+                "account": "SecurityAssociatedAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "execute_transaction",
+      "docs": [
+        "execute transfer hook"
+      ],
+      "discriminator": [
+        105,
+        37,
+        101,
+        197,
+        75,
+        251,
+        102,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "source_account"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "destination_account"
+        },
+        {
+          "name": "owner_delegate"
+        },
+        {
+          "name": "extra_metas_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  45,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_data"
+        },
+        {
+          "name": "security_associated_account_from"
+        },
+        {
+          "name": "security_associated_account_to"
+        },
+        {
+          "name": "transfer_rule"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_default_security_accounts",
+      "discriminator": [
+        81,
+        54,
+        165,
+        92,
+        129,
+        149,
+        40,
+        235
+      ],
+      "accounts": [
+        {
+          "name": "transfer_restriction_holder",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "arg",
+                "path": "holder_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "holder_group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_holder"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "security_associated_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "associated_token_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "security_token"
+        },
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_wallet"
+        },
+        {
+          "name": "associated_token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "holder_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_extra_account_meta_list",
+      "discriminator": [
+        92,
+        197,
+        174,
+        197,
+        41,
+        124,
+        19,
+        3
+      ],
+      "accounts": [
+        {
+          "name": "extra_metas_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  45,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "security_mint"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "access_control"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_holder_group",
+      "discriminator": [
+        236,
+        173,
+        120,
+        20,
+        217,
+        85,
+        57,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "holder_group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "holder"
+              },
+              {
+                "kind": "account",
+                "path": "group.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data.security_token_mint",
+                "account": "TransferRestrictionData"
+              }
+            ]
+          }
+        },
+        {
+          "name": "group",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "group.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "holder",
+          "writable": true
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_security_associated_account",
+      "discriminator": [
+        154,
+        169,
+        189,
+        28,
+        30,
+        71,
+        161,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "security_associated_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "associated_token_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "group",
+          "writable": true
+        },
+        {
+          "name": "holder",
+          "writable": true
+        },
+        {
+          "name": "holder_group",
+          "writable": true
+        },
+        {
+          "name": "security_token"
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_wallet"
+        },
+        {
+          "name": "associated_token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "group_id",
+          "type": "u64"
+        },
+        {
+          "name": "holder_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_transfer_restriction_group",
+      "discriminator": [
+        62,
+        223,
+        111,
+        8,
+        59,
+        225,
+        31,
+        108
+      ],
+      "accounts": [
+        {
+          "name": "transfer_restriction_group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "access_control_account.mint",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_transfer_restriction_holder",
+      "discriminator": [
+        184,
+        97,
+        123,
+        132,
+        240,
+        132,
+        91,
+        118
+      ],
+      "accounts": [
+        {
+          "name": "transfer_restriction_holder",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "access_control_account.mint",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_transfer_restrictions_data",
+      "discriminator": [
+        214,
+        241,
+        131,
+        83,
+        138,
+        120,
+        171,
+        133
+      ],
+      "accounts": [
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "zero_transfer_restriction_group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": [
+        {
+          "name": "max_holders",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_transfer_rule",
+      "discriminator": [
+        24,
+        28,
+        16,
+        18,
+        72,
+        26,
+        87,
+        49
+      ],
+      "accounts": [
+        {
+          "name": "transfer_rule",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_group_from.id",
+                "account": "TransferRestrictionGroup"
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_group_to.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "access_control_account.mint",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_group_from"
+        },
+        {
+          "name": "transfer_restriction_group_to"
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "transfer_group_id_from",
+          "type": "u64"
+        },
+        {
+          "name": "transfer_group_id_to",
+          "type": "u64"
+        },
+        {
+          "name": "lock_until",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "pause",
+      "discriminator": [
+        211,
+        22,
+        221,
+        251,
+        74,
+        121,
+        193,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "security_mint"
+        },
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "revoke_holder",
+      "discriminator": [
+        250,
+        238,
+        38,
+        18,
+        138,
+        55,
+        227,
+        111
+      ],
+      "accounts": [
+        {
+          "name": "holder",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "holder.id",
+                "account": "TransferRestrictionHolder"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data.security_token_mint",
+                "account": "TransferRestrictionData"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_wallet_role",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "revoke_holder_group",
+      "discriminator": [
+        33,
+        153,
+        183,
+        187,
+        204,
+        120,
+        164,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "holder",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "holder.id",
+                "account": "TransferRestrictionHolder"
+              }
+            ]
+          }
+        },
+        {
+          "name": "holder_group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "holder"
+              },
+              {
+                "kind": "account",
+                "path": "group.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data.security_token_mint",
+                "account": "TransferRestrictionData"
+              }
+            ]
+          }
+        },
+        {
+          "name": "group",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "group.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_wallet_role",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "revoke_security_associated_account",
+      "discriminator": [
+        75,
+        206,
+        46,
+        31,
+        84,
+        165,
+        44,
+        66
+      ],
+      "accounts": [
+        {
+          "name": "security_associated_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "associated_token_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "group",
+          "writable": true
+        },
+        {
+          "name": "holder",
+          "writable": true
+        },
+        {
+          "name": "holder_group",
+          "writable": true
+        },
+        {
+          "name": "security_token"
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_wallet"
+        },
+        {
+          "name": "associated_token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_address_permission",
+      "discriminator": [
+        206,
+        98,
+        48,
+        240,
+        226,
+        102,
+        10,
+        236
+      ],
+      "accounts": [
+        {
+          "name": "security_associated_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_associated_token_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_group_new",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "arg",
+                "path": "group_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_group_current",
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "security_associated_account.group",
+                "account": "SecurityAssociatedAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_holder",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_holder.id",
+                "account": "TransferRestrictionHolder"
+              }
+            ]
+          }
+        },
+        {
+          "name": "holder_group_new",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_holder"
+              },
+              {
+                "kind": "arg",
+                "path": "group_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "holder_group_current",
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_associated_account.holder",
+                "account": "SecurityAssociatedAccount"
+              },
+              {
+                "kind": "account",
+                "path": "security_associated_account.group",
+                "account": "SecurityAssociatedAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "security_token"
+        },
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_wallet"
+        },
+        {
+          "name": "user_associated_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "security_mint",
+          "writable": true
+        },
+        {
+          "name": "access_control_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_mint"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "access_control_program"
+            }
+          }
+        },
+        {
+          "name": "access_control_program",
+          "address": "4X79YRjz9KNMhdjdxXg2ZNTS3YnMGYdwJkBHnezMJwr3"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "group_id",
+          "type": "u64"
+        },
+        {
+          "name": "frozen",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_allow_transfer_rule",
+      "discriminator": [
+        4,
+        83,
+        246,
+        172,
+        106,
+        193,
+        31,
+        116
+      ],
+      "accounts": [
+        {
+          "name": "transfer_rule",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_group_from.id",
+                "account": "TransferRestrictionGroup"
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_group_to.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "access_control_account.mint",
+                "account": "AccessControl"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_group_from"
+        },
+        {
+          "name": "transfer_restriction_group_to"
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "transfer_group_id_from",
+          "type": "u64"
+        },
+        {
+          "name": "transfer_group_id_to",
+          "type": "u64"
+        },
+        {
+          "name": "locked_until",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_holder_group_max",
+      "discriminator": [
+        83,
+        33,
+        238,
+        145,
+        212,
+        216,
+        16,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "group.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "group_id",
+          "type": "u64"
+        },
+        {
+          "name": "holder_group_max",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_holder_max",
+      "discriminator": [
+        254,
+        104,
+        250,
+        53,
+        13,
+        151,
+        2,
+        161
+      ],
+      "accounts": [
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "holder_max",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_lockup_escrow_account",
+      "discriminator": [
+        134,
+        172,
+        249,
+        223,
+        25,
+        118,
+        55,
+        93
+      ],
+      "accounts": [
+        {
+          "name": "transfer_restriction_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_security_associated_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "escrow_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "access_control_account"
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "escrow_account"
+        },
+        {
+          "name": "tokenlock_account"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_wallet_group",
+      "discriminator": [
+        225,
+        33,
+        252,
+        93,
+        186,
+        129,
+        24,
+        241
+      ],
+      "accounts": [
+        {
+          "name": "security_associated_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_associated_token_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "security_token"
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_group_current",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_group_current.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "transfer_restriction_group_new",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_group_new.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "holder_group_current",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_associated_account.holder",
+                "account": "SecurityAssociatedAccount"
+              },
+              {
+                "kind": "account",
+                "path": "security_associated_account.group",
+                "account": "SecurityAssociatedAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "holder_group_new",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  104,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_associated_account.holder",
+                "account": "SecurityAssociatedAccount"
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_group_new.id",
+                "account": "TransferRestrictionGroup"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_wallet_role"
+        },
+        {
+          "name": "user_wallet"
+        },
+        {
+          "name": "user_associated_token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "security_token"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_group_id",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AccessControl",
+      "discriminator": [
+        147,
+        81,
+        178,
+        92,
+        223,
+        66,
+        181,
+        132
+      ]
+    },
+    {
+      "name": "HolderGroup",
+      "discriminator": [
+        136,
+        231,
+        252,
+        48,
+        92,
+        187,
+        25,
+        164
+      ]
+    },
+    {
+      "name": "SecurityAssociatedAccount",
+      "discriminator": [
+        68,
+        169,
+        137,
+        56,
+        226,
+        21,
+        69,
+        124
+      ]
+    },
+    {
+      "name": "TransferRestrictionData",
+      "discriminator": [
+        166,
+        184,
+        205,
+        98,
+        165,
+        224,
+        174,
+        148
+      ]
+    },
+    {
+      "name": "TransferRestrictionGroup",
+      "discriminator": [
+        61,
+        120,
+        96,
+        96,
+        113,
+        210,
+        205,
+        223
+      ]
+    },
+    {
+      "name": "TransferRestrictionHolder",
+      "discriminator": [
+        196,
+        226,
+        112,
+        46,
+        157,
+        122,
+        48,
+        157
+      ]
+    },
+    {
+      "name": "TransferRule",
+      "discriminator": [
+        200,
+        231,
+        114,
+        91,
+        84,
+        241,
+        109,
+        172
+      ]
+    },
+    {
+      "name": "WalletRole",
+      "discriminator": [
+        219,
+        71,
+        35,
+        217,
+        102,
+        248,
+        173,
+        9
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6001,
+      "name": "MaxHoldersReached",
+      "msg": "Max holders reached"
+    },
+    {
+      "code": 6002,
+      "name": "TransferRuleNotAllowedUntilLater",
+      "msg": "Transfer rule not allowed until later"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidRole",
+      "msg": "Invalid role"
+    },
+    {
+      "code": 6004,
+      "name": "AllTransfersPaused",
+      "msg": "All transfers are paused"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidPDA",
+      "msg": "Invalid PDA"
+    },
+    {
+      "code": 6006,
+      "name": "BalanceIsTooLow",
+      "msg": "Balance is too low"
+    },
+    {
+      "code": 6007,
+      "name": "CurrentWalletsCountMustBeZero",
+      "msg": "Current wallets count must be zero"
+    },
+    {
+      "code": 6008,
+      "name": "MismatchedEscrowAccount",
+      "msg": "Mismatched escrow account"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidHolderIndex",
+      "msg": "Invalid transfer restriction holder index"
+    },
+    {
+      "code": 6010,
+      "name": "MaxHoldersReachedInsideTheGroup",
+      "msg": "Max holders reached inside the group"
+    },
+    {
+      "code": 6011,
+      "name": "TransferGroupNotApproved",
+      "msg": "Transfer group not approved"
+    },
+    {
+      "code": 6012,
+      "name": "IncorrectTokenlockAccount",
+      "msg": "Wrong tokenlock account"
+    },
+    {
+      "code": 6013,
+      "name": "TransferRuleAccountDataIsEmtpy",
+      "msg": "Transfer rule account data is empty"
+    },
+    {
+      "code": 6014,
+      "name": "SecurityAssociatedAccountDataIsEmtpy",
+      "msg": "Security associated account data is empty"
+    },
+    {
+      "code": 6015,
+      "name": "TransferRestrictionsAccountDataIsEmtpy",
+      "msg": "Transfer restrictions account data is empty"
+    },
+    {
+      "code": 6016,
+      "name": "NoWalletsInGroup",
+      "msg": "No wallets in group"
+    },
+    {
+      "code": 6017,
+      "name": "NewGroupIsTheSameAsTheCurrentGroup",
+      "msg": "New group is the same as the current group"
+    },
+    {
+      "code": 6018,
+      "name": "NewHolderMaxMustExceedCurrentHolderCount",
+      "msg": "New holder max must exceed current holder count"
+    },
+    {
+      "code": 6019,
+      "name": "NewHolderGroupMaxMustExceedCurrentHolderGroupCount",
+      "msg": "New holder group max must exceed current holder group count"
+    },
+    {
+      "code": 6020,
+      "name": "ZeroGroupHolderGroupMaxCannotBeNonZero",
+      "msg": "Zero group holder group max cannot be non-zero"
+    },
+    {
+      "code": 6021,
+      "name": "NonPositiveHolderGroupCount",
+      "msg": "Non-positive holder group count"
+    },
+    {
+      "code": 6022,
+      "name": "CurrentHolderGroupCountMustBeZero",
+      "msg": "Current holder group count must be zero"
+    },
+    {
+      "code": 6023,
+      "name": "ValueUnchanged",
+      "msg": "The provided value is already set. No changes were made"
+    },
+    {
+      "code": 6024,
+      "name": "CurrentGroupRequiredForExistingWallet",
+      "msg": "Current group and holder group must be provided for existing wallet"
+    },
+    {
+      "code": 6025,
+      "name": "HolderGroupAlreadyInitialized",
+      "msg": "Holder group already initialized"
+    }
+  ],
+  "types": [
+    {
+      "name": "AccessControl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_total_supply",
+            "type": "u64"
+          },
+          {
+            "name": "lockup_escrow_account",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HolderGroup",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group",
+            "type": "u64"
+          },
+          {
+            "name": "holder",
+            "type": "pubkey"
+          },
+          {
+            "name": "current_wallets_count",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SecurityAssociatedAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group",
+            "type": "u64"
+          },
+          {
+            "name": "holder",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferRestrictionData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "security_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "access_control_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "current_holders_count",
+            "type": "u64"
+          },
+          {
+            "name": "holder_ids",
+            "type": "u64"
+          },
+          {
+            "name": "max_holders",
+            "type": "u64"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "lockup_escrow_account",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferRestrictionGroup",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "current_holders_count",
+            "type": "u64"
+          },
+          {
+            "name": "max_holders",
+            "type": "u64"
+          },
+          {
+            "name": "transfer_restriction_data",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferRestrictionHolder",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transfer_restriction_data",
+            "type": "pubkey"
+          },
+          {
+            "name": "current_wallets_count",
+            "type": "u64"
+          },
+          {
+            "name": "current_holder_group_count",
+            "type": "u64"
+          },
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferRule",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transfer_restriction_data",
+            "type": "pubkey"
+          },
+          {
+            "name": "transfer_group_id_from",
+            "type": "u64"
+          },
+          {
+            "name": "transfer_group_id_to",
+            "type": "u64"
+          },
+          {
+            "name": "locked_until",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WalletRole",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "access_control",
+            "type": "pubkey"
+          },
+          {
+            "name": "role",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}
