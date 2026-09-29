@@ -1,0 +1,46 @@
+[package]
+name = "aegis"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "aegis"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+idl-build = [
+    "anchor-lang/idl-build",
+    "anchor-spl/idl-build",
+]
+
+
+[dependencies]
+anchor-lang = { version = "1.0.2", features = ["init-if-needed"] }
+anchor-spl = "1.0.2"
+ruint = "1.12.3"
+# anchor-spl 1.2 ships the Token-2022 *interface* crate, which has no `onchain` CPI helper, so
+# the hook accounts are resolved directly against the transfer-hook interface instead.
+spl-transfer-hook-interface = "2.1.0"
+dynamic-bonding-curve = { git = "https://github.com/MeteoraAg/dynamic-bonding-curve", features = ["cpi"] }
+aegis-hook = { path = "../aegis-hook", features = ["cpi"] }
+
+
+[dev-dependencies]
+litesvm = "0.10.0"
+solana-message = "3.0.1"
+solana-transaction = "3.0.2"
+solana-signer = "3.0.0"
+solana-keypair = "3.0.1"
+
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
