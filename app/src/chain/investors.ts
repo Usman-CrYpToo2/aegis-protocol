@@ -3,22 +3,17 @@
  *
  * Approving a wallet is what the test scripts do for the local buyer, in four instructions:
  * create its security token account, register a holder, put the holder in the investor group,
- * and create the wallet's security-associated account (its approval record). Account order comes
- * from the Transfer Restrictions IDL; investors.test.ts checks every account against it.
+ * and create the wallet's security-associated account (its approval record). Built by
+ * issue.ts `holderInstructions`; investors.test.ts checks every account against the IDL.
  *
  * Aegis only reads this register. The issuer signs every change, as the holder of Upside's roles.
  */
-import { createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
-import { PublicKey, SystemProgram, TransactionInstruction, TransactionMessage, VersionedTransaction, type Connection } from "@solana/web3.js";
-import tr from "../idl/transfer_restrictions.json";
+import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
+import { PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction, type Connection } from "@solana/web3.js";
 import type { LaunchAccount } from "./aegis";
 import { bridgeAddresses } from "./bridge";
+import { holderInstructions } from "./issue";
 import { ACCESS_CONTROL_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TRANSFER_RESTRICTIONS_PROGRAM_ID } from "./ids";
-
-const disc = (name: string) => Uint8Array.from(tr.instructions.find((i) => i.name === name)!.discriminator);
-const INIT_HOLDER = disc("initialize_transfer_restriction_holder");
-const INIT_HOLDER_GROUP = disc("initialize_holder_group");
-const INIT_SAA = disc("initialize_security_associated_account");
 
 const text = (s: string) => new TextEncoder().encode(s);
 const u64 = (v: bigint) => {
@@ -44,23 +39,9 @@ export function registerAddresses(launch: LaunchAccount, issuer: PublicKey, wall
   };
 }
 
-/** The four instructions that put `wallet` on the register as holder number `holderId`. */
+/** The four instructions that put `wallet` in the investor group as holder number `holderId`. */
 export function approveInstructions(launch: LaunchAccount, issuer: PublicKey, wallet: PublicKey, holderId: bigint): TransactionInstruction[] {
-  const a = registerAddresses(launch, issuer, wallet, holderId);
-  const w = (pubkey: PublicKey) => ({ pubkey, isSigner: false, isWritable: true });
-  const r = (pubkey: PublicKey) => ({ pubkey, isSigner: false, isWritable: false });
-  const signer = { pubkey: issuer, isSigner: true, isWritable: false };
-  const payer = { pubkey: issuer, isSigner: true, isWritable: true };
-  const ix = (data: Uint8Array, keys: TransactionInstruction["keys"]) =>
-    new TransactionInstruction({ programId: TRANSFER_RESTRICTIONS_PROGRAM_ID, data: Buffer.from(data), keys });
-  return [
-    createAssociatedTokenAccountIdempotentInstruction(issuer, a.tokenAccount, wallet, launch.realRwaMint, TOKEN_2022_PROGRAM_ID),
-    ix(new Uint8Array([...INIT_HOLDER, ...u64(holderId)]), [w(a.holder), w(a.trd), r(a.accessControl), r(a.authorityRole), signer, payer, r(SystemProgram.programId)]),
-    ix(INIT_HOLDER_GROUP, [w(a.holderGroup), w(a.trd), r(a.group), w(a.holder), r(a.authorityRole), signer, payer, r(SystemProgram.programId)]),
-    ix(new Uint8Array([...INIT_SAA, ...u64(launch.investorGroup), ...u64(holderId)]), [
-      w(a.saa), w(a.group), w(a.holder), w(a.holderGroup), r(launch.realRwaMint), r(a.trd), r(wallet), r(a.tokenAccount), r(a.authorityRole), signer, payer, r(SystemProgram.programId),
-    ]),
-  ];
+  return holderInstructions(launch.realRwaMint, issuer, wallet, launch.investorGroup, holderId);
 }
 
 /** The next holder number the register will accept: Upside's `holder_ids` counter. */

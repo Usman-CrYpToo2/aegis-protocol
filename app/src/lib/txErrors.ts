@@ -56,7 +56,9 @@ export class PlainError extends Error {
   }
 }
 
-export function explainTradeError(error: unknown): Explained {
+export type ErrorTable = Record<string, Omit<Explained, "retry" | "charged">>;
+
+export function explainTradeError(error: unknown, overrides: ErrorTable = {}): Explained {
   const message = error instanceof Error ? error.message : String(error);
   const logs = logsOf(error).join("\n");
   const all = `${message}\n${logs}`;
@@ -72,6 +74,7 @@ export function explainTradeError(error: unknown): Explained {
     return { title: "Already on the register", detail: "At least one of these wallets is already approved. Refresh the list and try the others.", retry: false, charged: false };
   }
   const code = /Error Code: (\w+)/.exec(logs)?.[1];
+  if (code && overrides[code]) return { ...overrides[code]!, retry: true, charged: false };
   if (code && METEORA[code]) return { ...METEORA[code]!, retry: true, charged: false };
 
   if (/insufficient funds|custom program error: 0x1\b/i.test(all)) {
@@ -91,3 +94,36 @@ export function explainTradeError(error: unknown): Explained {
   }
   return { title: "It didn’t go through", detail: message.slice(0, 200), retry: true, charged: false };
 }
+
+const SUPPLY_SHORT = { title: "Your supply is too small for these terms", detail: "At this opening price, the raise needs more tokens than you are issuing. Nothing was changed on-chain. Raise the price, lower the raise, or go back and issue more." };
+
+/** Errors while issuing an asset, in the words of the step the issuer is on. */
+export const ISSUE_ERRORS: ErrorTable = {
+  ProtocolPaused: { title: "Aegis is paused", detail: "The platform is not accepting new launches right now. Nothing was changed; try again later." },
+  InvalidLaunchStage: { title: "This step is already done", detail: "The chain shows this launch has moved past this step. The page will refresh to where you are." },
+  InvalidRwaDecimals: { title: "Decimals must be 6 to 9", detail: "Meteora only accepts tokens with 6 to 9 decimals." },
+  InvalidTotalSupply: { title: "Enter a supply above zero", detail: "The asset needs at least one unit." },
+  TokenNameTooLong: { title: "The name is too long", detail: "Use 32 characters or fewer." },
+  TokenSymbolTooLong: { title: "The symbol is too long", detail: "Use 9 characters or fewer, so the wrapper’s symbol still fits." },
+  TokenUriTooLong: { title: "The link is too long", detail: "Use a link of 200 characters or fewer." },
+  SupplyTooSmallForCurve: SUPPLY_SHORT,
+  InvalidTokenSupply: SUPPLY_SHORT,
+  RaiseBelowMinimum: { title: "The raise is below the minimum", detail: "This quote token has a minimum raise set by the platform. Raise the target." },
+  MigrationFeeTooLow: { title: "Your cash share is below the platform’s floor", detail: "Take a larger share of the raise as cash." },
+  MigrationFeeTooHigh: { title: "Your cash share is above the platform’s ceiling", detail: "Leave more of the raise in the trading pool." },
+  InvalidLiquiditySplit: { title: "The pool split doesn’t add up", detail: "Locked forever and unlocking monthly must together make up your whole share of the pool." },
+  PermanentLockTooLow: { title: "Too little is locked forever", detail: "The platform requires a minimum share of your pool liquidity to be locked for good." },
+  InvalidVestingMonths: { title: "The unlock period is outside the platform’s range", detail: "Choose a number of months within the range shown." },
+  InvalidFeeBps: { title: "The pool fee is outside the allowed range", detail: "Choose a fee within the range shown." },
+  PriceExpansionExceedsRwaLimit: { title: "The price rises further than this sale type allows", detail: "Lower the end price or pick a sale type with a wider range." },
+  PriceExpansionTooSmall: { title: "The price must rise at least a little", detail: "A completely flat price can’t be launched on a curve." },
+  InvalidStartPrice: { title: "That opening price can’t be represented", detail: "Meteora can’t price a token this cheaply or this expensively. Adjust the opening price." },
+  PriceExceedsMaxSqrtPrice: { title: "The price is too high for Meteora", detail: "Lower the opening price or the price range." },
+  CurveSellsNothing: { title: "The sale would sell nothing", detail: "The raise is too small for this price. Raise the target or lower the price." },
+  QuoteTokenNotWhitelisted: { title: "That currency isn’t approved", detail: "The platform only accepts the currencies listed." },
+  QuoteTokenInactive: { title: "That currency is switched off", detail: "The platform has paused sales in this currency. Choose another." },
+  SupplyCapRaised: { title: "The supply cap was raised", detail: "Your security’s maximum supply was changed after it was created, so it can no longer be escrowed safely." },
+  SupplyMintedElsewhere: { title: "Tokens exist outside the escrow", detail: "Some of the security was minted somewhere else. The whole supply must be in escrow." },
+  IssuerNotRegistered: { title: "Your wallet isn’t on the register", detail: "Register yourself as a holder first; the escrow can only come back to an approved wallet." },
+  LaunchAlreadyLive: { title: "The sale has already started", detail: "Once buyers hold the wrapper, the escrow backs their tokens and the launch can’t be cancelled." },
+};

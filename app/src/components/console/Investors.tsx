@@ -27,12 +27,12 @@ function useApprove(launch: ConsoleLaunch) {
     let ok = true;
     for (const [i, chunk] of chunks.entries()) {
       setProgress({ at: i + 1, of: chunks.length });
-      ok = await tx.run(async () => {
+      ok = (await tx.run(async () => {
         const done = await alreadyApproved(connection, l, chunk);
         const todo = chunk.filter((_, j) => !done[j]);
         if (!todo.length) throw new PlainError("Already approved", "These wallets are already on the register.");
         return approvalBatch(connection, l, publicKey, todo);
-      });
+      })) !== null;
       if (!ok) break;
       setApproved((prev) => [...prev, ...chunk.map(String)]);
     }
