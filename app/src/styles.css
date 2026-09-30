@@ -1,0 +1,62 @@
+@import "@solana/wallet-adapter-react-ui/styles.css";
+@import "tailwindcss";
+
+/* The design's tokens. Components use these names, never raw hex. */
+@theme {
+  --color-paper: #f4f1ea;
+  --color-surface: #fbfaf6;
+  --color-ink: #16140f;
+  --color-ink2: #3b372f;
+  --color-mute: #5c574c;
+  --color-rule: #d9d3c4;
+  --color-line: #cfc7b5;
+  --color-track: #e4decf;
+  --color-blue: #1d3a8a;
+  --color-blue-deep: #132966;
+  --color-ox: #7e2a1e;
+  --color-green: #1e6b45;
+  --color-amber: #8a5a00;
+  --color-amber-wash: #fbf5e8;
+  --color-error: #a3261b;
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html { background: var(--color-paper); }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+  button, a { -webkit-tap-highlight-color: transparent; }
+}
+
+@utility num { font-variant-numeric: tabular-nums; }
+@utility kicker {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-mute);
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Wallet picker, restyled to the registry rather than the adapter's default dark theme. */
+.wallet-adapter-modal-wrapper { background: var(--color-surface); border: 1px solid var(--color-ink); border-radius: 0; box-shadow: 0 12px 32px rgb(22 20 15 / 0.18); font-family: var(--font-sans); }
+.wallet-adapter-modal-title { color: var(--color-ink); font-family: var(--font-serif); font-weight: 400; font-size: 30px; }
+.wallet-adapter-modal-button-close { background: transparent; }
+.wallet-adapter-modal-button-close svg { fill: var(--color-ink); }
+.wallet-adapter-modal-list .wallet-adapter-button { color: var(--color-ink); font-family: var(--font-sans); font-weight: 500; border-radius: 0; }
+.wallet-adapter-modal-list .wallet-adapter-button:not([disabled]):hover { background: var(--color-paper); }
+.wallet-adapter-modal-list-more { color: var(--color-ink); font-family: var(--font-sans); }
+.wallet-adapter-modal-list-more svg { fill: var(--color-ink); }
+.wallet-adapter-modal-overlay { background: rgb(22 20 15 / 0.5); }
+.wallet-adapter-modal-middle-button { background: var(--color-blue); border-radius: 0; }

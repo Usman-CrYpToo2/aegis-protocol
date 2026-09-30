@@ -1,0 +1,7306 @@
+{
+  "address": "FRR7Ff4HW8nPdutTGQmRGoEzkkoqTk57Vy7bfpnMtFy",
+  "metadata": {
+    "name": "aegis",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "abort_launch",
+      "docs": [
+        "Abandons a launch before any wrapper exists and returns the asset to the issuer.",
+        "",
+        "Valid only at `Funded` and `Configured`. Beyond those stages buyers hold wrapper tokens",
+        "backed by the escrowed asset, and it is no longer the issuer's alone to withdraw."
+      ],
+      "discriminator": [
+        44,
+        112,
+        192,
+        235,
+        227,
+        61,
+        179,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "issuer",
+          "docs": [
+            "Only the issuer. Unlike settlement, this is not something a stranger should be able to",
+            "trigger: it ends a launch."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "real_rwa_mint",
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "aegis_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "issuer_real_rwa_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "issuer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_saa",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "escrow_vault"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "issuer_saa",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_real_rwa_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "redeem_rule",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "launch.vault_group",
+                "account": "Launch"
+              },
+              {
+                "kind": "account",
+                "path": "launch.investor_group",
+                "account": "Launch"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "real_rwa_extra_metas",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  45,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restrictions_program",
+          "address": "6yEnqdEjX3zBBDkzhwTRGJwv1jRaN4QE4gywmgdcfPBZ"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "bridge_deposit",
+      "docs": [
+        "Bridge, wrap direction: deposit the asset, receive the wrapper one for one.",
+        "",
+        "Open to any approved holder. Puts a ceiling on the wrapper's market price, because a",
+        "premium can always be sold into."
+      ],
+      "discriminator": [
+        201,
+        159,
+        238,
+        210,
+        127,
+        210,
+        78,
+        174
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "real_rwa_mint",
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "crwa_mint",
+          "writable": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "aegis_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "user_real_rwa_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_crwa_account",
+          "docs": [
+            "Created on demand: a first-time depositor has no wrapper account yet."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "crwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_saa",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_real_rwa_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_saa",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "escrow_vault"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "deposit_rule",
+          "docs": [
+            "investor -> vault. Governs the incoming transfer."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "launch.investor_group",
+                "account": "Launch"
+              },
+              {
+                "kind": "account",
+                "path": "launch.vault_group",
+                "account": "Launch"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "redeem_rule",
+          "docs": [
+            "vault -> investor. Not used by this transfer; checked so that nobody deposits into a",
+            "launch they could never redeem from."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "launch.vault_group",
+                "account": "Launch"
+              },
+              {
+                "kind": "account",
+                "path": "launch.investor_group",
+                "account": "Launch"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "real_rwa_extra_metas",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  45,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restrictions_program",
+          "address": "6yEnqdEjX3zBBDkzhwTRGJwv1jRaN4QE4gywmgdcfPBZ"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "bridge_redeem",
+      "docs": [
+        "Bridge, unwrap direction: burn the wrapper, receive the asset one for one.",
+        "",
+        "The protocol's compliance gate. This is the moment someone takes ownership of a regulated",
+        "security, so the redeemer's registration is verified by Aegis directly rather than left",
+        "to the token's hook. Puts a floor under the wrapper's market price."
+      ],
+      "discriminator": [
+        195,
+        21,
+        201,
+        109,
+        101,
+        249,
+        240,
+        93
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "real_rwa_mint",
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "crwa_mint",
+          "writable": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "aegis_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "user_real_rwa_account",
+          "docs": [
+            "Must already exist. Registering it with Upside requires the account first, so anyone",
+            "entitled to redeem necessarily has one."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_crwa_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "crwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_saa",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "escrow_vault"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_saa",
+          "docs": [
+            "The redeemer's own registration. Its absence is what stops an unapproved wallet from",
+            "taking delivery of a security."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_real_rwa_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "redeem_rule",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "launch.vault_group",
+                "account": "Launch"
+              },
+              {
+                "kind": "account",
+                "path": "launch.investor_group",
+                "account": "Launch"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "real_rwa_extra_metas",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  45,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restrictions_program",
+          "address": "6yEnqdEjX3zBBDkzhwTRGJwv1jRaN4QE4gywmgdcfPBZ"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim_partner_migration_fee",
+      "docs": [
+        "Claims the protocol's share of the migration fee taken off the raise at graduation."
+      ],
+      "discriminator": [
+        5,
+        91,
+        233,
+        246,
+        90,
+        63,
+        86,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "cranker",
+          "docs": [
+            "Anyone."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "platform_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "launch",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch.real_rwa_mint",
+                "account": "Launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "aegis_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_recipient"
+        },
+        {
+          "name": "fee_recipient_quote_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fee_recipient"
+              },
+              {
+                "kind": "account",
+                "path": "token_quote_program"
+              },
+              {
+                "kind": "account",
+                "path": "quote_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "quote_vault",
+          "writable": true
+        },
+        {
+          "name": "meteora_config"
+        },
+        {
+          "name": "virtual_pool",
+          "writable": true
+        },
+        {
+          "name": "pool_authority",
+          "address": "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM"
+        },
+        {
+          "name": "meteora_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                9,
+                96,
+                12,
+                165,
+                36,
+                247,
+                177,
+                183,
+                214,
+                204,
+                177,
+                195,
+                151,
+                58,
+                160,
+                51,
+                13,
+                25,
+                3,
+                218,
+                96,
+                28,
+                201,
+                181,
+                222,
+                227,
+                198,
+                98,
+                180,
+                202,
+                209,
+                73
+              ]
+            }
+          }
+        },
+        {
+          "name": "meteora_dbc_program",
+          "address": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN"
+        },
+        {
+          "name": "token_quote_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_partner_trading_fee",
+      "docs": [
+        "Claims the protocol's share of the bonding curve's trading fees.",
+        "",
+        "Permissionless: the destination is pinned to the platform fee recipient, so a stranger",
+        "calling it only pays to move the protocol's money to the protocol."
+      ],
+      "discriminator": [
+        123,
+        126,
+        241,
+        171,
+        152,
+        241,
+        18,
+        123
+      ],
+      "accounts": [
+        {
+          "name": "cranker",
+          "docs": [
+            "Anyone. Pays the transaction and any rent for the destination account."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "platform_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "launch",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch.real_rwa_mint",
+                "account": "Launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "aegis_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_recipient"
+        },
+        {
+          "name": "fee_recipient_quote_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fee_recipient"
+              },
+              {
+                "kind": "account",
+                "path": "token_quote_program"
+              },
+              {
+                "kind": "account",
+                "path": "quote_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "aegis_crwa_account",
+          "docs": [
+            "Required by Meteora's account list even though nothing is claimed into it. Pointed at the",
+            "protocol's own wrapper account rather than the treasury's, so that if a base fee ever did",
+            "arrive it would land somewhere the protocol already accounts for."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "aegis_authority"
+              },
+              {
+                "kind": "account",
+                "path": "token_base_program"
+              },
+              {
+                "kind": "account",
+                "path": "base_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "base_mint"
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "base_vault",
+          "writable": true
+        },
+        {
+          "name": "quote_vault",
+          "writable": true
+        },
+        {
+          "name": "meteora_config"
+        },
+        {
+          "name": "virtual_pool",
+          "writable": true
+        },
+        {
+          "name": "pool_authority",
+          "address": "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM"
+        },
+        {
+          "name": "meteora_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                9,
+                96,
+                12,
+                165,
+                36,
+                247,
+                177,
+                183,
+                214,
+                204,
+                177,
+                195,
+                151,
+                58,
+                160,
+                51,
+                13,
+                25,
+                3,
+                218,
+                96,
+                28,
+                201,
+                181,
+                222,
+                227,
+                198,
+                98,
+                180,
+                202,
+                209,
+                73
+              ]
+            }
+          }
+        },
+        {
+          "name": "meteora_dbc_program",
+          "address": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN"
+        },
+        {
+          "name": "token_base_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "token_quote_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_unsold",
+      "docs": [
+        "The issuer collects the asset behind their unsold wrapper, once they are a registered",
+        "holder. Pays only what the vault holds above the wrapper supply, so cRWA holders are",
+        "always covered first."
+      ],
+      "discriminator": [
+        27,
+        135,
+        26,
+        153,
+        188,
+        87,
+        177,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "issuer",
+          "docs": [
+            "Only the issuer. Like `abort_launch`, this moves the security to them."
+          ],
+          "signer": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "real_rwa_mint",
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "crwa_mint",
+          "docs": [
+            "Read for its supply: the part of the vault that backs the wrapper and must not be paid out."
+          ],
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "aegis_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "issuer_real_rwa_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "issuer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_saa",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "escrow_vault"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "issuer_saa",
+          "docs": [
+            "The issuer's own holder record. To receive the security they must be registered, in the",
+            "investor group the launch was configured with, like anyone else."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_real_rwa_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "redeem_rule",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "launch.vault_group",
+                "account": "Launch"
+              },
+              {
+                "kind": "account",
+                "path": "launch.investor_group",
+                "account": "Launch"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "real_rwa_extra_metas",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  45,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restrictions_program",
+          "address": "6yEnqdEjX3zBBDkzhwTRGJwv1jRaN4QE4gywmgdcfPBZ"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_rwa",
+      "docs": [
+        "Launch step 1: create the Real RWA — the legal, compliance-restricted security token.",
+        "",
+        "Aegis builds it so its shape is guaranteed correct, then hands the issuer all four",
+        "Upside roles. Aegis keeps no authority over the legal token."
+      ],
+      "discriminator": [
+        225,
+        227,
+        217,
+        237,
+        157,
+        175,
+        129,
+        58
+      ],
+      "accounts": [
+        {
+          "name": "issuer",
+          "docs": [
+            "The asset issuer. Pays for everything and receives all four Upside roles."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "platform_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_recipient",
+          "writable": true
+        },
+        {
+          "name": "real_rwa_mint",
+          "docs": [
+            "A fresh keypair. Upside initializes the mint inside its own instruction, so this",
+            "arrives uninitialized and must sign."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "access_control",
+          "docs": [
+            "substituted account cannot be passed."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "issuer_wallet_role",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116,
+                  95,
+                  114,
+                  111,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              },
+              {
+                "kind": "account",
+                "path": "issuer"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "access_control_program",
+          "address": "4X79YRjz9KNMhdjdxXg2ZNTS3YnMGYdwJkBHnezMJwr3"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CreateRwaArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_rwa_config",
+      "docs": [
+        "Launch step 3: create and validate the Meteora DBC config for this launch."
+      ],
+      "discriminator": [
+        11,
+        98,
+        163,
+        227,
+        178,
+        33,
+        147,
+        242
+      ],
+      "accounts": [
+        {
+          "name": "issuer",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "platform_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch.real_rwa_mint",
+                "account": "Launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "quote_token",
+          "docs": [
+            "Proof that the admin approved this quote token. Its existence is the whitelist."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  113,
+                  117,
+                  111,
+                  116,
+                  101,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "quote_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "aegis_authority",
+          "docs": [
+            "",
+            "Meteora overloads `fee_claimer` with four roles at once: partner fee recipient, partner",
+            "LP position owner, partner migration-fee claimant, and — with the authority option below",
+            "— cRWA mint authority. All four must therefore land on something that can sign a CPI,",
+            "which rules out a plain treasury wallet.",
+            "Derived canonically rather than from `launch.authority_bump`. The stored bump is only",
+            "written at `fund_vault`, so trusting it here would make an out-of-order call fail with an",
+            "opaque seeds error instead of naming the real problem. Nothing signs with this PDA in",
+            "this instruction — it is only recorded as Meteora's partner — so re-deriving costs a",
+            "little compute and nothing else."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "meteora_config",
+          "docs": [
+            "must sign for its own rent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "meteora_dbc_program",
+          "docs": [
+            "their own program and have Aegis call it with the issuer as payer — and the event",
+            "authority below, being derived from whatever program is passed, would validate nothing."
+          ],
+          "address": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN"
+        },
+        {
+          "name": "meteora_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                9,
+                96,
+                12,
+                165,
+                36,
+                247,
+                177,
+                183,
+                214,
+                204,
+                177,
+                195,
+                151,
+                58,
+                160,
+                51,
+                13,
+                25,
+                3,
+                218,
+                96,
+                28,
+                201,
+                181,
+                222,
+                227,
+                198,
+                98,
+                180,
+                202,
+                209,
+                73
+              ]
+            }
+          }
+        },
+        {
+          "name": "aegis_hook_program",
+          "docs": [
+            "",
+            "It approves every transfer. It exists only because Meteora refuses to grant mint",
+            "authority on a non-hook config, and mint authority is what the bridge runs on."
+          ],
+          "address": "794bKUmPusvBPie4MFhYnKebcSbjCN8GHrds8WRq23rw"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CreateRwaConfigArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "finalize_graduation",
+      "docs": [
+        "Launch step 5: settle the unsold allocation and open the bridge.",
+        "",
+        "Collects the wrapper the curve never sold, burns it, and records the matching asset as",
+        "owed to the issuer, so total supply keeps meaning what it claims. The asset stays in the",
+        "vault, so opening the bridge never depends on the issuer being registered.",
+        "Permissionless: it squares the books and moves nothing to the caller. Must follow",
+        "Meteora's migration, which Meteora itself enforces."
+      ],
+      "discriminator": [
+        253,
+        214,
+        158,
+        72,
+        30,
+        227,
+        103,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "cranker",
+          "docs": [
+            "Anyone. Pays rent for the collection account and nothing else."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "real_rwa_mint",
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "crwa_mint",
+          "writable": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "aegis_authority",
+          "docs": [
+            "given at config time."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "aegis_crwa_account",
+          "docs": [
+            "Where Meteora deposits the unsold wrapper. It must be an associated token account of the",
+            "leftover receiver, and Meteora does not create it, so it is created here if missing."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "aegis_authority"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "crwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "escrow_vault",
+          "docs": [
+            "Read only: its balance is the escrow side of the ledger. Nothing is moved out of it here."
+          ],
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "pool_authority",
+          "address": "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM"
+        },
+        {
+          "name": "meteora_config"
+        },
+        {
+          "name": "virtual_pool",
+          "docs": [
+            "Meteora refuses to release the leftover unless this shows the graduated pool already",
+            "exists, which is what orders settlement after migration.",
+            "",
+            "Loaded as a typed account rather than left unchecked, because its `is_withdraw_leftover`",
+            "flag has to be read before deciding whether to call Meteora at all — see the handler.",
+            "The type also proves the pool is the transfer-hook variant this launch created."
+          ],
+          "writable": true
+        },
+        {
+          "name": "base_vault",
+          "writable": true
+        },
+        {
+          "name": "meteora_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                9,
+                96,
+                12,
+                165,
+                36,
+                247,
+                177,
+                183,
+                214,
+                204,
+                177,
+                195,
+                151,
+                58,
+                160,
+                51,
+                13,
+                25,
+                3,
+                218,
+                96,
+                28,
+                201,
+                181,
+                222,
+                227,
+                198,
+                98,
+                180,
+                202,
+                209,
+                73
+              ]
+            }
+          }
+        },
+        {
+          "name": "meteora_dbc_program",
+          "address": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "fund_vault",
+      "docs": [
+        "Launch step 2: lock the entire Real RWA supply in the Aegis escrow vault.",
+        "",
+        "Verifies the issuer's Upside compliance setup first — in particular that the redemption",
+        "path out of the vault is open — then mints the full supply into escrow."
+      ],
+      "discriminator": [
+        26,
+        33,
+        207,
+        242,
+        119,
+        108,
+        134,
+        73
+      ],
+      "accounts": [
+        {
+          "name": "issuer",
+          "docs": [
+            "Must be the issuer recorded on the launch, and must hold ReserveAdmin."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "real_rwa_mint",
+          "writable": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "aegis_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_vault",
+          "docs": [
+            "Upside's `mint_securities` requires the destination to be an associated token account of",
+            "the destination authority, so the vault address is fully determined by the launch."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "aegis_authority"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "issuer_wallet_role",
+          "docs": [
+            "Proves the issuer still holds ReserveAdmin. Upside re-checks this, but failing here",
+            "gives a message that names the actual problem."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116,
+                  95,
+                  114,
+                  111,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              },
+              {
+                "kind": "account",
+                "path": "issuer"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_saa",
+          "docs": [
+            "The vault's holder record. Also required by `mint_securities` for any destination that",
+            "is not a registered lockup escrow — which ours is not, and cannot be."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "escrow_vault"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "redeem_rule",
+          "docs": [
+            "The vault -> investor rule. Its address encodes both group ids, so passing the wrong",
+            "rule cannot pass the seed check."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "vault_saa.group",
+                "account": "SecurityAssociatedAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "args.investor_group"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "access_control_program",
+          "address": "4X79YRjz9KNMhdjdxXg2ZNTS3YnMGYdwJkBHnezMJwr3"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "FundVaultArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_platform",
+      "docs": [
+        "Bootstraps the Aegis Protocol global singleton state.",
+        "Establishes the master admin and the protocol treasury. Callable once."
+      ],
+      "discriminator": [
+        119,
+        201,
+        101,
+        45,
+        75,
+        122,
+        89,
+        3
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "Becomes the global protocol admin, and pays rent.",
+            "",
+            "Note this is first-caller-wins: nothing here proves the signer is the deployer. Handled",
+            "as deployment procedure rather than in code — initialize in the same script as the",
+            "deploy and verify `platform_config.admin` before announcing the program. See `audit.md`",
+            "finding 5."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "platform_config",
+          "docs": [
+            "The singleton PDA that stores the global protocol configuration."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "launch_pool",
+      "docs": [
+        "Launch step 4: open the sale.",
+        "",
+        "Meteora creates the cRWA mint and mints the whole supply into its pool. Aegis then reads",
+        "the result back and refuses to proceed unless supply, decimals and mint authority are",
+        "exactly what the peg requires. Compute-heavy — raise the budget above the 200k default."
+      ],
+      "discriminator": [
+        166,
+        119,
+        209,
+        182,
+        214,
+        109,
+        58,
+        181
+      ],
+      "accounts": [
+        {
+          "name": "issuer",
+          "docs": [
+            "The issuer. Becomes Meteora's pool creator, which carries the issuer's share of the",
+            "graduated liquidity position, their trading fees, surplus and migration fee."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "platform_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "launch",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "real_rwa_mint",
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "aegis_authority",
+          "docs": [
+            "what makes it the cRWA mint authority once the pool exists."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "launch"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_vault",
+          "relations": [
+            "launch"
+          ]
+        },
+        {
+          "name": "access_control",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                52,
+                73,
+                111,
+                144,
+                68,
+                201,
+                194,
+                136,
+                142,
+                176,
+                110,
+                98,
+                34,
+                243,
+                63,
+                165,
+                30,
+                161,
+                45,
+                199,
+                24,
+                46,
+                67,
+                87,
+                76,
+                194,
+                73,
+                243,
+                192,
+                121,
+                138,
+                252
+              ]
+            }
+          }
+        },
+        {
+          "name": "transfer_restriction_data",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "real_rwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_saa",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  97,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "escrow_vault"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "redeem_rule",
+          "docs": [
+            "The vault -> investor rule, pinned to the groups recorded at funding so the redemption",
+            "path cannot have been quietly redirected to a different pair of groups."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "transfer_restriction_data"
+              },
+              {
+                "kind": "account",
+                "path": "launch.vault_group",
+                "account": "Launch"
+              },
+              {
+                "kind": "account",
+                "path": "launch.investor_group",
+                "account": "Launch"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                88,
+                178,
+                141,
+                125,
+                200,
+                188,
+                125,
+                137,
+                125,
+                88,
+                149,
+                75,
+                107,
+                71,
+                103,
+                229,
+                40,
+                122,
+                222,
+                91,
+                70,
+                194,
+                129,
+                112,
+                232,
+                37,
+                115,
+                156,
+                202,
+                12,
+                36,
+                220
+              ]
+            }
+          }
+        },
+        {
+          "name": "meteora_config",
+          "docs": [
+            "deserializes and validates it."
+          ]
+        },
+        {
+          "name": "pool_authority",
+          "docs": [
+            "pinning it costs nothing and removes an account the caller could otherwise choose."
+          ],
+          "address": "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM"
+        },
+        {
+          "name": "crwa_mint",
+          "docs": [
+            "and cannot be typed as a `Mint` until afterwards. It signs for its own rent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "substituted address fails inside their program rather than here."
+          ],
+          "writable": true
+        },
+        {
+          "name": "base_vault",
+          "docs": [
+            "landed in it."
+          ],
+          "writable": true
+        },
+        {
+          "name": "quote_vault",
+          "writable": true
+        },
+        {
+          "name": "meteora_event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                9,
+                96,
+                12,
+                165,
+                36,
+                247,
+                177,
+                183,
+                214,
+                204,
+                177,
+                195,
+                151,
+                58,
+                160,
+                51,
+                13,
+                25,
+                3,
+                218,
+                96,
+                28,
+                201,
+                181,
+                222,
+                227,
+                198,
+                98,
+                180,
+                202,
+                209,
+                73
+              ]
+            }
+          }
+        },
+        {
+          "name": "meteora_dbc_program",
+          "docs": [
+            "against this address, so without the pin none of those derivations mean anything."
+          ],
+          "address": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN"
+        },
+        {
+          "name": "aegis_hook_program",
+          "docs": [
+            "so a mismatch here would fail inside their program too."
+          ],
+          "address": "794bKUmPusvBPie4MFhYnKebcSbjCN8GHrds8WRq23rw"
+        },
+        {
+          "name": "extra_account_meta_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  116,
+                  114,
+                  97,
+                  45,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "crwa_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                91,
+                54,
+                212,
+                69,
+                16,
+                55,
+                18,
+                224,
+                3,
+                182,
+                59,
+                186,
+                15,
+                161,
+                59,
+                55,
+                245,
+                207,
+                53,
+                163,
+                54,
+                98,
+                56,
+                155,
+                189,
+                108,
+                204,
+                122,
+                222,
+                231,
+                38,
+                128
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_quote_program",
+          "docs": [
+            "Quote side may be legacy SPL or Token-2022; Meteora checks it against the quote mint."
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "The base side is always Token-2022."
+          ],
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "LaunchPoolArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_platform_config",
+      "docs": [
+        "Updates global platform parameters. Master admin only."
+      ],
+      "discriminator": [
+        195,
+        60,
+        76,
+        129,
+        146,
+        45,
+        67,
+        143
+      ],
+      "accounts": [
+        {
+          "name": "platform_config",
+          "docs": [
+            "The current protocol administrator.",
+            "",
+            "`has_one = admin` below ensures this signer matches the",
+            "administrator stored inside the PlatformConfig PDA.",
+            "Seeds are pinned as well as `has_one`. Only one `PlatformConfig` can exist, because",
+            "`initialize_platform` creates it at this address with `init`, so the address check is",
+            "redundant today — but every other instruction reaches the config by seeds, and leaving",
+            "one path that accepts any account of the right type is the kind of asymmetry that stops",
+            "being harmless the moment a second config becomes creatable."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "The current protocol administrator who is authorized",
+            "to modify the configuration."
+          ],
+          "signer": true,
+          "relations": [
+            "platform_config"
+          ]
+        },
+        {
+          "name": "new_fee_recipient",
+          "docs": [
+            "",
+            "Taken as an account rather than a bare pubkey so its owner can be checked. A fee",
+            "recipient owned by another program cannot receive a plain lamport transfer, which would",
+            "make `create_rwa` fail and halt every launch until an admin noticed and changed it back."
+          ],
+          "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "parameters",
+          "type": {
+            "defined": {
+              "name": "UpdatePlatformConfigParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_quote_token",
+      "docs": [
+        "Updates an approved quote token's status or minimum raise. Existing launches are",
+        "unaffected either way."
+      ],
+      "discriminator": [
+        194,
+        2,
+        86,
+        7,
+        125,
+        39,
+        21,
+        52
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "platform_config"
+          ]
+        },
+        {
+          "name": "platform_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "quote_token",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  113,
+                  117,
+                  111,
+                  116,
+                  101,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "quote_token.mint",
+                "account": "QuoteToken"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "is_active",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
+          "name": "min_raise",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "whitelist_quote_token",
+      "docs": [
+        "Approves a quote token for use in launches. Protocol admin only.",
+        "",
+        "Also enforces Meteora's own quote-mint rules, so an unsupported token is rejected here",
+        "rather than at pool creation, after an issuer has already locked their asset."
+      ],
+      "discriminator": [
+        83,
+        70,
+        98,
+        119,
+        18,
+        250,
+        136,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "platform_config"
+          ]
+        },
+        {
+          "name": "platform_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "quote_token",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  113,
+                  117,
+                  111,
+                  116,
+                  101,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "quote_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "min_raise",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Launch",
+      "discriminator": [
+        144,
+        51,
+        51,
+        163,
+        206,
+        85,
+        213,
+        38
+      ]
+    },
+    {
+      "name": "PlatformConfig",
+      "discriminator": [
+        160,
+        78,
+        128,
+        0,
+        248,
+        83,
+        230,
+        160
+      ]
+    },
+    {
+      "name": "QuoteToken",
+      "discriminator": [
+        190,
+        93,
+        207,
+        228,
+        99,
+        45,
+        216,
+        186
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BridgeDeposited",
+      "discriminator": [
+        145,
+        220,
+        154,
+        169,
+        176,
+        132,
+        164,
+        136
+      ]
+    },
+    {
+      "name": "BridgeRedeemed",
+      "discriminator": [
+        73,
+        1,
+        22,
+        42,
+        17,
+        40,
+        238,
+        59
+      ]
+    },
+    {
+      "name": "Graduated",
+      "discriminator": [
+        51,
+        241,
+        66,
+        50,
+        140,
+        245,
+        156,
+        192
+      ]
+    },
+    {
+      "name": "LaunchAborted",
+      "discriminator": [
+        243,
+        47,
+        210,
+        249,
+        74,
+        119,
+        96,
+        183
+      ]
+    },
+    {
+      "name": "LaunchConfigured",
+      "discriminator": [
+        110,
+        18,
+        138,
+        67,
+        225,
+        113,
+        169,
+        7
+      ]
+    },
+    {
+      "name": "PartnerRevenueClaimed",
+      "discriminator": [
+        153,
+        240,
+        220,
+        201,
+        51,
+        15,
+        12,
+        165
+      ]
+    },
+    {
+      "name": "PlatformConfigUpdated",
+      "discriminator": [
+        198,
+        206,
+        187,
+        204,
+        148,
+        251,
+        237,
+        25
+      ]
+    },
+    {
+      "name": "PlatformInitialized",
+      "discriminator": [
+        16,
+        222,
+        212,
+        5,
+        213,
+        140,
+        112,
+        162
+      ]
+    },
+    {
+      "name": "PoolLaunched",
+      "discriminator": [
+        163,
+        247,
+        64,
+        16,
+        107,
+        160,
+        183,
+        210
+      ]
+    },
+    {
+      "name": "QuoteTokenApproved",
+      "discriminator": [
+        112,
+        214,
+        91,
+        90,
+        217,
+        210,
+        118,
+        54
+      ]
+    },
+    {
+      "name": "QuoteTokenStatusChanged",
+      "discriminator": [
+        190,
+        150,
+        204,
+        164,
+        42,
+        117,
+        218,
+        8
+      ]
+    },
+    {
+      "name": "RwaCreated",
+      "discriminator": [
+        137,
+        3,
+        13,
+        165,
+        177,
+        90,
+        76,
+        41
+      ]
+    },
+    {
+      "name": "UnsoldClaimed",
+      "discriminator": [
+        137,
+        118,
+        124,
+        150,
+        65,
+        5,
+        10,
+        18
+      ]
+    },
+    {
+      "name": "VaultFunded",
+      "discriminator": [
+        192,
+        119,
+        245,
+        193,
+        55,
+        223,
+        195,
+        50
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UnauthorizedAccess",
+      "msg": "You are not authorized to perform this administrative action."
+    },
+    {
+      "code": 6001,
+      "name": "UnauthorizedIssuer",
+      "msg": "The caller does not own this RWA launch record."
+    },
+    {
+      "code": 6002,
+      "name": "PresetNotFound",
+      "msg": "The requested DBC curve preset does not exist."
+    },
+    {
+      "code": 6003,
+      "name": "PresetInactive",
+      "msg": "The requested DBC curve preset is currently deactivated by the protocol."
+    },
+    {
+      "code": 6004,
+      "name": "InvalidValuationTarget",
+      "msg": "The provided RWA valuation target must be greater than zero."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidTokenStandard",
+      "msg": "Institutional RWAs must use the Token-2022 standard."
+    },
+    {
+      "code": 6006,
+      "name": "MissingTransferHookExtension",
+      "msg": "The Token-2022 mint is missing the mandatory Transfer Hook extension for KYC."
+    },
+    {
+      "code": 6007,
+      "name": "UnauthorizedTransferHook",
+      "msg": "The Transfer Hook points to an unauthorized program ID. Must point to Aegis KYC Hook."
+    },
+    {
+      "code": 6008,
+      "name": "MathOverflow",
+      "msg": "A mathematical overflow occurred during fee or curve calculation."
+    },
+    {
+      "code": 6009,
+      "name": "CurveSerializationFailed",
+      "msg": "Failed to serialize the curve segments for the Meteora CPI."
+    },
+    {
+      "code": 6010,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: caller is not the protocol administrator."
+    },
+    {
+      "code": 6011,
+      "name": "InvalidAdmin",
+      "msg": "Admin cannot be the default/zero public key."
+    },
+    {
+      "code": 6012,
+      "name": "InvalidFeeRecipient",
+      "msg": "Fee recipient cannot be the default/zero public key."
+    },
+    {
+      "code": 6013,
+      "name": "InvalidUpsideTransferHook",
+      "msg": "Transfer hook program does not match the official Upside registry"
+    },
+    {
+      "code": 6014,
+      "name": "MissingTransferHookProgram",
+      "msg": "Missing Upside Transfer Hook Program in account context"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidStartPrice",
+      "msg": "Starting price must be greater than zero"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidQuoteThreshold",
+      "msg": "Migration quote threshold must be greater than zero"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidSegmentCount",
+      "msg": "Curve must contain between 2 and 16 segments"
+    },
+    {
+      "code": 6018,
+      "name": "NonMonotonicCurve",
+      "msg": "Curve is non-monotonic; prices must strictly increase"
+    },
+    {
+      "code": 6019,
+      "name": "ZeroLiquiditySegment",
+      "msg": "Curve contains a zero-liquidity segment"
+    },
+    {
+      "code": 6020,
+      "name": "CurveCapacityTooSmall",
+      "msg": "Curve quote capacity is mathematically smaller than the migration threshold"
+    },
+    {
+      "code": 6021,
+      "name": "PriceExpansionExceedsRwaLimit",
+      "msg": "Curve final price exceeds the authorized maximum multiplier for this RWA archetype"
+    },
+    {
+      "code": 6022,
+      "name": "ProtocolPaused",
+      "msg": "The protocol is paused. No new launches can be created."
+    },
+    {
+      "code": 6023,
+      "name": "InvalidLaunchStage",
+      "msg": "This launch is not at the stage required for this action."
+    },
+    {
+      "code": 6024,
+      "name": "BackingShortfall",
+      "msg": "Backing shortfall: the escrowed Real RWA no longer covers the cRWA in circulation."
+    },
+    {
+      "code": 6025,
+      "name": "InvalidRwaDecimals",
+      "msg": "RWA decimals must be between 6 and 9. Meteora rejects anything outside this range."
+    },
+    {
+      "code": 6026,
+      "name": "InvalidTotalSupply",
+      "msg": "Total supply must be greater than zero."
+    },
+    {
+      "code": 6027,
+      "name": "TokenNameTooLong",
+      "msg": "Token name is too long."
+    },
+    {
+      "code": 6028,
+      "name": "TokenSymbolTooLong",
+      "msg": "Token symbol is too long."
+    },
+    {
+      "code": 6029,
+      "name": "TokenUriTooLong",
+      "msg": "Token metadata URI is too long."
+    },
+    {
+      "code": 6030,
+      "name": "ComplianceRegistryMismatch",
+      "msg": "The Upside compliance registry does not belong to this token."
+    },
+    {
+      "code": 6031,
+      "name": "TransfersPaused",
+      "msg": "Transfers of the Real RWA are paused by the issuer."
+    },
+    {
+      "code": 6032,
+      "name": "SupplyCapRaised",
+      "msg": "The issuer raised the supply cap above the launch supply. Holders would be diluted."
+    },
+    {
+      "code": 6033,
+      "name": "VaultMintMismatch",
+      "msg": "The escrow vault holds the wrong mint."
+    },
+    {
+      "code": 6034,
+      "name": "VaultNotOwnedByAegis",
+      "msg": "The escrow vault is not owned by the Aegis authority PDA."
+    },
+    {
+      "code": 6035,
+      "name": "VaultFrozen",
+      "msg": "The escrow vault has been frozen by the issuer."
+    },
+    {
+      "code": 6036,
+      "name": "VaultHasDelegate",
+      "msg": "The escrow vault has a delegate, which could move the backing asset."
+    },
+    {
+      "code": 6037,
+      "name": "VaultGroupChanged",
+      "msg": "The escrow vault has been moved to a different transfer group."
+    },
+    {
+      "code": 6038,
+      "name": "WrongRedeemRule",
+      "msg": "The supplied transfer rule is not the vault-to-investor redemption rule."
+    },
+    {
+      "code": 6039,
+      "name": "RedemptionPathClosed",
+      "msg": "The redemption path is closed: no transfer rule permits vault to investor."
+    },
+    {
+      "code": 6040,
+      "name": "RedemptionPathLocked",
+      "msg": "The redemption path is time-locked and not yet open."
+    },
+    {
+      "code": 6041,
+      "name": "NotLaunchIssuer",
+      "msg": "Only the issuer recorded on this launch may perform this action."
+    },
+    {
+      "code": 6042,
+      "name": "VaultUnderfunded",
+      "msg": "The escrow vault balance does not equal the launch supply after minting."
+    },
+    {
+      "code": 6043,
+      "name": "SupplyMintedElsewhere",
+      "msg": "The Real RWA total supply does not equal the launch supply. Tokens exist elsewhere."
+    },
+    {
+      "code": 6044,
+      "name": "InvalidGroupConfiguration",
+      "msg": "The investor group must differ from the vault group."
+    },
+    {
+      "code": 6045,
+      "name": "QuoteTokenNotWhitelisted",
+      "msg": "This quote token has not been approved by the protocol admin."
+    },
+    {
+      "code": 6046,
+      "name": "QuoteTokenInactive",
+      "msg": "This quote token has been deactivated by the protocol admin."
+    },
+    {
+      "code": 6047,
+      "name": "QuoteTokenStatusUnchanged",
+      "msg": "The quote token is already in that state."
+    },
+    {
+      "code": 6048,
+      "name": "UnsupportedQuoteMint",
+      "msg": "Meteora cannot accept this quote mint: it must be legacy SPL, or Token-2022 carrying only metadata extensions."
+    },
+    {
+      "code": 6049,
+      "name": "PriceExpansionTooSmall",
+      "msg": "The price expansion must be greater than zero; a flat curve cannot be launched."
+    },
+    {
+      "code": 6050,
+      "name": "PriceExceedsMaxSqrtPrice",
+      "msg": "The resulting price exceeds Meteora's maximum representable sqrt price."
+    },
+    {
+      "code": 6051,
+      "name": "MigrationPriceAboveCurve",
+      "msg": "The sale would close above the end of the curve. This should be unreachable."
+    },
+    {
+      "code": 6052,
+      "name": "CurveSellsNothing",
+      "msg": "The curve would sell no tokens at all."
+    },
+    {
+      "code": 6053,
+      "name": "SupplyTooSmallForCurve",
+      "msg": "The token supply is too small for this raise. Lower the target or widen the price band."
+    },
+    {
+      "code": 6054,
+      "name": "InvalidPercentage",
+      "msg": "A percentage field exceeded its permitted maximum."
+    },
+    {
+      "code": 6055,
+      "name": "MigrationFeeTooHigh",
+      "msg": "The migration fee exceeds the protocol ceiling."
+    },
+    {
+      "code": 6056,
+      "name": "MigrationFeeTooLow",
+      "msg": "The migration fee is below the protocol floor. At zero the issuer raises nothing."
+    },
+    {
+      "code": 6057,
+      "name": "InvalidDbcProgram",
+      "msg": "The Meteora DBC program account is not the official program."
+    },
+    {
+      "code": 6058,
+      "name": "InvalidHookProgram",
+      "msg": "The transfer hook program is not the Aegis hook."
+    },
+    {
+      "code": 6059,
+      "name": "QuoteMintMismatch",
+      "msg": "The quote mint does not match the approved quote token record."
+    },
+    {
+      "code": 6060,
+      "name": "WrongMeteoraConfig",
+      "msg": "The supplied Meteora config is not the one recorded on this launch."
+    },
+    {
+      "code": 6061,
+      "name": "CrwaMintMalformed",
+      "msg": "The cRWA mint Meteora produced could not be parsed."
+    },
+    {
+      "code": 6062,
+      "name": "CrwaSupplyMismatch",
+      "msg": "cRWA supply does not equal the escrowed Real RWA. The 1:1 backing would be broken."
+    },
+    {
+      "code": 6063,
+      "name": "CrwaDecimalsMismatch",
+      "msg": "cRWA decimals do not match the Real RWA. The peg would be off by a power of ten."
+    },
+    {
+      "code": 6064,
+      "name": "CrwaMintAuthorityMismatch",
+      "msg": "cRWA mint authority is not the Aegis PDA. The issuer could print unbacked tokens."
+    },
+    {
+      "code": 6065,
+      "name": "CrwaFreezeAuthoritySet",
+      "msg": "cRWA has a freeze authority, which could be used to strand holders."
+    },
+    {
+      "code": 6066,
+      "name": "IssuerNotRegistered",
+      "msg": "The issuer is not registered in the investor group and cannot receive the asset back."
+    },
+    {
+      "code": 6067,
+      "name": "ZeroBridgeAmount",
+      "msg": "Bridge amount must be greater than zero."
+    },
+    {
+      "code": 6068,
+      "name": "HolderNotApproved",
+      "msg": "This wallet is not an approved holder of the security."
+    },
+    {
+      "code": 6069,
+      "name": "DepositPathClosed",
+      "msg": "The deposit path is closed: no transfer rule permits investor to vault."
+    },
+    {
+      "code": 6070,
+      "name": "DepositPathLocked",
+      "msg": "The deposit path is time-locked and not yet open."
+    },
+    {
+      "code": 6071,
+      "name": "NothingReceived",
+      "msg": "The vault received nothing from the deposit."
+    },
+    {
+      "code": 6072,
+      "name": "UnexpectedBaseFee",
+      "msg": "Meteora paid a base-token fee despite quote-only collection being configured."
+    },
+    {
+      "code": 6073,
+      "name": "LaunchAlreadyLive",
+      "msg": "The launch already has wrapper tokens in circulation and cannot be aborted."
+    },
+    {
+      "code": 6074,
+      "name": "InvalidFeeBps",
+      "msg": "A fee expressed in basis points is outside its permitted range."
+    },
+    {
+      "code": 6075,
+      "name": "InvalidVestingMonths",
+      "msg": "The vesting length is outside the range the protocol permits."
+    },
+    {
+      "code": 6076,
+      "name": "InvalidLiquiditySplit",
+      "msg": "The issuer's liquidity split must account for exactly the issuer's share."
+    },
+    {
+      "code": 6077,
+      "name": "PermanentLockTooLow",
+      "msg": "The issuer locks less liquidity permanently than the protocol requires."
+    },
+    {
+      "code": 6078,
+      "name": "RaiseBelowMinimum",
+      "msg": "The target raise is below the minimum set for this quote token."
+    },
+    {
+      "code": 6079,
+      "name": "NothingToClaim",
+      "msg": "The issuer has no unsold stock left to claim."
+    },
+    {
+      "code": 6080,
+      "name": "UnsoldNotInVault",
+      "msg": "The vault holds nothing above the wrapper supply, so none of the issuer's unsold stock can be paid."
+    }
+  ],
+  "types": [
+    {
+      "name": "AccessControl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_total_supply",
+            "type": "u64"
+          },
+          {
+            "name": "lockup_escrow_account",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeDeposited",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "real_rwa_locked",
+            "type": "u64"
+          },
+          {
+            "name": "crwa_minted",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeRedeemed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "real_rwa_locked",
+            "type": "u64"
+          },
+          {
+            "name": "crwa_minted",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateRwaArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "decimals",
+            "docs": [
+              "Shared by the Real RWA and the cRWA. Meteora rejects anything outside 6..=9, and the",
+              "two mints must match exactly or the 1:1 backing is off by a power of ten."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "total_supply",
+            "docs": [
+              "The exact supply that will be issued. Becomes Upside's `max_total_supply`, so the",
+              "issuer has no headroom to mint into without a visible on-chain cap change."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateRwaConfigArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sqrt_start_price",
+            "docs": [
+              "Opening price as a Q64.64 sqrt price. Derived by the frontend from a human price; an",
+              "issuer never types this."
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "sqrt_expansion_bps",
+            "docs": [
+              "How far the *sqrt* price may travel over the sale, in basis points. 10_000 is flat.",
+              "Expressed against the sqrt price so no square root is needed on-chain; a sqrt multiple",
+              "of `m` is a price multiple of `m²`."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "target_raise",
+            "docs": [
+              "Quote-token atoms to raise. Becomes Meteora's migration threshold."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "archetype",
+            "docs": [
+              "Bounds how far the price may expand. See `curve::RwaCurveArchetype`."
+            ],
+            "type": {
+              "defined": {
+                "name": "RwaCurveArchetype"
+              }
+            }
+          },
+          {
+            "name": "migration_fee_pct",
+            "docs": [
+              "Percentage of the raise diverted out of the graduated pool at migration and paid to the",
+              "issuer and Aegis.",
+              "",
+              "This is the only channel that delivers raised capital at all: Meteora turns the migration",
+              "threshold into pool liquidity, and the rest of it is locked. With this at zero an issuer",
+              "raises nothing, which is a silent and expensive surprise — hence the floor below."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "issuer_permanent_lock_pct",
+            "docs": [
+              "Of the liquidity that belongs to the issuer, the share locked forever.",
+              "",
+              "Permanently locked liquidity can never be withdrawn by anyone. Its fees still flow to the",
+              "issuer; the principal stays in the pool as a permanent floor under the wrapper's price."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "issuer_vested_pct",
+            "docs": [
+              "Of the liquidity that belongs to the issuer, the share released on a schedule.",
+              "",
+              "Together with `issuer_permanent_lock_pct` this must account for the issuer's entire",
+              "share. There is deliberately no third bucket: liquidity that is withdrawable on day one",
+              "is the exit a launchpad exists to prevent."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "vesting_months",
+            "docs": [
+              "How many 30-day periods that vested share unlocks over. Must be zero when nothing vests."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "pool_fee_bps",
+            "docs": [
+              "Swap fee on the graduated pool, in basis points."
+            ],
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FundVaultArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "investor_group",
+            "docs": [
+              "The Upside transfer group holding KYC-approved investors. The issuer chooses their own",
+              "group numbering, so Aegis cannot assume it — but it must be pinned, because redemption",
+              "is only ever permitted into this group."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Graduated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "unsold_burned",
+            "docs": [
+              "Unsold wrapper destroyed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "issuer_unsold",
+            "docs": [
+              "Real RWA behind that wrapper, now owed to the issuer and collectable with `claim_unsold`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "real_rwa_locked",
+            "type": "u64"
+          },
+          {
+            "name": "crwa_minted",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Launch",
+      "docs": [
+        "Per-launch state, at PDA [\"launch\", real_rwa_mint].",
+        "",
+        "Keyed on the Real RWA mint so that \"one launch per asset\" is structural, and so the",
+        "backing of a launch can be verified from a single account."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "issuer",
+            "docs": [
+              "The asset issuer. Holds all four Upside roles and full legal control of the Real RWA."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "real_rwa_mint",
+            "docs": [
+              "The legal, compliance-restricted token. Created by Upside via `create_rwa`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "crwa_mint",
+            "docs": [
+              "The tradable wrapper. `Pubkey::default()` until `Live` — Meteora creates it at pool init."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "meteora_config",
+            "docs": [
+              "Meteora DBC config account. Default until `ConfigCreated`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "virtual_pool",
+            "docs": [
+              "Meteora DBC virtual pool. Default until `Live`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "docs": [
+              "Quote token for the raise (USDC). Default until `ConfigCreated`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow_vault",
+            "docs": [
+              "Token-2022 account holding the Real RWA, owned by the launch's `aegis_authority` PDA.",
+              "Default until `ComplianceReady`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "total_supply",
+            "docs": [
+              "Total Real RWA to be issued, and the cRWA supply that must back it.",
+              "Equals Upside's `max_total_supply`, so there is no headroom to mint into."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "real_rwa_locked",
+            "docs": [
+              "Running ledger of Real RWA held in `escrow_vault`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "crwa_minted",
+            "docs": [
+              "Running ledger of cRWA in existence."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "issuer_unsold",
+            "docs": [
+              "Real RWA in the vault that belongs to the issuer, not to cRWA holders: the asset behind",
+              "the wrapper the curve never sold. Recorded by `finalize_graduation`, paid out by",
+              "`claim_unsold`.",
+              "",
+              "Kept in the vault rather than sent at graduation, so opening the bridge never depends on",
+              "the issuer being registered. It is never backing for cRWA: `claim_unsold` pays only what",
+              "the vault holds above the cRWA supply, so holders are always covered first."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vault_group",
+            "docs": [
+              "Upside transfer group the escrow vault sits in. Read from the vault's holder record at",
+              "`fund_vault` and pinned from then on, so a later group change is detectable."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "investor_group",
+            "docs": [
+              "Upside transfer group that KYC-approved investors sit in. Declared by the issuer at",
+              "`fund_vault`. Redemption is only permitted into this group."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "decimals",
+            "docs": [
+              "Shared by both mints. Must be 6..=9 (Meteora) and identical on both sides (peg)."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "stage",
+            "type": {
+              "defined": {
+                "name": "LaunchStage"
+              }
+            }
+          },
+          {
+            "name": "archetype",
+            "docs": [
+              "Set at `create_rwa_config`. Placeholder value until then."
+            ],
+            "type": {
+              "defined": {
+                "name": "RwaCurveArchetype"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "authority_bump",
+            "docs": [
+              "Bump for [\"authority\", launch]. Stored so CPI signing does not re-derive it."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LaunchAborted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "real_rwa_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "issuer",
+            "type": "pubkey"
+          },
+          {
+            "name": "returned",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LaunchConfigured",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "meteora_config",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "archetype",
+            "type": {
+              "defined": {
+                "name": "RwaCurveArchetype"
+              }
+            }
+          },
+          {
+            "name": "target_raise",
+            "type": "u64"
+          },
+          {
+            "name": "sqrt_start_price",
+            "type": "u128"
+          },
+          {
+            "name": "sqrt_end_price",
+            "type": "u128"
+          },
+          {
+            "name": "migration_sqrt_price",
+            "docs": [
+              "The price at which the sale actually closes, which is what the last buyer pays."
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "migration_fee_pct",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LaunchPoolArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "docs": [
+              "Metadata for the wrapper token. Cosmetic: the legal identity lives on the Real RWA."
+            ],
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LaunchStage",
+      "docs": [
+        "How far a launch has progressed. Stages only ever move forward, and every instruction",
+        "asserts the exact stage it is valid in.",
+        "",
+        "The stages exist because token genesis cannot happen in one shot: Meteora creates the cRWA",
+        "mint itself, inside its own pool-initialization instruction, so the wrapper token does not",
+        "exist until `Live`."
+      ],
+      "repr": {
+        "kind": "rust"
+      },
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "TokenCreated"
+          },
+          {
+            "name": "Funded"
+          },
+          {
+            "name": "Configured"
+          },
+          {
+            "name": "Live"
+          },
+          {
+            "name": "Graduated"
+          },
+          {
+            "name": "Aborted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PartnerRevenueClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "kind",
+            "docs": [
+              "0 trading fee, 1 migration fee. See `instructions::claim::RevenueKind`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "quote_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlatformConfig",
+      "docs": [
+        "Global protocol settings.",
+        "",
+        "Every economic field here falls into one of two groups, and the distinction matters:",
+        "",
+        "* **Protocol revenue** — a single value the admin sets. The issuer cannot choose these,",
+        "because the issuer would always choose zero.",
+        "* **Bounds on issuer choices** — a floor and a ceiling. Inside them the issuer decides,",
+        "because these are choices about the issuer's own capital where different issuers",
+        "legitimately want different answers.",
+        "",
+        "Anything that protects the backing or the anti-rug guarantees is not here at all. Those are",
+        "fixed in the program and neither party can move them."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "The global administrator of the Aegis protocol."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_recipient",
+            "docs": [
+              "The protocol treasury. Receives the launch creation fee and every claimed revenue stream."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "creation_fee_lamports",
+            "docs": [
+              "Flat fee charged in lamports to create a launch."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "is_paused",
+            "docs": [
+              "Master failsafe switch. If true, new launches revert."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "curve_fee_bps",
+            "docs": [
+              "Fee charged on every trade during the sale, in basis points. This is the placement fee:",
+              "the protocol's main compensation for running the launch. Meteora's own floor is 25 bps."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "issuer_curve_fee_share_pct",
+            "docs": [
+              "The issuer's share of that placement fee, as a percentage.",
+              "",
+              "Zero by default, and deliberately so. The issuer is already paid by the sale proceeds;",
+              "handing them part of the fee buyers pay to buy the issuer's own token is charging twice.",
+              "In a traditional placement the agent takes the fee and the issuer takes the proceeds."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "aegis_migration_fee_share_pct",
+            "docs": [
+              "The protocol's share of the migration fee, as a percentage.",
+              "",
+              "Previously this was passed in by the issuer, which meant any issuer could set it so the",
+              "protocol received nothing. It is protocol revenue and belongs here.",
+              "",
+              "Zero by default, so the fee model is a single legible number: the protocol charges the",
+              "placement fee above and nothing else. Raise it if that proves too little."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "aegis_lp_share_pct",
+            "docs": [
+              "Share of the graduated liquidity permanently locked to the protocol, as a percentage.",
+              "",
+              "This is the only liquidity that stays permanently. Its purpose is not anti-rug — the",
+              "bridge already guarantees redemption — but to ensure a trading venue never disappears",
+              "entirely for holders who have not completed KYC and therefore cannot use the bridge."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "min_migration_fee_pct",
+            "docs": [
+              "Floor on the share of the raise paid out as cash. At zero the issuer raises nothing,",
+              "because everything they raised becomes pool liquidity."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "max_migration_fee_pct",
+            "docs": [
+              "Ceiling on the same. The remainder seeds the trading venue, so this bounds how thin that",
+              "venue can be."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "min_issuer_permanent_pct",
+            "docs": [
+              "Minimum share of the issuer's liquidity that must be locked permanently rather than",
+              "vested. Zero by default: vesting already prevents a day-one withdrawal, and permanently",
+              "locking a claim on a real asset is a genuine loss rather than a formality."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "min_vesting_months",
+            "docs": [
+              "Bounds on how long the issuer's liquidity vests back to them, in months. The floor",
+              "protects early holders from the market emptying immediately; the ceiling stops an issuer",
+              "from tying up their own capital longer than Meteora permits."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "max_vesting_months",
+            "type": "u16"
+          },
+          {
+            "name": "min_pool_fee_bps",
+            "docs": [
+              "Bounds on the trading fee of the graduated pool, in basis points.",
+              "",
+              "Worth keeping low. A cRWA should trade close to the value of the asset behind it, and a",
+              "high pool fee is exactly how far the price can drift before correcting it is worthwhile."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "max_pool_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlatformConfigUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "creation_fee_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "is_paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlatformInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "creation_fee_lamports",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolLaunched",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "crwa_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "virtual_pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "crwa_supply",
+            "docs": [
+              "Equal to the escrowed asset at this moment, by construction."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolMetrics",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "total_protocol_base_fee",
+            "type": "u64"
+          },
+          {
+            "name": "total_protocol_quote_fee",
+            "type": "u64"
+          },
+          {
+            "name": "total_trading_base_fee",
+            "type": "u64"
+          },
+          {
+            "name": "total_trading_quote_fee",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolState",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "volatility_tracker",
+            "docs": [
+              "volatility tracker"
+            ],
+            "type": {
+              "defined": {
+                "name": "VolatilityTracker"
+              }
+            }
+          },
+          {
+            "name": "config",
+            "docs": [
+              "config key"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "docs": [
+              "creator"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "base_mint",
+            "docs": [
+              "base mint"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "base_vault",
+            "docs": [
+              "base vault"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_vault",
+            "docs": [
+              "quote vault"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "base_reserve",
+            "docs": [
+              "base reserve"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "quote_reserve",
+            "docs": [
+              "quote reserve"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "protocol_base_fee",
+            "docs": [
+              "protocol base fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "protocol_quote_fee",
+            "docs": [
+              "protocol quote fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "partner_base_fee",
+            "docs": [
+              "partner base fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "partner_quote_fee",
+            "docs": [
+              "trading quote fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "sqrt_price",
+            "docs": [
+              "current price"
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "activation_point",
+            "docs": [
+              "Activation point"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pool_type",
+            "docs": [
+              "pool type, spl token or token2022"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "is_migrated",
+            "docs": [
+              "is migrated"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "is_partner_withdraw_surplus",
+            "docs": [
+              "is partner withdraw surplus"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "is_protocol_withdraw_surplus",
+            "docs": [
+              "is protocol withdraw surplus"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "migration_progress",
+            "docs": [
+              "migration progress"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "is_withdraw_leftover",
+            "docs": [
+              "is withdraw leftover"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "is_creator_withdraw_surplus",
+            "docs": [
+              "is creator withdraw surplus"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "migration_fee_withdraw_status",
+            "docs": [
+              "migration fee withdraw status",
+              "bit 1 (0b010) creator",
+              "bit 2 (0b100) partner"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "metrics",
+            "docs": [
+              "pool metrics"
+            ],
+            "type": {
+              "defined": {
+                "name": "PoolMetrics"
+              }
+            }
+          },
+          {
+            "name": "finish_curve_timestamp",
+            "docs": [
+              "The time curve is finished"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_base_fee",
+            "docs": [
+              "creator base fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_quote_fee",
+            "docs": [
+              "creator quote fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "legacy_creation_fee_bits",
+            "docs": [
+              "legacy creation fee bits, we dont use this now"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "creation_fee_bits",
+            "docs": [
+              "pool creation fee claim status"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "has_swap",
+            "docs": [
+              "Cached flag"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "_padding_0",
+            "docs": [
+              "Padding for further use"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                5
+              ]
+            }
+          },
+          {
+            "name": "protocol_liquidity_migration_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "_padding_1",
+            "type": {
+              "array": [
+                "u8",
+                6
+              ]
+            }
+          },
+          {
+            "name": "protocol_migration_base_fee_amount",
+            "type": "u64"
+          },
+          {
+            "name": "protocol_migration_quote_fee_amount",
+            "type": "u64"
+          },
+          {
+            "name": "_padding_2",
+            "docs": [
+              "Padding for further use"
+            ],
+            "type": {
+              "array": [
+                "u64",
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "QuoteToken",
+      "docs": [
+        "An admin-approved quote token, at PDA [\"quote_token\", mint].",
+        "",
+        "Existence of this account is the whitelist: no account, no launch. Keyed on the mint rather",
+        "than held as a list inside `PlatformConfig` so the set can grow without reallocating, and so",
+        "checking one costs a single account read.",
+        "",
+        "Approval is not only a business decision. Meteora refuses quote mints it cannot handle",
+        "permissionlessly, so the check that happens at approval time is also the check that stops an",
+        "issuer from configuring a launch that Meteora would reject halfway through."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "docs": [
+              "Copied at approval so callers do not need to load the mint to reason about amounts."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "is_active",
+            "docs": [
+              "Whether new launches may use this token. Deactivating is preferred over closing the",
+              "account: launches already configured against this quote token keep working, and the",
+              "address cannot be re-approved with different data behind an operator's back."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "is_legacy_spl",
+            "docs": [
+              "True when the mint is owned by the legacy SPL Token program rather than Token-2022.",
+              "",
+              "Client-facing only: the program never reads it, because Meteora validates the quote token",
+              "program against the mint itself during pool creation. It is recorded so a frontend can",
+              "build the launch transaction without a second account fetch."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "min_raise",
+            "docs": [
+              "Smallest raise permitted in this token, in its own smallest units.",
+              "",
+              "Held per token rather than globally because the number is meaningless without the",
+              "token's decimals: a million units of a six-decimal stablecoin is a dollar, and of a",
+              "nine-decimal token it is a thousandth of one."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "approved_at",
+            "docs": [
+              "Unix timestamp of approval. Useful for audit trails; never read by the program."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "QuoteTokenApproved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "is_legacy_spl",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "QuoteTokenStatusChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RwaCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "real_rwa_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "issuer",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_supply",
+            "type": "u64"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RwaCurveArchetype",
+      "docs": [
+        "Which price-expansion ceiling the curve must respect. See the math firewall."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "FixedPar"
+          },
+          {
+            "name": "BookBuilding"
+          },
+          {
+            "name": "GrowthCapital"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SecurityAssociatedAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group",
+            "type": "u64"
+          },
+          {
+            "name": "holder",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferHookPool",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool_state",
+            "type": {
+              "defined": {
+                "name": "PoolState"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferRestrictionData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "security_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "access_control_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "current_holders_count",
+            "type": "u64"
+          },
+          {
+            "name": "holder_ids",
+            "type": "u64"
+          },
+          {
+            "name": "max_holders",
+            "type": "u64"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "lockup_escrow_account",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferRule",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "transfer_restriction_data",
+            "type": "pubkey"
+          },
+          {
+            "name": "transfer_group_id_from",
+            "type": "u64"
+          },
+          {
+            "name": "transfer_group_id_to",
+            "type": "u64"
+          },
+          {
+            "name": "locked_until",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UnsoldClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "issuer",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "remaining",
+            "docs": [
+              "Still owed to the issuer. Non-zero only if the vault held less than they were owed."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdatePlatformConfigParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Optional new protocol administrator."
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "creation_fee_lamports",
+            "docs": [
+              "Optional new pool creation fee, in lamports."
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "is_paused",
+            "docs": [
+              "Optional new pause state."
+            ],
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "curve_fee_bps",
+            "docs": [
+              "Placement fee on the sale, in basis points. Meteora's own floor is 25."
+            ],
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "issuer_curve_fee_share_pct",
+            "docs": [
+              "The issuer's share of that placement fee."
+            ],
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "aegis_migration_fee_share_pct",
+            "docs": [
+              "The protocol's share of the migration fee."
+            ],
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "aegis_lp_share_pct",
+            "docs": [
+              "Share of graduated liquidity permanently locked to the protocol."
+            ],
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "min_migration_fee_pct",
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "max_migration_fee_pct",
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "min_issuer_permanent_pct",
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "min_vesting_months",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "max_vesting_months",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "min_pool_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "max_pool_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultFunded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "launch",
+            "type": "pubkey"
+          },
+          {
+            "name": "real_rwa_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "vault_group",
+            "type": "u64"
+          },
+          {
+            "name": "investor_group",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VolatilityTracker",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "last_update_timestamp",
+            "type": "u64"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "sqrt_price_reference",
+            "type": "u128"
+          },
+          {
+            "name": "volatility_accumulator",
+            "type": "u128"
+          },
+          {
+            "name": "volatility_reference",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WalletRole",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "access_control",
+            "type": "pubkey"
+          },
+          {
+            "name": "role",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

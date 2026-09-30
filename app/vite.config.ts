@@ -1,0 +1,49 @@
+import { defineConfig, loadEnv, type Plugin } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+
+/**
+ * Production builds get a Content-Security-Policy. It is left out of dev because Vite's hot
+ * reload injects inline scripts that a strict policy would block.
+ *
+ * The page talks to exactly one RPC endpoint (and its websocket), so `connect-src` names it and
+ * nothing else: a compromised dependency cannot quietly send data anywhere.
+ */
+function contentSecurityPolicy(rpcUrl: string): Plugin {
+  const rpc = new URL(rpcUrl);
+  const ws = `${rpc.protocol === "https:" ? "wss:" : "ws:"}//${rpc.hostname}${rpc.port ? `:${Number(rpc.port) + 1}` : ""}`;
+  const policy = [
+    "default-src 'self'",
+    "script-src 'self'",
+    // React style attributes and the wallet modal's stylesheet.
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    `connect-src 'self' ${rpc.origin} ${ws}`,
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'none'",
+  ].join("; ");
+  return {
+    name: "aegis-csp",
+    apply: "build",
+    transformIndexHtml: (html) =>
+      html.replace("<head>", `<head>\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`),
+  };
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      // web3.js and Anchor expect Node's Buffer in the browser. Tests run in Node, which has the
+      // real one; polyfilling there would mix two Buffer types between our code and libraries.
+      !process.env.VITEST && nodePolyfills({ include: ["buffer"], globals: { Buffer: true, global: false, process: false } }),
+      contentSecurityPolicy(env.VITE_RPC_URL || "http://127.0.0.1:8899"),
+    ],
+    server: { port: 5173, strictPort: true },
+  };
+});

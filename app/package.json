@@ -1,0 +1,39 @@
+{
+  "name": "aegis-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -b --noEmit",
+    "idl": "node scripts/sync-idl.mjs"
+  },
+  "dependencies": {
+    "@solana/spl-token": "0.4.15",
+    "@solana/spl-token-metadata": "0.1.6",
+    "@solana/wallet-adapter-base": "^0.9.28",
+    "@solana/wallet-adapter-react": "^0.15.40",
+    "@solana/wallet-adapter-react-ui": "^0.9.40",
+    "@solana/web3.js": "1.99.0",
+    "@tanstack/react-query": "^5",
+    "bs58": "^6",
+    "buffer": "^6.0.3",
+    "react": "^19",
+    "react-dom": "^19",
+    "react-router-dom": "^7"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4",
+    "typescript": "^5.7",
+    "vite": "^8",
+    "vite-plugin-node-polyfills": "^0.28.0",
+    "vitest": "^5.0.3"
+  }
+}
