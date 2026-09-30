@@ -18,6 +18,16 @@ const METEORA: Record<string, Omit<Explained, "retry" | "charged">> = {
     detail: "The raise reached its target and the offering is moving to its permanent pool. Trading continues there once it opens.",
   },
   AmountIsZero: { title: "Enter an amount above zero", detail: "The amount rounds to nothing in this token." },
+  // Aegis bridge (programs/aegis/src/errors.rs)
+  HolderNotApproved: { title: "Your wallet isn’t approved yet", detail: "Only wallets the issuer has approved can hold the security. Nothing was sent." },
+  TransfersPaused: { title: "The issuer has paused transfers", detail: "The security can’t move until the issuer resumes transfers. Your wrapper still trades freely." },
+  DepositPathClosed: { title: "Deposits are closed", detail: "The issuer hasn’t opened the route from the security back into the wrapper." },
+  DepositPathLocked: { title: "Deposits aren’t open yet", detail: "The issuer’s rule keeps this route locked until a set date." },
+  VaultUnderfunded: { title: "The escrow can’t cover that", detail: "There is less of the security in escrow than you asked for. Try a smaller amount." },
+  BackingShortfall: { title: "The escrow is short", detail: "The bridge stops when the escrow holds less than it should, so nobody is paid ahead of anyone else." },
+  VaultFrozen: { title: "The escrow is frozen", detail: "The issuer has frozen the escrow, so the bridge can’t move tokens." },
+  InvalidLaunchStage: { title: "The bridge isn’t open", detail: "It opens when the sale graduates to its permanent pool." },
+  ZeroBridgeAmount: { title: "Enter an amount above zero", detail: "Nothing to exchange." },
 };
 
 function logsOf(error: unknown): string[] {

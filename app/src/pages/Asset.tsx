@@ -164,6 +164,16 @@ function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcCo
         </div>
 
         <div className="flex h-fit flex-col gap-6">
+        {launch.stage === "Graduated" && (
+          <div className="flex flex-col gap-3 border border-ink bg-ink p-6 text-paper">
+            <span className="kicker text-[#6FCF97]">The bridge is open</span>
+            <span className="font-serif text-3xl leading-tight">Exchange {wrapper} for the security, one for one.</span>
+            <span className="text-sm leading-relaxed text-line">No fee and no price impact. Holding the security needs the issuer’s approval; the wrapper never does.</span>
+            <Link to={`/asset/${launch.realRwaMint.toBase58()}/bridge`} className="mt-2 inline-flex min-h-12 items-center justify-center bg-paper font-semibold text-ink hover:bg-surface">
+              Go to the bridge
+            </Link>
+          </div>
+        )}
         {launch.stage === "Live" && (
           <div id="trade" className="scroll-mt-6">
             <TradePanel entry={entry} />
