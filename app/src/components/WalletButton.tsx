@@ -1,24 +1,33 @@
-import { WalletReadyState } from "@solana/wallet-adapter-base";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
-import { shortAddress } from "../lib/amount";
+import { config, explorerUrl } from "../config";
+import { formatUnits, shortAddress } from "../lib/amount";
 import { useIsIssuer } from "../hooks/useRegistry";
-import { NoWalletDialog } from "./NoWalletDialog";
+import { useConnectModal } from "./connect/ConnectModal";
 
 const base =
   "inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 px-4 text-sm transition-colors disabled:cursor-wait disabled:opacity-60";
 
+/** Only images are accepted as a wallet's icon; it is supplied by the wallet itself. */
+const safeIcon = (icon: string | undefined) => (icon && /^(data:image\/(svg\+xml|png|webp|jpeg);|https:\/\/)/i.test(icon) ? icon : null);
+
 export function WalletButton() {
-  const { publicKey, connecting, disconnecting, disconnect, wallet, wallets } = useWallet();
-  const { setVisible } = useWalletModal();
+  const { publicKey, connecting, disconnecting, disconnect, wallet } = useWallet();
+  const { connection } = useConnection();
+  const { open: openConnect } = useConnectModal();
   const isIssuer = useIsIssuer();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [noWallet, setNoWallet] = useState(false);
   const menuId = useId();
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+
+  const sol = useQuery({
+    queryKey: ["sol", config.rpcUrl, publicKey?.toBase58()],
+    enabled: Boolean(publicKey) && open,
+    queryFn: async () => BigInt(await connection.getBalance(publicKey!, "confirmed")),
+  });
 
   // Close on outside click and on Escape, returning focus to the button that opened it.
   useEffect(() => {
@@ -42,33 +51,27 @@ export function WalletButton() {
 
   useEffect(() => setOpen(false), [publicKey]);
 
-  const hasWallet = wallets.some(
-    (w) => w.readyState === WalletReadyState.Installed || w.readyState === WalletReadyState.Loadable
-  );
-  const openPicker = () => (hasWallet ? setVisible(true) : setNoWallet(true));
-
   if (!publicKey) {
     return (
-      <>
-        <button type="button" className={`${base} bg-ink font-semibold text-paper hover:bg-ink2`} disabled={connecting} onClick={openPicker}>
-          {connecting ? `Connecting${wallet ? ` to ${wallet.adapter.name}` : ""}…` : "Connect wallet"}
-        </button>
-        {noWallet && <NoWalletDialog onClose={() => setNoWallet(false)} />}
-      </>
+      <button type="button" className={`${base} bg-ink font-semibold text-paper hover:bg-ink2`} disabled={connecting} onClick={openConnect}>
+        {connecting ? "Connecting…" : "Connect wallet"}
+      </button>
     );
   }
 
   const address = publicKey.toBase58();
+  const icon = safeIcon(wallet?.adapter.icon);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(address);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Clipboard can be blocked (insecure context, permissions); the full address is shown instead.
-      setCopied(false);
+      // Clipboard can be blocked; the full address is shown in the menu instead.
     }
   };
+
+  const item = "flex min-h-11 w-full cursor-pointer items-center gap-3 px-4 text-left text-sm hover:bg-paper";
 
   return (
     <div ref={root} className="relative">
@@ -79,27 +82,37 @@ export function WalletButton() {
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((v) => !v)}
-        className={`${base} border border-line bg-surface font-mono font-medium hover:border-ink`}
+        className={`${base} border border-line bg-surface pl-2 font-mono font-medium hover:border-ink`}
       >
+        {icon ? <img src={icon} alt="" width={22} height={22} className="size-5.5 rounded" /> : <span className="size-2 rounded-full bg-green" aria-hidden="true" />}
         {shortAddress(address)}
         {isIssuer && <span className="bg-ink px-1.5 py-0.5 font-sans text-[11px] tracking-[0.08em] text-paper uppercase">Issuer</span>}
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className={`transition-transform ${open ? "rotate-180" : ""}`}>
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
       {open && (
-        <div id={menuId} role="menu" className="absolute right-0 z-40 mt-2 w-72 border border-ink bg-surface shadow-[0_12px_32px_rgb(22_20_15/0.14)]">
-          <div className="border-b border-rule px-4 py-3">
-            <div className="kicker">Connected{wallet ? ` · ${wallet.adapter.name}` : ""}</div>
-            <div className="mt-1 font-mono text-xs break-all text-ink2">{address}</div>
+        <div id={menuId} role="menu" className="absolute right-0 z-40 mt-2 w-76 border border-ink bg-surface shadow-[0_12px_32px_rgb(22_20_15/0.14)]">
+          <div className="flex flex-col gap-1 border-b border-rule px-4 py-4">
+            <div className="flex items-center gap-2">
+              {icon && <img src={icon} alt="" width={20} height={20} className="size-5 rounded" />}
+              <span className="kicker">{wallet?.adapter.name ?? "Wallet"} · {config.cluster}</span>
+            </div>
+            <span className="font-serif text-3xl num">
+              {sol.data === undefined ? "—" : formatUnits(sol.data, 9, { maxFraction: 4 })} <span className="font-sans text-sm text-mute">SOL</span>
+            </span>
+            <span className="font-mono text-xs break-all text-ink2">{address}</span>
           </div>
-          <button role="menuitem" type="button" onClick={copy} className="flex min-h-11 w-full cursor-pointer items-center px-4 text-left text-sm hover:bg-paper">
+          <button role="menuitem" type="button" onClick={copy} className={item}>
             {copied ? "Copied ✓" : "Copy address"}
           </button>
-          <button role="menuitem" type="button" onClick={() => { setOpen(false); setVisible(true); }} className="flex min-h-11 w-full cursor-pointer items-center px-4 text-left text-sm hover:bg-paper">
-            Change wallet
+          <a role="menuitem" href={explorerUrl("address", address)} target="_blank" rel="noopener noreferrer" className={item}>
+            View on Explorer ↗<span className="sr-only"> (opens Solana Explorer)</span>
+          </a>
+          <button role="menuitem" type="button" onClick={() => { setOpen(false); openConnect(); }} className={item}>
+            Switch wallet
           </button>
-          <button role="menuitem" type="button" disabled={disconnecting} onClick={() => void disconnect()} className="flex min-h-11 w-full cursor-pointer items-center border-t border-rule px-4 text-left text-sm text-error hover:bg-paper">
+          <button role="menuitem" type="button" disabled={disconnecting} onClick={() => void disconnect()} className={`${item} border-t border-rule text-error`}>
             Disconnect
           </button>
         </div>

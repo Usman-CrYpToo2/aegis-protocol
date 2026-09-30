@@ -1,8 +1,8 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { config, explorerUrl } from "../../config";
+import { useConnectModal } from "../connect/ConnectModal";
 import { loadAsset } from "../../chain/asset";
 import type { RegistryEntry } from "../../chain/registry";
 import { loadTradeAccounts, prepareTrade, type Side } from "../../chain/trade";
@@ -47,7 +47,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
   const { launch, quote, detail } = entry;
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
-  const { setVisible } = useWalletModal();
+  const { open: openConnect } = useConnectModal();
   const queryClient = useQueryClient();
   const inputId = useId();
 
@@ -312,7 +312,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
             )}
 
             {!publicKey ? (
-              <button type="button" onClick={() => setVisible(true)} className="min-h-14 cursor-pointer bg-ink text-base font-semibold text-paper hover:bg-ink2">
+              <button type="button" onClick={openConnect} className="min-h-14 cursor-pointer bg-ink text-base font-semibold text-paper hover:bg-ink2">
                 Connect a wallet to {side}
               </button>
             ) : (

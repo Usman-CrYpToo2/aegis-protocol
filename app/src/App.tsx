@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import type { WalletError } from "@solana/wallet-adapter-base";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { ConnectModalProvider } from "./components/connect/ConnectModal";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { config } from "./config";
 import { Header } from "./components/Header";
@@ -24,10 +24,14 @@ const queryClient = new QueryClient({
 
 export function App() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  // Set by the connect dialog while it is open, so its errors show in place instead of as a toast.
+  const inDialog = useRef<((message: string) => boolean) | null>(null);
 
   // Wallet errors (rejected connection, locked wallet) become a plain message, never a crash.
   const onWalletError = useCallback((error: WalletError) => {
     const rejected = /reject|cancel|denied/i.test(error.message);
+    const text = rejected ? "Connection cancelled in your wallet." : `Your wallet reported a problem: ${error.message || error.name}`;
+    if (inDialog.current?.(text)) return;
     setToast({
       tone: rejected ? "neutral" : "error",
       text: rejected ? "Connection cancelled in your wallet." : `Your wallet reported a problem: ${error.message || error.name}`,
@@ -40,7 +44,7 @@ export function App() {
         {/* An empty list means "every wallet that implements the Wallet Standard", which is
             how Phantom, Solflare and Backpack register themselves today. */}
         <WalletProvider wallets={[]} autoConnect onError={onWalletError}>
-          <WalletModalProvider>
+          <ConnectModalProvider errorRef={inDialog}>
             <BrowserRouter>
               <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-surface focus:px-4 focus:py-2">
                 Skip to content
@@ -55,7 +59,7 @@ export function App() {
               </main>
               <Toast message={toast} onDismiss={() => setToast(null)} />
             </BrowserRouter>
-          </WalletModalProvider>
+          </ConnectModalProvider>
         </WalletProvider>
       </ConnectionProvider>
     </QueryClientProvider>

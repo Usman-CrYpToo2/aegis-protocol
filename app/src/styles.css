@@ -1,4 +1,3 @@
-@import "@solana/wallet-adapter-react-ui/styles.css";
 @import "tailwindcss";
 
 /* The design's tokens. Components use these names, never raw hex. */
@@ -74,14 +73,8 @@
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
-/* Wallet picker, restyled to the registry rather than the adapter's default dark theme. */
-.wallet-adapter-modal-wrapper { background: var(--color-surface); border: 1px solid var(--color-ink); border-radius: 0; box-shadow: 0 12px 32px rgb(22 20 15 / 0.18); font-family: var(--font-sans); }
-.wallet-adapter-modal-title { color: var(--color-ink); font-family: var(--font-serif); font-weight: 400; font-size: 30px; }
-.wallet-adapter-modal-button-close { background: transparent; }
-.wallet-adapter-modal-button-close svg { fill: var(--color-ink); }
-.wallet-adapter-modal-list .wallet-adapter-button { color: var(--color-ink); font-family: var(--font-sans); font-weight: 500; border-radius: 0; }
-.wallet-adapter-modal-list .wallet-adapter-button:not([disabled]):hover { background: var(--color-paper); }
-.wallet-adapter-modal-list-more { color: var(--color-ink); font-family: var(--font-sans); }
-.wallet-adapter-modal-list-more svg { fill: var(--color-ink); }
-.wallet-adapter-modal-overlay { background: rgb(22 20 15 / 0.5); }
-.wallet-adapter-modal-middle-button { background: var(--color-blue); border-radius: 0; }
+/* Connect dialog: a sheet that slides up on phones, a gentle rise on wider screens. */
+.connect-sheet { animation: sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
+@media (width < 40rem) { .connect-sheet { animation-name: sheet-slide; } }
+@keyframes sheet-slide { from { transform: translateY(100%); } }
