@@ -107,6 +107,11 @@ export function WalletButton() {
           <Link role="menuitem" to="/holdings" onClick={() => setOpen(false)} className={item}>
             My holdings
           </Link>
+          {isIssuer && (
+            <Link role="menuitem" to="/console" onClick={() => setOpen(false)} className={item}>
+              Issuer console
+            </Link>
+          )}
           <button role="menuitem" type="button" onClick={copy} className={item}>
             {copied ? "Copied ✓" : "Copy address"}
           </button>

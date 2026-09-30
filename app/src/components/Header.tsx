@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { config } from "../config";
 import { ProgramNotDeployedError } from "../chain/registry";
 import { useRegistry } from "../hooks/useRegistry";
+import { useConsole } from "../hooks/useConsole";
 import { LogoMark } from "./Logo";
 import { WalletButton } from "./WalletButton";
 
@@ -30,6 +31,8 @@ const link = ({ isActive }: { isActive: boolean }) =>
 export function Header() {
   const { pathname } = useLocation();
   const { publicKey } = useWallet();
+  const console_ = useConsole();
+  const attention = console_.attention.length;
   // Asset pages are part of the registry, so its tab stays marked while one is open.
   const inRegistry = pathname === "/" || pathname.startsWith("/asset/");
   return (
@@ -47,6 +50,17 @@ export function Header() {
             {publicKey && (
               <NavLink to="/holdings" className={link}>
                 My holdings
+              </NavLink>
+            )}
+            {/* Only a wallet recorded as some launch's issuer sees the console. */}
+            {console_.isIssuer && (
+              <NavLink to="/console" className={link}>
+                Issuer console
+                {attention > 0 && (
+                  <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber px-1.5 font-mono text-[11px] text-white" aria-label={`${attention} items need attention`}>
+                    {attention}
+                  </span>
+                )}
               </NavLink>
             )}
           </nav>
