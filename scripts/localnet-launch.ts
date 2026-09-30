@@ -11,6 +11,13 @@
  *
  * Wallets are throwaway keypairs kept in .localnet/actors.json, so a second run on the same node
  * reuses the same admin and simply starts another launch.
+ *
+ * Optional, to fill a local registry with launches at different stages:
+ *
+ *   AEGIS_NAME="Aegis Tower B" AEGIS_SYMBOL=TWRB   the asset's name and symbol
+ *   AEGIS_STOP_AT=funded|live|graduated            where to stop (default: graduated, then bridge
+ *                                                  and claims, the full lifecycle)
+ *   AEGIS_BUY=6200                                 USDC to buy when stopping at live
  */
 import * as fs from "fs";
 import {
@@ -52,6 +59,19 @@ const ISSUER_HOLDER_ID = 1; // the vault is holder 0
 const BUYER_HOLDER_ID = 2;
 
 const conn = new Connection(RPC, "confirmed");
+
+const STAGES = ["funded", "live", "graduated"] as const;
+type StopAt = (typeof STAGES)[number];
+
+function readOptions() {
+  const stopAt = (process.env.AEGIS_STOP_AT ?? "graduated") as StopAt;
+  if (!STAGES.includes(stopAt)) throw new Error(`AEGIS_STOP_AT must be one of ${STAGES.join(", ")}`);
+  const symbol = process.env.AEGIS_SYMBOL ?? "TWRA";
+  if (!/^[A-Z0-9]{1,8}$/.test(symbol)) throw new Error("AEGIS_SYMBOL must be 1-8 capital letters or digits");
+  const buyWhole = BigInt(process.env.AEGIS_BUY ?? "6200");
+  if (buyWhole <= 0n) throw new Error("AEGIS_BUY must be a positive whole number of USDC");
+  return { name: process.env.AEGIS_NAME ?? "Aegis Tower A", symbol, stopAt, buy: buyWhole * 10n ** BigInt(USDC_DECIMALS) };
+}
 
 // ------------------------------------------------------------------------------------------------
 // The test helpers read accounts synchronously from the in-memory chain. This serves the same
@@ -120,6 +140,7 @@ async function main() {
   if (!version) throw new Error(`No local node at ${RPC}. Start it with scripts/localnet.sh.`);
 
   const { admin, issuer, treasury, buyer, usdc } = loadActors();
+  const options = readOptions();
 
   // The helpers, pointed at the node.
   const env = Env.create();
@@ -187,7 +208,11 @@ async function main() {
   const rwa = Keypair.generate();
   const mint = rwa.publicKey;
   const vault = upside.ataFor(mint, Env.aegisAuthorityPda(mint));
-  const rwaArgs = defaultRwaArgs();
+  const rwaArgs = defaultRwaArgs({
+    name: options.name,
+    symbol: options.symbol,
+    uri: `https://aegis.test/${options.symbol.toLowerCase()}.json`,
+  });
 
   await send(
     "create_rwa",
@@ -259,6 +284,8 @@ async function main() {
     [issuer]
   );
 
+  if (options.stopAt === "funded") return summary("funded", mint, usdc.publicKey);
+
   // ----------------------------------------------------------------------------------------------
   console.log("\nThe sale");
   const config = Keypair.generate();
@@ -288,6 +315,11 @@ async function main() {
         quoteMint: usdc.publicKey,
         meteoraConfig: config.publicKey,
         crwaMint: crwa.publicKey,
+        args: {
+          name: `Wrapped ${options.name}`.slice(0, 32),
+          symbol: `c${options.symbol}`,
+          uri: `https://aegis.test/c${options.symbol.toLowerCase()}.json`,
+        },
       }),
     ],
     [issuer, crwa]
@@ -328,13 +360,15 @@ async function main() {
         eventAuthority: Env.meteoraEventAuthority(),
         hookProgram: env.aegisHookProgramId(),
         extraAccountMetaList: Env.extraAccountMetaList(crwa.publicKey),
-        amountIn: TARGET_RAISE * 2n,
+        // Buying twice the target buys the whole curve out; a smaller amount leaves it open.
+        amountIn: options.stopAt === "live" ? options.buy : TARGET_RAISE * 2n,
         swapMode: SWAP_MODE.PartialFill,
       }),
     ],
     [buyer]
   );
   console.log(`    buyer received ${whole(await tokenBalance(buyerCrwa))} cRWA`);
+  if (options.stopAt === "live") return summary("live", mint, usdc.publicKey);
 
   // ----------------------------------------------------------------------------------------------
   console.log("\nGraduation");
@@ -439,6 +473,13 @@ async function main() {
   console.log(`  cRWA mint: ${crwa.publicKey.toBase58()}`);
   console.log(`  last tx:   ${explorer(lastSig)}\n`);
   if (!pegHolds) process.exit(1);
+}
+
+/** Printed when a run stops early, so the frontend can be pointed at what was created. */
+function summary(stage: StopAt, mint: PublicKey, usdcMint: PublicKey) {
+  console.log(`\nStopped at ${stage}.`);
+  console.log(`  RWA mint:  ${mint.toBase58()}`);
+  console.log(`  USDC mint: ${usdcMint.toBase58()}  (for app/.env.local: VITE_QUOTE_LABELS=${usdcMint.toBase58()}=USDC)\n`);
 }
 
 main().catch((e) => {
