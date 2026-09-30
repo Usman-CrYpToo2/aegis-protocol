@@ -8,6 +8,8 @@ import { ProgramNotDeployedError, type RegistryEntry } from "../chain/registry";
 import { CurveChart } from "../components/asset/CurveChart";
 import { Seal } from "../components/asset/Seal";
 import { useAsset } from "../hooks/useAsset";
+import { useChangeFlash } from "../hooks/useChangeFlash";
+import { useNow } from "../hooks/useNow";
 import { formatUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms } from "../lib/amount";
 import { ARCHETYPE_CEILING, ceilingPrice } from "../lib/curve";
 
@@ -91,7 +93,9 @@ function StageRail({ entry }: { entry: RegistryEntry }) {
 // §1 The offering
 // ------------------------------------------------------------------------------------------------
 
-function Offering({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) {
+function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcConfig; readAt: number }) {
+  const now = useNow();
+  const flash = useChangeFlash(entry.price);
   const { launch, quote, raise } = entry;
   const cap = ARCHETYPE_CEILING[launch.archetype];
   const d = launch.decimals;
@@ -108,14 +112,23 @@ function Offering({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) 
     <Section id="offering" title="§1 The offering" aside="Meteora dynamic bonding curve">
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex flex-col gap-5 border border-line bg-surface p-5 sm:p-7">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
               <span className="kicker">{live ? `Price of one ${wrapper} now` : launch.stage === "Graduated" ? "Final sale price" : "Opening price"}</span>
-              <span className="font-serif text-5xl num">
+              <span key={flash} className={`-mx-1 w-fit px-1 font-serif text-5xl num ${flash}`}>
                 {formatUnits(priceNow ?? (launch.stage === "Graduated" ? ceilingPriceAtEnd(terms, d) : startPrice(terms, d)), quote.decimals, { maxFraction: 4, minFraction: 3 })}{" "}
                 <span className="font-sans text-xl text-mute">{quote.symbol}</span>
               </span>
             </div>
+            {live && (
+              <span className="inline-flex items-center gap-2 font-mono text-xs text-mute" aria-live="off">
+                <span className="relative flex size-2" aria-hidden="true">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-green opacity-60" />
+                  <span className="relative inline-flex size-2 rounded-full bg-green" />
+                </span>
+                Live · updated {Math.max(0, Math.round((now - readAt) / 1000))}s ago
+              </span>
+            )}
           </div>
           <CurveChart
             terms={terms}
@@ -136,7 +149,7 @@ function Offering({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) 
                 <span className="font-mono num">{pct}%</span>
               </div>
               <span role="progressbar" aria-label="Raise" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="block h-1.5 bg-track">
-                <span className="block h-1.5 bg-ink" style={{ width: `${pct}%` }} />
+                <span className="bar-fill block h-1.5 bg-ink" style={{ width: `${pct}%` }} />
               </span>
             </div>
           )}
@@ -364,6 +377,7 @@ function Skeleton() {
 
 export function AssetPage() {
   const { mint } = useParams();
+  const now = useNow();
   const asset = useAsset(mint);
   const entry = asset.data;
 
@@ -441,7 +455,7 @@ export function AssetPage() {
         <figure className="m-0 flex flex-col items-center gap-3 justify-self-center lg:justify-self-end">
           <Seal backing={entry.backing} decimals={launch.decimals} id="seal-ring" />
           <figcaption className="font-mono text-xs text-mute">
-            Checked {Math.max(0, Math.round((Date.now() - entry.readAt) / 1000))}s ago · <a href="#proof" className="underline underline-offset-2 hover:text-ink">see the proof</a>
+            Checked {Math.max(0, Math.round((now - entry.readAt) / 1000))}s ago · <a href="#proof" className="underline underline-offset-2 hover:text-ink">see the proof</a>
           </figcaption>
         </figure>
       </section>
@@ -449,7 +463,7 @@ export function AssetPage() {
       {launch.stage !== "Aborted" && <StageRail entry={entry} />}
 
       {configured && detail.terms ? (
-        <Offering entry={entry} terms={detail.terms} />
+        <Offering entry={entry} terms={detail.terms} readAt={entry.readAt} />
       ) : launch.stage !== "Aborted" ? (
         <Section id="offering" title="§1 The offering">
           <p className="max-w-2xl text-[15px] leading-relaxed text-ink2">

@@ -18,6 +18,9 @@ describe.runIf(process.env.AEGIS_LOCALNET === "1")("registry against a live node
   it("decodes every launch, its price, raise and backing", async () => {
     const registry = await loadRegistry(new Connection("http://127.0.0.1:8899", "confirmed"));
     const byName = new Map(registry.entries.map((e) => [e.label?.name, e]));
+    for (const name of ["Aegis Tower A", "Aegis Tower B", "Aegis Tower C"]) {
+      expect(byName.has(name), `${name} is missing: seed the node with the three launches in this file's header`).toBe(true);
+    }
     expect(registry.unreadable).toBe(0);
 
     const a = byName.get("Aegis Tower A")!;
