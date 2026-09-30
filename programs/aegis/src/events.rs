@@ -85,10 +85,21 @@ pub struct PoolLaunched {
 #[event]
 pub struct Graduated {
     pub launch: Pubkey,
-    /// Unsold wrapper destroyed, and the asset returned to the issuer behind it.
+    /// Unsold wrapper destroyed.
     pub unsold_burned: u64,
+    /// Real RWA behind that wrapper, now owed to the issuer and collectable with `claim_unsold`.
+    pub issuer_unsold: u64,
     pub real_rwa_locked: u64,
     pub crwa_minted: u64,
+}
+
+#[event]
+pub struct UnsoldClaimed {
+    pub launch: Pubkey,
+    pub issuer: Pubkey,
+    pub amount: u64,
+    /// Still owed to the issuer. Non-zero only if the vault held less than they were owed.
+    pub remaining: u64,
 }
 
 #[event]

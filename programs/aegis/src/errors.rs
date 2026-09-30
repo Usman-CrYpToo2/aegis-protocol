@@ -279,4 +279,13 @@ pub enum AegisError {
 
     #[msg("The target raise is below the minimum set for this quote token.")]
     RaiseBelowMinimum,
+
+    // ==========================================
+    // UNSOLD STOCK
+    // ==========================================
+    #[msg("The issuer has no unsold stock left to claim.")]
+    NothingToClaim,
+
+    #[msg("The vault holds nothing above the wrapper supply, so none of the issuer's unsold stock can be paid.")]
+    UnsoldNotInVault,
 }

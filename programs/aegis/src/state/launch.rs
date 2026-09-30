@@ -77,6 +77,14 @@ pub struct Launch {
 
     /// Running ledger of cRWA in existence.
     pub crwa_minted: u64,
+    /// Real RWA in the vault that belongs to the issuer, not to cRWA holders: the asset behind
+    /// the wrapper the curve never sold. Recorded by `finalize_graduation`, paid out by
+    /// `claim_unsold`.
+    ///
+    /// Kept in the vault rather than sent at graduation, so opening the bridge never depends on
+    /// the issuer being registered. It is never backing for cRWA: `claim_unsold` pays only what
+    /// the vault holds above the cRWA supply, so holders are always covered first.
+    pub issuer_unsold: u64,
 
     /// Upside transfer group the escrow vault sits in. Read from the vault's holder record at
     /// `fund_vault` and pinned from then on, so a later group change is detectable.
@@ -107,6 +115,8 @@ impl Launch {
     /// Deliberately an inequality, not an equality. Both sides of the ledger can be moved by
     /// people Aegis does not control, and only one direction is dangerous:
     ///
+    /// * After graduation the vault also holds the issuer's unclaimed unsold stock
+    ///   (`issuer_unsold`) until they collect it.
     /// * Anyone may burn wrapper tokens they own, which lowers supply.
     /// * Any approved holder may send the asset straight into the vault, which raises the
     ///   escrowed balance. Both leave the launch over-collateralised, which harms nobody.

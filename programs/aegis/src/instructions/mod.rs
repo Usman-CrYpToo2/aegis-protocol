@@ -7,6 +7,7 @@
 pub mod abort_launch;
 pub mod bridge;
 pub mod claim;
+pub mod claim_unsold;
 pub mod create_rwa;
 pub mod create_rwa_config;
 pub mod finalize_graduation;
@@ -19,6 +20,7 @@ pub mod update_platform_config;
 pub use abort_launch::*;
 pub use bridge::*;
 pub use claim::*;
+pub use claim_unsold::*;
 pub use create_rwa::*;
 pub use create_rwa_config::*;
 pub use finalize_graduation::*;

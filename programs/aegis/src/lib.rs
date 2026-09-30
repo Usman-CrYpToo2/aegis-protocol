@@ -118,12 +118,20 @@ pub mod aegis {
 
     /// Launch step 5: settle the unsold allocation and open the bridge.
     ///
-    /// Collects the wrapper the curve never sold, burns it, and returns the matching asset to
-    /// the issuer, so total supply keeps meaning what it claims. Permissionless: it squares the
-    /// books and moves nothing to the caller. Must follow Meteora's migration, which Meteora
-    /// itself enforces.
+    /// Collects the wrapper the curve never sold, burns it, and records the matching asset as
+    /// owed to the issuer, so total supply keeps meaning what it claims. The asset stays in the
+    /// vault, so opening the bridge never depends on the issuer being registered.
+    /// Permissionless: it squares the books and moves nothing to the caller. Must follow
+    /// Meteora's migration, which Meteora itself enforces.
     pub fn finalize_graduation(ctx: Context<FinalizeGraduation>) -> Result<()> {
         instructions::finalize_graduation::handler(ctx)
+    }
+
+    /// The issuer collects the asset behind their unsold wrapper, once they are a registered
+    /// holder. Pays only what the vault holds above the wrapper supply, so cRWA holders are
+    /// always covered first.
+    pub fn claim_unsold(ctx: Context<ClaimUnsold>) -> Result<()> {
+        instructions::claim_unsold::handler(ctx)
     }
 
     /// Launch step 4: open the sale.
