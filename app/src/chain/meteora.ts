@@ -21,7 +21,9 @@ const DISC = {
 const POOL_LEN = 8 + 416;
 const CONFIG_LEN = 8 + 1040;
 
-const POOL = { config: 72, baseMint: 136, baseVault: 168, quoteVault: 200, baseReserve: 232, quoteReserve: 240, sqrtPrice: 280, isMigrated: 305 } as const;
+const POOL = { config: 72, creator: 104, baseMint: 136, baseVault: 168, quoteVault: 200, baseReserve: 232, quoteReserve: 240, sqrtPrice: 280, isMigrated: 305, migrationFeeStatus: 311 } as const;
+/** Bit in `migration_fee_withdraw_status` set once the creator has collected (virtual_pool.rs). */
+export const CREATOR_MIGRATION_FEE_MASK = 0b010;
 const CONFIG = {
   curveFeeNumerator: 104, // pool_fees.base_fee.cliff_fee_numerator (u64)
   partnerVesting: 184, // LiquidityVestingInfo, 16 bytes
@@ -47,6 +49,8 @@ export const METEORA_PROTOCOL_FEE_PCT = 20;
 
 export type DbcPool = {
   config: PublicKey;
+  /** The pool's creator: the issuer, who alone may collect the creator's share of the raise. */
+  creator: PublicKey;
   baseMint: PublicKey;
   baseVault: PublicKey;
   quoteVault: PublicKey;
@@ -57,6 +61,7 @@ export type DbcPool = {
   /** Current price as Q64.64 square root, in atoms of quote per atom of base. */
   sqrtPrice: bigint;
   isMigrated: boolean;
+  migrationFeeStatus: number;
 };
 
 export type LiquidityVesting = {
@@ -118,6 +123,7 @@ export function decodeDbcPool(info: AccountInfo<Uint8Array>): DbcPool {
   }
   return {
     config: new PublicKey(d.subarray(POOL.config, POOL.config + 32)),
+    creator: new PublicKey(d.subarray(POOL.creator, POOL.creator + 32)),
     baseMint: new PublicKey(d.subarray(POOL.baseMint, POOL.baseMint + 32)),
     baseVault: new PublicKey(d.subarray(POOL.baseVault, POOL.baseVault + 32)),
     quoteVault: new PublicKey(d.subarray(POOL.quoteVault, POOL.quoteVault + 32)),
@@ -125,6 +131,7 @@ export function decodeDbcPool(info: AccountInfo<Uint8Array>): DbcPool {
     quoteReserve: u64(d, POOL.quoteReserve),
     sqrtPrice: u128(d, POOL.sqrtPrice),
     isMigrated: d[POOL.isMigrated] === 1,
+    migrationFeeStatus: d[POOL.migrationFeeStatus] ?? 0,
   };
 }
 
