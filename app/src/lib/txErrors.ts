@@ -1,3 +1,4 @@
+import { TRANSFER_RESTRICTIONS_PROGRAM_ID } from "../chain/ids";
 import { SimulationError } from "../chain/trade";
 
 export type Explained = { title: string; detail: string; retry: boolean; charged: boolean };
@@ -33,6 +34,12 @@ const METEORA: Record<string, Omit<Explained, "retry" | "charged">> = {
   NotPermitToDoThisAction: { title: "Not available yet", detail: "Your share of the raise can be collected once the sale completes, and only by the wallet that created the pool." },
   NothingToClaim: { title: "Nothing to collect", detail: "There is no unsold stock owed to you for this launch." },
   UnsoldNotInVault: { title: "Nothing above the backing yet", detail: "Unsold stock is only paid from what the escrow holds above every holder’s backing." },
+  // Upside Transfer Restrictions (approving investors)
+  Unauthorized: { title: "This wallet can’t change the register", detail: "Only a wallet holding the security’s wallets-admin role in Upside can approve investors. Connect the wallet you launched with." },
+  MaxHoldersReached: { title: "The register is full", detail: "The security has reached its maximum number of holders. Raise the limit in Upside before approving more." },
+  MaxHoldersReachedInsideTheGroup: { title: "The investor group is full", detail: "The investor group has reached its maximum number of holders. Raise the group’s limit in Upside before approving more." },
+  InvalidHolderIndex: { title: "The register changed while you were signing", detail: "Another approval landed first, so the holder numbers moved on. Nothing was spent. Try again." },
+  AllTransfersPaused: { title: "Transfers are paused", detail: "You have paused this security. Resume transfers in Upside and try again." },
 };
 
 function logsOf(error: unknown): string[] {
@@ -42,13 +49,27 @@ function logsOf(error: unknown): string[] {
 }
 
 /** Turns anything a trade can throw into a sentence a buyer can act on. */
+/** An error that is already a plain explanation, thrown before anything is sent. */
+export class PlainError extends Error {
+  constructor(readonly title: string, readonly detail: string) {
+    super(`${title}. ${detail}`);
+  }
+}
+
 export function explainTradeError(error: unknown): Explained {
   const message = error instanceof Error ? error.message : String(error);
   const logs = logsOf(error).join("\n");
   const all = `${message}\n${logs}`;
 
+  if (error instanceof PlainError) return { title: error.title, detail: error.detail, retry: false, charged: false };
   if (/user rejected|rejected the request|declined|cancel/i.test(all)) {
     return { title: "Cancelled in your wallet", detail: "Nothing was sent and nothing was spent.", retry: true, charged: false };
+  }
+  // Upside: a wallet with no role for this security has no role record to read.
+  if (/account: authority_wallet_role\. Error Code: AccountNotInitialized/.test(logs)) return { ...METEORA.Unauthorized!, retry: false, charged: false };
+  // Upside: creating an approval record that already exists.
+  if (logs.includes(`Program ${TRANSFER_RESTRICTIONS_PROGRAM_ID.toBase58()} failed`) && /already in use/.test(logs)) {
+    return { title: "Already on the register", detail: "At least one of these wallets is already approved. Refresh the list and try the others.", retry: false, charged: false };
   }
   const code = /Error Code: (\w+)/.exec(logs)?.[1];
   if (code && METEORA[code]) return { ...METEORA[code]!, retry: true, charged: false };
@@ -68,5 +89,5 @@ export function explainTradeError(error: unknown): Explained {
   if (/Failed to fetch|NetworkError|ECONNREFUSED/i.test(all)) {
     return { title: "Can’t reach the network", detail: "Check your connection and try again. Nothing was sent.", retry: true, charged: false };
   }
-  return { title: "The trade didn’t go through", detail: message.slice(0, 200), retry: true, charged: false };
+  return { title: "It didn’t go through", detail: message.slice(0, 200), retry: true, charged: false };
 }
