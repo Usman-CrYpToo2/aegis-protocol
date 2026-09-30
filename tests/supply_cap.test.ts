@@ -114,10 +114,12 @@ describe("a raised supply cap", () => {
     });
 
     it("leaves the peg intact — dilution is not a shortfall", () => {
+      // The vault also holds the issuer's unsold stock until they claim it.
+      const owed = BigInt(env.launch(l.mint.publicKey).issuerUnsold.toString());
       assert.equal(
         balance(env, vaultOf(l.mint.publicKey)),
-        supplyOf(env, l.crwaMint.publicKey),
-        "escrowed asset must still equal wrapper supply"
+        supplyOf(env, l.crwaMint.publicKey) + owed,
+        "escrowed asset must still equal wrapper supply plus the issuer's unsold stock"
       );
     });
   });

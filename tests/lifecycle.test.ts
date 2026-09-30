@@ -30,7 +30,7 @@
  * the wrapper's price tied to the building instead of floating free.
  *
  * ---------------------------------------------------------------------------------------------
- * THE TWELVE STEPS
+ * THE FOURTEEN STEPS
  *
  *   ADMIN SETS UP THE PLATFORM
  *    1. initialize_platform      the protocol is created, once, ever
@@ -49,11 +49,12 @@
  *
  *   GRADUATION
  *   10. (Meteora) migrate        the raise becomes a permanent DAMM v2 trading pool
- *   11. finalize_graduation      unsold wrapper is destroyed, unsold stock goes back to the issuer
+ *   11. finalize_graduation      unsold wrapper is destroyed, the bridge opens
  *
  *   FOREVER AFTER
  *   12. bridge_redeem / deposit  anyone approved converts between the two, one for one
- *       claim_partner_*          the protocol collects its revenue
+ *   13. claim_partner_*          the protocol collects its revenue
+ *   14. claim_unsold             the issuer collects their unsold stock
  *
  * ---------------------------------------------------------------------------------------------
  * WHAT IS REAL HERE
@@ -187,15 +188,18 @@ describe("A COMPLETE LAUNCH", () => {
   function assertPeg(where: string) {
     const escrowed = balance(env, escrowVault());
     const circulating = supplyOf(env, crwaMint.publicKey);
+    const rec = env.launch(realRwaMint.publicKey);
+    // After graduation the vault also holds the issuer's unsold stock until they claim it. That
+    // part is theirs, not backing, so it is counted separately.
+    const owed = BigInt(rec.issuerUnsold.toString());
     assert.equal(
       escrowed.toString(),
-      circulating.toString(),
-      `peg broken after ${where}: ${escrowed} escrowed vs ${circulating} circulating`
+      (circulating + owed).toString(),
+      `peg broken after ${where}: ${escrowed} escrowed vs ${circulating} circulating + ${owed} owed to the issuer`
     );
 
     // The program keeps its own ledger of both figures. It must agree with the chain, because
     // that ledger is what the bridge reads when deciding whether a redemption is covered.
-    const rec = env.launch(realRwaMint.publicKey);
     assert.equal(rec.realRwaLocked.toString(), escrowed.toString());
     assert.equal(rec.crwaMinted.toString(), circulating.toString());
   }
@@ -405,9 +409,9 @@ describe("A COMPLETE LAUNCH", () => {
     });
 
     it("registers the issuer as an approved holder too", async () => {
-      // The issuer is a holder like anyone else. They need this to receive their unsold stock
-      // back at graduation — the security cannot be sent to an unregistered wallet, not even
-      // the wallet of the company that issued it.
+      // The issuer is a holder like anyone else. They need this to claim their unsold stock
+      // after graduation (step 14) — the security cannot be sent to an unregistered wallet, not
+      // even the wallet of the company that issued it. Graduation itself does not need it.
       await registerHolder(env, realRwaMint.publicKey, env.issuer, 1);
     });
   });
@@ -746,23 +750,27 @@ describe("A COMPLETE LAUNCH", () => {
   });
 
   describe("11. the books are squared", () => {
-    let unsoldBefore: bigint;
-    let issuerRealBefore: bigint;
+    let supplyBefore: bigint;
+    let vaultBefore: bigint;
 
-    it("finalize_graduation destroys the unsold wrapper and sends the stock home", async () => {
+    it("finalize_graduation destroys the unsold wrapper and opens the bridge", async () => {
       // A bonding curve rarely sells out. Whatever wrapper was not bought is backed by asset in
-      // the vault that now belongs to nobody — so leaving it alone would make the backing figure
-      // a lie: supply would say a million while only part of it is in anyone's hands.
+      // the vault — so leaving it alone would make the backing figure a lie: supply would say a
+      // million while only part of it is in anyone's hands.
       //
-      // This step collects the leftover from Meteora, burns it, and releases the matching amount
-      // of the security back to the issuer. It is their unsold stock, and it goes home.
+      // This step collects the leftover from Meteora and burns it. The matching amount of the
+      // security is the issuer's unsold stock: it is recorded as owed to them and stays in the
+      // vault until they collect it in step 14.
+      //
+      // Why not send it to the issuer right here? That needs the issuer to be a registered
+      // holder, and this is the step that opens the bridge. An issuer who de-registered, never
+      // registered, or lost their wallet could then stop every buyer from ever redeeming. Paying
+      // the issuer must never be able to block the bridge.
       //
       // Permissionless on purpose: it moves nothing to the caller and changes nobody's
       // entitlement, and gating it would let a launch sit unsettled because one wallet went quiet.
-      issuerRealBefore = balance(
-        env, upside.ataFor(realRwaMint.publicKey, env.issuer.publicKey)
-      );
-      unsoldBefore = supplyOf(env, crwaMint.publicKey) - balance(env, buyerCrwa);
+      supplyBefore = supplyOf(env, crwaMint.publicKey);
+      vaultBefore = balance(env, escrowVault());
 
       expectSuccess(
         env.send(
@@ -784,19 +792,18 @@ describe("A COMPLETE LAUNCH", () => {
       assert.deepEqual(env.launch(realRwaMint.publicKey).stage, { graduated: {} });
     });
 
-    it("the issuer got their unsold stock back", () => {
-      const returned =
-        balance(env, upside.ataFor(realRwaMint.publicKey, env.issuer.publicKey)) -
-        issuerRealBefore;
-      assert.isTrue(returned > 0n, "unsold stock returned to the issuer");
-      console.log(`      → ${human(returned)} TWRA returned to the issuer as unsold stock`);
+    it("the wrapper nobody bought was burned, and the issuer is owed the asset behind it", () => {
+      const burned = supplyBefore - supplyOf(env, crwaMint.publicKey);
+      assert.isTrue(burned > 0n, "unsold wrapper was burned");
+      const owed = BigInt(env.launch(realRwaMint.publicKey).issuerUnsold.toString());
+      assert.equal(owed, burned, "owed exactly the asset behind the unsold wrapper");
+      console.log(`      → ${human(burned)} cTWRA burned, ${human(owed)} TWRA owed to the issuer`);
     });
 
-    it("that stock came out of escrow, and the matching wrapper was burned", () => {
-      // Both sides fell by the same amount. That is the only way the peg survives this step.
+    it("that stock is still in escrow, so every remaining wrapper stays fully backed", () => {
+      assert.equal(balance(env, escrowVault()), vaultBefore, "no asset left the vault");
       assertPeg("finalize_graduation");
       const circulating = supplyOf(env, crwaMint.publicKey);
-      assert.isTrue(circulating < TOTAL_SUPPLY, "supply fell");
       console.log(`      → ${human(circulating)} cTWRA now in circulation, fully backed`);
     });
 
@@ -987,6 +994,32 @@ describe("A COMPLETE LAUNCH", () => {
         crwaMint.publicKey, Env.aegisAuthorityPda(realRwaMint.publicKey)
       );
       assert.equal(balance(env, aegisCrwa), 0n);
+    });
+  });
+
+  describe("14. the issuer collects their unsold stock", () => {
+    it("claim_unsold pays the issuer exactly what they are owed", async () => {
+      // The issuer registered as a holder in step 5, so they can take delivery like any investor.
+      // Note the order: buyers have already been redeeming for two steps. Nobody had to wait for
+      // the issuer.
+      const owed = BigInt(env.launch(realRwaMint.publicKey).issuerUnsold.toString());
+      const issuerAta = upside.ataFor(realRwaMint.publicKey, env.issuer.publicKey);
+      const before = balance(env, issuerAta);
+
+      expectSuccess(
+        env.send(
+          [Env.computeBudget(), await env.claimUnsoldIx(realRwaMint.publicKey)],
+          [env.issuer]
+        )
+      );
+
+      assert.equal(balance(env, issuerAta) - before, owed);
+      assert.equal(env.launch(realRwaMint.publicKey).issuerUnsold.toString(), "0");
+      console.log(`      → ${human(owed)} TWRA returned to the issuer as unsold stock`);
+    });
+
+    it("and only that — every wrapper is still fully backed", () => {
+      assertPeg("claim_unsold");
     });
   });
 

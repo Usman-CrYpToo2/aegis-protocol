@@ -76,7 +76,8 @@ export async function graduatedLaunch(env: Env, opts = { finalize: true }) {
 
   const mint = await env.fundedLaunch();
 
-  // Holder 0 is the issuer, who must be registered to receive their unsold stock back.
+  // The issuer registers as a holder so they can claim their unsold stock after graduation.
+  // Graduation itself no longer needs it.
   await registerHolder(env, mint.publicKey, env.issuer, 1);
 
   const meteoraConfig = Keypair.generate();
@@ -240,19 +241,26 @@ export async function graduatedLaunch(env: Env, opts = { finalize: true }) {
 
 type Launch = Awaited<ReturnType<typeof graduatedLaunch>>;
 
-/** Asserts the invariant the entire protocol rests on. */
+/**
+ * Asserts the invariant the entire protocol rests on.
+ *
+ * After graduation the vault holds two things: the backing for every cRWA, and the issuer's
+ * unsold stock until they claim it. So it must equal the wrapper supply plus what is still owed
+ * to the issuer — exactly, when nobody has donated to the vault.
+ */
 function assertPeg(env: Env, l: Launch) {
   const supply = readMint(env, l.crwaMint.publicKey).supply;
   const vault = balance(
     env,
     upside.ataFor(l.mint.publicKey, Env.aegisAuthorityPda(l.mint.publicKey))
   );
+  const rec = env.launch(l.mint.publicKey);
+  const owed = BigInt(rec.issuerUnsold.toString());
   assert.equal(
     vault.toString(),
-    supply.toString(),
-    "escrowed asset must equal wrapper supply"
+    (supply + owed).toString(),
+    "escrowed asset must equal wrapper supply plus the issuer's unclaimed unsold stock"
   );
-  const rec = env.launch(l.mint.publicKey);
   assert.equal(rec.realRwaLocked.toString(), vault.toString());
   assert.equal(rec.crwaMinted.toString(), supply.toString());
 }

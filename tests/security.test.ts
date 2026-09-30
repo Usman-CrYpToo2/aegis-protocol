@@ -364,22 +364,57 @@ describe("security regressions", () => {
    * halts rather than serving the fastest.
    */
   describe("a shortfall in the vault", () => {
+    /** Simulates the issuer exercising the seizure powers a securities issuer retains. */
+    function setVaultBalance(env: Env, mint: any, amount: bigint) {
+      const vault = upside.ataFor(mint, Env.aegisAuthorityPda(mint));
+      const acc = env.svm.getAccount(vault)!;
+      const data = Buffer.from(acc.data);
+      data.writeBigUInt64LE(amount, 64);
+      env.svm.setAccount(vault, { ...acc, data } as any);
+    }
+
+    function crwaSupply(env: Env, crwaMint: any): bigint {
+      // `supply` sits at byte 36 of every SPL mint.
+      return Buffer.from(env.svm.getAccount(crwaMint)!.data).readBigUInt64LE(36);
+    }
+
     it("halts the bridge", async () => {
       const env = await Env.booted();
       const l = await graduatedLaunch(env);
       await registerHolder(env, l.mint.publicKey, env.outsider, 2);
 
-      // Simulate the issuer exercising the seizure powers a securities issuer legally retains.
-      const vault = upside.ataFor(
-        l.mint.publicKey,
-        Env.aegisAuthorityPda(l.mint.publicKey)
-      );
-      const acc = env.svm.getAccount(vault)!;
-      const data = Buffer.from(acc.data);
-      data.writeBigUInt64LE(balance(env, vault) / 2n, 64);
-      env.svm.setAccount(vault, { ...acc, data } as any);
+      // Below the wrapper supply, so holders' backing is short — not just the issuer's share.
+      setVaultBalance(env, l.mint.publicKey, crwaSupply(env, l.crwaMint.publicKey) / 2n);
 
       expectFailure(
+        env.send(
+          [
+            Env.computeBudget(),
+            await env.bridgeRedeemIx({
+              user: env.outsider.publicKey,
+              realRwaMint: l.mint.publicKey,
+              crwaMint: l.crwaMint.publicKey,
+              amount: 1_000n,
+            }),
+          ],
+          [env.outsider]
+        )
+      );
+    });
+
+    // Until the issuer claims it, their unsold stock sits in the vault on top of the backing.
+    // A loss that share can absorb must come out of it, and leave every holder whole.
+    it("comes out of the issuer's unsold stock first", async () => {
+      const env = await Env.booted();
+      const l = await graduatedLaunch(env);
+      await registerHolder(env, l.mint.publicKey, env.outsider, 2);
+
+      // Take everything the issuer is owed, and nothing more.
+      const supply = crwaSupply(env, l.crwaMint.publicKey);
+      assert.isTrue(BigInt(env.launch(l.mint.publicKey).issuerUnsold.toString()) > 0n);
+      setVaultBalance(env, l.mint.publicKey, supply);
+
+      expectSuccess(
         env.send(
           [
             Env.computeBudget(),

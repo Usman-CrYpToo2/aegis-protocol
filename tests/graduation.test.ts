@@ -6,8 +6,10 @@
  *  1. The buy that reaches the raise target ends the sale, inside that same transaction, and
  *     Meteora permanently strips the transfer hook from cRWA.
  *  2. Someone — anyone — calls Meteora's migration to build the AMM pool.
- *  3. Aegis settles: the wrapper the curve never sold is burned and the matching asset returns
- *     to the issuer, so total supply keeps meaning what it claims.
+ *  3. Aegis settles: the wrapper the curve never sold is burned and the matching asset is
+ *     recorded as the issuer's, so total supply keeps meaning what it claims. The asset stays in
+ *     the vault for the issuer to claim, so settling — and opening the bridge — never depends on
+ *     the issuer being registered. Every test here runs with an issuer who never registered.
  *
  * Everything runs against the Meteora and DAMM v2 binaries dumped from mainnet, using a real
  * Meteora-owned config account, so migration either genuinely works or the test fails.
@@ -321,39 +323,12 @@ describe("graduation", () => {
     let m: Market;
     let supplyBefore: bigint;
     let vaultBefore: bigint;
-    let issuerBefore: bigint;
 
     before(async () => {
       env = await Env.booted();
       m = await liveMarket(env);
 
-      // The issuer must be a registered holder to receive the security back — they are subject
-      // to the same rules as any investor.
-      const issuerAta = upside.ataFor(m.mint.publicKey, env.issuer.publicKey);
-      env.sendOk(
-        [
-          upside.ix.createAta(
-            env.issuer.publicKey,
-            m.mint.publicKey,
-            env.issuer.publicKey
-          ),
-          await upside.ix.initHolder(m.mint.publicKey, env.issuer.publicKey, 1),
-          await upside.ix.initHolderGroup(
-            m.mint.publicKey,
-            env.issuer.publicKey,
-            1,
-            upside.DEFAULT_LAYOUT.investorGroup
-          ),
-          await upside.ix.initSaa(
-            m.mint.publicKey,
-            env.issuer.publicKey,
-            env.issuer.publicKey,
-            upside.DEFAULT_LAYOUT.investorGroup,
-            1
-          ),
-        ],
-        [env.issuer]
-      );
+      // Deliberately no issuer registration: settlement must not depend on it.
 
       completeTheSale(env, m);
       expectSuccess(migrate(env, m));
@@ -364,7 +339,6 @@ describe("graduation", () => {
         upside.ataFor(m.mint.publicKey, Env.aegisAuthorityPda(m.mint.publicKey)),
         TOKEN_2022_PROGRAM_ID
       );
-      issuerBefore = balance(env, issuerAta, TOKEN_2022_PROGRAM_ID);
 
       expectSuccess(
         env.send(
@@ -391,14 +365,16 @@ describe("graduation", () => {
       );
     });
 
-    it("returns the matching asset to the issuer", () => {
+    it("records the matching asset as the issuer's, without moving it", () => {
       const burned = supplyBefore - readMint(env, m.crwaMint.publicKey).supply;
-      const issuerAta = upside.ataFor(m.mint.publicKey, env.issuer.publicKey);
+      assert.isTrue(burned > 0n);
       assert.equal(
-        balance(env, issuerAta, TOKEN_2022_PROGRAM_ID) - issuerBefore,
-        burned,
-        "the issuer gets back exactly the asset behind their unsold stock"
+        env.launch(m.mint.publicKey).issuerUnsold.toString(),
+        burned.toString(),
+        "the issuer is owed exactly the asset behind their unsold stock"
       );
+      const issuerAta = upside.ataFor(m.mint.publicKey, env.issuer.publicKey);
+      assert.isFalse(env.exists(issuerAta), "nothing was sent to the issuer");
     });
 
     it("leaves the peg exact", () => {
@@ -408,10 +384,11 @@ describe("graduation", () => {
         upside.ataFor(m.mint.publicKey, Env.aegisAuthorityPda(m.mint.publicKey)),
         TOKEN_2022_PROGRAM_ID
       );
-      assert.equal(vault.toString(), supply.toString());
-      assert.isTrue(vault < vaultBefore, "the vault released the unsold portion");
-
       const launch = env.launch(m.mint.publicKey);
+      const owed = BigInt(launch.issuerUnsold.toString());
+      assert.equal(vault.toString(), (supply + owed).toString());
+      assert.equal(vault, vaultBefore, "no asset left the vault");
+
       assert.equal(launch.realRwaLocked.toString(), vault.toString());
       assert.equal(launch.crwaMinted.toString(), supply.toString());
     });
@@ -464,27 +441,7 @@ describe("graduation", () => {
       stranger = Keypair.generate();
       env.svm.airdrop(stranger.publicKey, 10n * 1_000_000_000n);
 
-      const issuerAta = upside.ataFor(m.mint.publicKey, env.issuer.publicKey);
-      env.sendOk(
-        [
-          upside.ix.createAta(env.issuer.publicKey, m.mint.publicKey, env.issuer.publicKey),
-          await upside.ix.initHolder(m.mint.publicKey, env.issuer.publicKey, 1),
-          await upside.ix.initHolderGroup(
-            m.mint.publicKey,
-            env.issuer.publicKey,
-            1,
-            upside.DEFAULT_LAYOUT.investorGroup
-          ),
-          await upside.ix.initSaa(
-            m.mint.publicKey,
-            env.issuer.publicKey,
-            env.issuer.publicKey,
-            upside.DEFAULT_LAYOUT.investorGroup,
-            1
-          ),
-        ],
-        [env.issuer]
-      );
+      // No issuer registration here either.
 
       completeTheSale(env, m);
       expectSuccess(migrate(env, m));
@@ -565,7 +522,9 @@ describe("graduation", () => {
         upside.ataFor(m.mint.publicKey, Env.aegisAuthorityPda(m.mint.publicKey)),
         TOKEN_2022_PROGRAM_ID
       );
-      assert.equal(vault.toString(), supply.toString());
+      const owed = BigInt(env.launch(m.mint.publicKey).issuerUnsold.toString());
+      assert.isTrue(owed > 0n, "the stranger's collection is still credited to the issuer");
+      assert.equal(vault.toString(), (supply + owed).toString());
       assert.deepEqual(env.launch(m.mint.publicKey).stage, { graduated: {} });
     });
   });
@@ -605,11 +564,26 @@ describe("graduation", () => {
       expectFailure(await finalize());
     });
 
-    it("refuses while the issuer is not a registered holder", async () => {
+    // An earlier version sent the unsold asset to the issuer here, so an unregistered issuer
+    // kept the bridge shut forever. Settlement no longer moves any Real RWA.
+    it("does not need the issuer to be a registered holder", async () => {
       completeTheSale(env, m);
       expectSuccess(migrate(env, m));
-      // The issuer never registered, so there is nowhere compliant to return the asset.
-      expectFailure(await finalize());
+      expectSuccess(await finalize());
+      assert.deepEqual(env.launch(m.mint.publicKey).stage, { graduated: {} });
+    });
+
+    // Settlement moves no Real RWA, so the issuer's registry controls cannot hold it back.
+    // They still govern every transfer out of the vault afterwards.
+    it("is not held back by a paused registry", async () => {
+      completeTheSale(env, m);
+      expectSuccess(migrate(env, m));
+      env.sendOk(
+        [await upside.ix.pause(m.mint.publicKey, env.issuer.publicKey, true)],
+        [env.issuer]
+      );
+      expectSuccess(await finalize());
+      assert.deepEqual(env.launch(m.mint.publicKey).stage, { graduated: {} });
     });
   });
 });

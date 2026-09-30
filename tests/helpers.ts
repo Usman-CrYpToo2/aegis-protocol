@@ -637,12 +637,10 @@ export class Env {
     meteoraConfig: PublicKey;
   }): Promise<TransactionInstruction> {
     const { cranker, realRwaMint, crwaMint, quoteMint, meteoraConfig } = opts;
-    const l = this.launch(realRwaMint);
     const authority = Env.aegisAuthorityPda(realRwaMint);
-    const trd = upside.pda.transferRestrictionData(realRwaMint);
-    const vault = upside.ataFor(realRwaMint, authority);
     const pool = Env.meteoraPool(meteoraConfig, crwaMint, quoteMint);
 
+    // No Upside accounts and no issuer: settlement moves no Real RWA, so none are needed.
     return this.program.methods
       .finalizeGraduation()
       .accountsPartial({
@@ -652,22 +650,7 @@ export class Env {
         crwaMint,
         aegisAuthority: authority,
         aegisCrwaAccount: upside.ataFor(crwaMint, authority),
-        escrowVault: vault,
-        issuer: l.issuer,
-        issuerRealRwaAccount: upside.ataFor(realRwaMint, l.issuer),
-        accessControl: upside.pda.accessControl(realRwaMint),
-        transferRestrictionData: trd,
-        vaultSaa: upside.pda.securityAssociatedAccount(vault),
-        issuerSaa: upside.pda.securityAssociatedAccount(
-          upside.ataFor(realRwaMint, l.issuer)
-        ),
-        redeemRule: upside.pda.rule(
-          trd,
-          BigInt(l.vaultGroup.toString()),
-          BigInt(l.investorGroup.toString())
-        ),
-        realRwaExtraMetas: upside.pda.extraAccountMetaList(realRwaMint),
-        transferRestrictionsProgram: TRANSFER_RESTRICTIONS_PROGRAM_ID,
+        escrowVault: upside.ataFor(realRwaMint, authority),
         poolAuthority: Env.meteoraPoolAuthority(),
         meteoraConfig,
         virtualPool: pool,
@@ -839,6 +822,43 @@ export class Env {
     return this.program.methods
       .claimPartnerMigrationFee()
       .accountsPartial(accounts)
+      .instruction();
+  }
+
+  /** The issuer collects the asset behind their unsold wrapper. `issuerOverride` names another signer. */
+  async claimUnsoldIx(
+    realRwaMint: PublicKey,
+    issuerOverride?: PublicKey
+  ): Promise<TransactionInstruction> {
+    const l = this.launch(realRwaMint);
+    const issuer = issuerOverride ?? l.issuer;
+    const authority = Env.aegisAuthorityPda(realRwaMint);
+    const trd = upside.pda.transferRestrictionData(realRwaMint);
+    const vault = upside.ataFor(realRwaMint, authority);
+    const issuerAta = upside.ataFor(realRwaMint, issuer);
+    return this.program.methods
+      .claimUnsold()
+      .accountsPartial({
+        issuer,
+        launch: Env.launchPda(realRwaMint),
+        realRwaMint,
+        crwaMint: l.crwaMint,
+        aegisAuthority: authority,
+        escrowVault: vault,
+        issuerRealRwaAccount: issuerAta,
+        accessControl: upside.pda.accessControl(realRwaMint),
+        transferRestrictionData: trd,
+        vaultSaa: upside.pda.securityAssociatedAccount(vault),
+        issuerSaa: upside.pda.securityAssociatedAccount(issuerAta),
+        redeemRule: upside.pda.rule(
+          trd,
+          BigInt(l.vaultGroup.toString()),
+          BigInt(l.investorGroup.toString())
+        ),
+        realRwaExtraMetas: upside.pda.extraAccountMetaList(realRwaMint),
+        transferRestrictionsProgram: TRANSFER_RESTRICTIONS_PROGRAM_ID,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+      })
       .instruction();
   }
 

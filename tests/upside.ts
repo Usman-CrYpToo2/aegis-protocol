@@ -353,6 +353,36 @@ export const ix = {
       .instruction();
   },
 
+  /** Removes a wallet from the registry. Upside closes the record (`close = payer`). */
+  async revokeSaa(
+    mint: PublicKey,
+    authority: PublicKey,
+    walletOwner: PublicKey,
+    groupId: bigint | number,
+    holderId: bigint | number
+  ): Promise<TransactionInstruction> {
+    const trd = pda.transferRestrictionData(mint);
+    const holder = pda.holder(trd, holderId);
+    const ata = ataFor(mint, walletOwner);
+    return transferRestrictionsProgram.methods
+      .revokeSecurityAssociatedAccount()
+      .accountsPartial({
+        securityAssociatedAccount: pda.securityAssociatedAccount(ata),
+        group: pda.group(trd, groupId),
+        holder,
+        holderGroup: pda.holderGroup(holder, groupId),
+        securityToken: mint,
+        transferRestrictionData: trd,
+        userWallet: walletOwner,
+        associatedTokenAccount: ata,
+        authorityWalletRole: pda.walletRole(mint, authority),
+        authority,
+        payer: authority,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+  },
+
   createAta(
     payer: PublicKey,
     mint: PublicKey,
