@@ -21,11 +21,12 @@ const DISC = {
 const POOL_LEN = 8 + 416;
 const CONFIG_LEN = 8 + 1040;
 
-const POOL = { config: 72, baseMint: 136, baseReserve: 232, quoteReserve: 240, sqrtPrice: 280, isMigrated: 305 } as const;
+const POOL = { config: 72, baseMint: 136, baseVault: 168, quoteVault: 200, baseReserve: 232, quoteReserve: 240, sqrtPrice: 280, isMigrated: 305 } as const;
 const CONFIG = {
   curveFeeNumerator: 104, // pool_fees.base_fee.cliff_fee_numerator (u64)
   partnerVesting: 184, // LiquidityVestingInfo, 16 bytes
   creatorVesting: 200,
+  collectFeeMode: 232,
   partnerPermanentPct: 239,
   creatorPermanentPct: 241,
   creatorTradingFeePct: 245,
@@ -40,13 +41,15 @@ const CONFIG = {
 const CURVE_POINTS = 20;
 
 /** Meteora's fee denominator (constants.rs `FEE_DENOMINATOR`). */
-const FEE_DENOMINATOR = 1_000_000_000n;
+export const FEE_DENOMINATOR = 1_000_000_000n;
 /** Share of every trading fee Meteora keeps for itself (constants.rs `PROTOCOL_FEE_PERCENT`). */
 export const METEORA_PROTOCOL_FEE_PCT = 20;
 
 export type DbcPool = {
   config: PublicKey;
   baseMint: PublicKey;
+  baseVault: PublicKey;
+  quoteVault: PublicKey;
   /** Wrapper atoms still in the pool, unsold. */
   baseReserve: bigint;
   /** Quote tokens paid into the curve so far, fees excluded. */
@@ -80,6 +83,10 @@ export type DbcConfig = {
   creatorMigrationFeePct: number;
   /** Trading fee on the curve, in basis points. */
   curveFeeBps: number;
+  /** The same fee as Meteora stores it, over 1e9. Swap previews use this, not the rounded bps. */
+  curveFeeNumerator: bigint;
+  /** 0 = fees taken in the quote token (all Aegis launches), 1 = in the output token. */
+  collectFeeMode: number;
   /** Of the non-Meteora part of that fee, the creator's (issuer's) share. */
   creatorTradingFeePct: number;
   /** Shares of the graduated pool's liquidity. */
@@ -112,6 +119,8 @@ export function decodeDbcPool(info: AccountInfo<Uint8Array>): DbcPool {
   return {
     config: new PublicKey(d.subarray(POOL.config, POOL.config + 32)),
     baseMint: new PublicKey(d.subarray(POOL.baseMint, POOL.baseMint + 32)),
+    baseVault: new PublicKey(d.subarray(POOL.baseVault, POOL.baseVault + 32)),
+    quoteVault: new PublicKey(d.subarray(POOL.quoteVault, POOL.quoteVault + 32)),
     baseReserve: u64(d, POOL.baseReserve),
     quoteReserve: u64(d, POOL.quoteReserve),
     sqrtPrice: u128(d, POOL.sqrtPrice),
@@ -153,6 +162,8 @@ export function decodeDbcConfig(info: AccountInfo<Uint8Array>): DbcConfig {
     migrationFeePct: d[CONFIG.migrationFeePct]!,
     creatorMigrationFeePct: d[CONFIG.creatorMigrationFeePct]!,
     curveFeeBps: Number((u64(d, CONFIG.curveFeeNumerator) * 10_000n) / FEE_DENOMINATOR),
+    curveFeeNumerator: u64(d, CONFIG.curveFeeNumerator),
+    collectFeeMode: d[CONFIG.collectFeeMode]!,
     creatorTradingFeePct: d[CONFIG.creatorTradingFeePct]!,
     partnerPermanentPct: d[CONFIG.partnerPermanentPct]!,
     creatorPermanentPct: d[CONFIG.creatorPermanentPct]!,
