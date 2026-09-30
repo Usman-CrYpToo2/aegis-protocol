@@ -9,3 +9,8 @@ export const METEORA_DBC_PROGRAM_ID = new PublicKey("dbcij3LWUppWqq96dh6gJWwBifm
 
 // Re-exported from the official package rather than typed by hand.
 export { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+
+/** Upside's compliance programs, which own the Real RWA's registry and transfer hook.
+ *  ids.test.ts checks every id in this file against the IDLs the program is built from. */
+export const TRANSFER_RESTRICTIONS_PROGRAM_ID = new PublicKey("6yEnqdEjX3zBBDkzhwTRGJwv1jRaN4QE4gywmgdcfPBZ");
+export const ACCESS_CONTROL_PROGRAM_ID = new PublicKey("4X79YRjz9KNMhdjdxXg2ZNTS3YnMGYdwJkBHnezMJwr3");

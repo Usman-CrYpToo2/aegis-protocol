@@ -27,6 +27,10 @@ export type LaunchAccount = {
   realRwaLocked: bigint;
   crwaMinted: bigint;
   issuerUnsold: bigint;
+  /** Upside group the escrow vault sits in, pinned at funding. */
+  vaultGroup: bigint;
+  /** Upside group KYC-approved investors sit in. Redemption only goes to this group. */
+  investorGroup: bigint;
   decimals: number;
   stage: LaunchStage;
   archetype: Archetype;
@@ -89,6 +93,8 @@ export function decodeLaunch(address: PublicKey, data: Uint8Array): LaunchAccoun
     realRwaLocked: u64(L.realRwaLocked),
     crwaMinted: u64(L.crwaMinted),
     issuerUnsold: u64(L.issuerUnsold),
+    vaultGroup: u64(L.vaultGroup),
+    investorGroup: u64(L.investorGroup),
     decimals: data[L.decimals]!,
     stage,
     archetype,
