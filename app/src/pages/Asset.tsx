@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import { isSet, type LaunchStage } from "../chain/aegis";
@@ -7,6 +7,7 @@ import { METEORA_PROTOCOL_FEE_PCT, type DbcConfig } from "../chain/meteora";
 import { ProgramNotDeployedError, type RegistryEntry } from "../chain/registry";
 import { CurveChart } from "../components/asset/CurveChart";
 import { Seal } from "../components/asset/Seal";
+import { TradePanel } from "../components/asset/TradePanel";
 import { useAsset } from "../hooks/useAsset";
 import { useChangeFlash } from "../hooks/useChangeFlash";
 import { useNow } from "../hooks/useNow";
@@ -105,7 +106,9 @@ function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcCo
 
   const fmtQ = (v: bigint, frac = 0) => formatUnits(v, quote.decimals, { maxFraction: frac });
   const priceNow = entry.price;
-  const live = launch.stage === "Live" && entry.detail.pool;
+  // Full but not yet moved to its pool: the curve is finished even though the stage still says Live.
+  const filled = launch.stage === "Live" && raise !== null && raise.raised >= raise.target;
+  const live = launch.stage === "Live" && entry.detail.pool && !filled;
   const pct = raise ? percentOf(raise.raised, raise.target) : 0;
 
   return (
@@ -114,7 +117,7 @@ function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcCo
         <div className="flex flex-col gap-5 border border-line bg-surface p-5 sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <span className="kicker">{live ? `Price of one ${wrapper} now` : launch.stage === "Graduated" ? "Final sale price" : "Opening price"}</span>
+              <span className="kicker">{live ? `Price of one ${wrapper} now` : launch.stage === "Graduated" || filled ? "Final sale price" : "Opening price"}</span>
               <span key={flash} className={`-mx-1 w-fit px-1 font-serif text-5xl num ${flash}`}>
                 {formatUnits(priceNow ?? (launch.stage === "Graduated" ? ceilingPriceAtEnd(terms, d) : startPrice(terms, d)), quote.decimals, { maxFraction: 4, minFraction: 3 })}{" "}
                 <span className="font-sans text-xl text-mute">{quote.symbol}</span>
@@ -132,8 +135,8 @@ function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcCo
           </div>
           <CurveChart
             terms={terms}
-            sqrtNow={live ? entry.detail.pool!.sqrtPrice : launch.stage === "Graduated" ? terms.migrationSqrtPrice : null}
-            finished={launch.stage === "Graduated"}
+            sqrtNow={live ? entry.detail.pool!.sqrtPrice : launch.stage === "Graduated" || filled ? terms.migrationSqrtPrice : null}
+            finished={launch.stage === "Graduated" || filled}
             ceiling={ceiling}
             ceilingLabel={cap.label}
             baseDecimals={d}
@@ -160,7 +163,13 @@ function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcCo
           </p>
         </div>
 
-        <aside aria-label="Sale terms" className="flex h-fit flex-col gap-4 border border-ink bg-surface p-5 sm:p-6">
+        <div className="flex h-fit flex-col gap-6">
+        {launch.stage === "Live" && (
+          <div id="trade" className="scroll-mt-6">
+            <TradePanel entry={entry} />
+          </div>
+        )}
+        <aside aria-label="Sale terms" className="flex h-fit flex-col gap-4 border border-line bg-surface p-5 sm:p-6">
           <h3 className="kicker">Sale terms · fixed on-chain</h3>
           <div className="flex flex-col gap-1">
             <Leader label="Opening price">{formatUnits(startPrice(terms, d), quote.decimals, { maxFraction: 4, minFraction: 3 })}</Leader>
@@ -176,6 +185,7 @@ function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcCo
               : `No KYC is needed to buy or hold ${wrapper}. To exchange it for the security itself after graduation, the issuer must approve your wallet.`}
           </p>
         </aside>
+        </div>
       </div>
     </Section>
   );
@@ -375,11 +385,25 @@ function Skeleton() {
   );
 }
 
+/** Whether the element with this id is on screen; used to hide the phone buy bar near the panel. */
+function useInView(id: string, active: boolean) {
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = active ? document.getElementById(id) : null;
+    if (!el) return;
+    const observer = new IntersectionObserver(([e]) => setInView(e!.isIntersecting), { threshold: 0.15 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [id, active]);
+  return inView;
+}
+
 export function AssetPage() {
   const { mint } = useParams();
   const now = useNow();
   const asset = useAsset(mint);
   const entry = asset.data;
+  const panelInView = useInView("trade", entry?.launch.stage === "Live");
 
   useEffect(() => {
     document.title = entry?.label?.name ? `${entry.label.name} — Aegis` : "Aegis";
@@ -421,7 +445,7 @@ export function AssetPage() {
   const supply = formatUnits(launch.totalSupply, launch.decimals, { maxFraction: 0 });
 
   return (
-    <div className="shell flex flex-col gap-12 pt-8 pb-24 lg:pt-10">
+    <div className={`shell flex flex-col gap-12 pt-8 lg:pt-10 ${launch.stage === "Live" ? "pb-32 md:pb-24" : "pb-24"}`}>
       {asset.isError && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border border-amber bg-amber-wash px-4 py-3 text-sm">
           <span>Couldn’t refresh from the network. The numbers below may be out of date.</span>
@@ -471,6 +495,21 @@ export function AssetPage() {
           </p>
         </Section>
       ) : null}
+
+      {launch.stage === "Live" && !panelInView && entry.price !== null && entry.quote && entry.raise && entry.raise.raised < entry.raise.target && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink bg-paper/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+          <a
+            href="#trade"
+            onClick={() => window.setTimeout(() => document.querySelector<HTMLInputElement>("#trade input")?.focus(), 350)}
+            className="flex min-h-12 items-center justify-between bg-blue px-4 font-semibold text-white"
+          >
+            <span>Buy {entry.wrapperLabel?.symbol ?? ""}</span>
+            <span className="font-mono text-sm num">
+              {formatUnits(entry.price, entry.quote.decimals, { maxFraction: 4, minFraction: 3 })} {entry.quote.symbol}
+            </span>
+          </a>
+        </div>
+      )}
 
       <Proof entry={entry} />
       {configured && detail.terms && <Money entry={entry} terms={detail.terms} />}
