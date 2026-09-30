@@ -1,3 +1,4 @@
+import { useWallet } from "@solana/wallet-adapter-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { config } from "../config";
 import { ProgramNotDeployedError } from "../chain/registry";
@@ -12,11 +13,12 @@ function NetworkChip() {
   const name = config.cluster === "devnet" ? "Devnet" : "Localnet";
   return (
     <span
-      className={`inline-flex h-7 items-center gap-1.5 rounded-full border bg-surface px-2 text-xs sm:px-2.5 sm:text-[13px] ${offline ? "border-amber text-amber" : "border-line text-ink2"}`}
+      className={`inline-flex h-7 min-w-7 items-center justify-center gap-1.5 rounded-full border bg-surface px-2 text-xs sm:px-2.5 sm:text-[13px] ${offline ? "border-amber text-amber" : "border-line text-ink2"}`}
       title={offline ? `Can't reach ${config.rpcUrl}` : `Reading from ${config.rpcUrl}`}
     >
       <span className={`size-2 rounded-full ${offline ? "bg-amber" : "bg-green"}`} aria-hidden="true" />
-      {name}
+      {/* On a phone the dot alone carries it; the name stays for screen readers. */}
+      <span className="sr-only sm:not-sr-only">{name}</span>
       {offline && <span className="sr-only"> (not reachable)</span>}
     </span>
   );
@@ -27,6 +29,7 @@ const link = ({ isActive }: { isActive: boolean }) =>
 
 export function Header() {
   const { pathname } = useLocation();
+  const { publicKey } = useWallet();
   // Asset pages are part of the registry, so its tab stays marked while one is open.
   const inRegistry = pathname === "/" || pathname.startsWith("/asset/");
   return (
@@ -41,6 +44,11 @@ export function Header() {
             <NavLink to="/" className={() => link({ isActive: inRegistry })} aria-current={inRegistry ? "page" : undefined}>
               Registry
             </NavLink>
+            {publicKey && (
+              <NavLink to="/holdings" className={link}>
+                My holdings
+              </NavLink>
+            )}
           </nav>
         </div>
         <div className="flex items-center gap-3">

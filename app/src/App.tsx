@@ -10,6 +10,7 @@ import { Toast, type ToastMessage } from "./components/Toast";
 import { RegistryPage } from "./pages/Registry";
 import { AssetPage } from "./pages/Asset";
 import { BridgePage } from "./pages/Bridge";
+import { HoldingsPage } from "./pages/Holdings";
 import { NotFoundPage } from "./pages/NotFound";
 import { ProgramNotDeployedError } from "./chain/registry";
 
@@ -56,6 +57,7 @@ export function App() {
                   <Route path="/" element={<RegistryPage />} />
                   <Route path="/asset/:mint" element={<AssetPage />} />
                   <Route path="/asset/:mint/bridge" element={<BridgePage />} />
+                  <Route path="/holdings" element={<HoldingsPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </main>

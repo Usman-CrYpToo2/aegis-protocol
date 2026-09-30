@@ -1,6 +1,7 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import { formatUnits, shortAddress } from "../lib/amount";
 import { useIsIssuer } from "../hooks/useRegistry";
@@ -82,7 +83,7 @@ export function WalletButton() {
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((v) => !v)}
-        className={`${base} border border-line bg-surface pl-2 font-mono font-medium hover:border-ink`}
+        className={`${base} border border-line bg-surface pl-2 font-mono font-medium whitespace-nowrap hover:border-ink`}
       >
         {icon ? <img src={icon} alt="" width={22} height={22} className="size-5.5 rounded" /> : <span className="size-2 rounded-full bg-green" aria-hidden="true" />}
         {shortAddress(address)}
@@ -103,6 +104,9 @@ export function WalletButton() {
             </span>
             <span className="font-mono text-xs break-all text-ink2">{address}</span>
           </div>
+          <Link role="menuitem" to="/holdings" onClick={() => setOpen(false)} className={item}>
+            My holdings
+          </Link>
           <button role="menuitem" type="button" onClick={copy} className={item}>
             {copied ? "Copied ✓" : "Copy address"}
           </button>
