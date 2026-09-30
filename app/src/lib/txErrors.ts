@@ -28,6 +28,11 @@ const METEORA: Record<string, Omit<Explained, "retry" | "charged">> = {
   VaultFrozen: { title: "The escrow is frozen", detail: "The issuer has frozen the escrow, so the bridge can’t move tokens." },
   InvalidLaunchStage: { title: "The bridge isn’t open", detail: "It opens when the sale graduates to its permanent pool." },
   ZeroBridgeAmount: { title: "Enter an amount above zero", detail: "Nothing to exchange." },
+  // Collecting (Meteora DBC and Aegis claim_unsold)
+  MigrationFeeHasBeenWithdraw: { title: "Already collected", detail: "Your share of this raise has already been paid to your wallet." },
+  NotPermitToDoThisAction: { title: "Not available yet", detail: "Your share of the raise can be collected once the sale completes, and only by the wallet that created the pool." },
+  NothingToClaim: { title: "Nothing to collect", detail: "There is no unsold stock owed to you for this launch." },
+  UnsoldNotInVault: { title: "Nothing above the backing yet", detail: "Unsold stock is only paid from what the escrow holds above every holder’s backing." },
 };
 
 function logsOf(error: unknown): string[] {
