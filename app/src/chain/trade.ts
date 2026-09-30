@@ -13,18 +13,11 @@ import {
   getTransferHook,
   unpackMint,
 } from "@solana/spl-token";
-import {
-  ComputeBudgetProgram,
-  PublicKey,
-  TransactionInstruction,
-  TransactionMessage,
-  VersionedTransaction,
-  type AccountInfo,
-  type Connection,
-} from "@solana/web3.js";
+import { PublicKey, TransactionInstruction, type AccountInfo, type Connection } from "@solana/web3.js";
 import type { LaunchAccount } from "./aegis";
 import { METEORA_DBC_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "./ids";
 import type { DbcPool } from "./meteora";
+import { prepareTransaction, SimulationError, type PreparedTx } from "./tx";
 
 export type Side = "buy" | "sell";
 
@@ -142,34 +135,9 @@ export function tradeInstructions({ launch, pool, accounts, owner, side, amountI
   return [createOutput, swap];
 }
 
-export type PreparedTrade = { transaction: VersionedTransaction; blockhash: string; lastValidBlockHeight: number };
+export type PreparedTrade = PreparedTx;
+export { SimulationError };
 
-export class SimulationError extends Error {
-  constructor(public readonly logs: string[], message: string) {
-    super(message);
-  }
-}
-
-/**
- * Simulates first, so a trade that would fail is explained before the wallet is ever opened, and
- * so the compute limit can be sized to what the swap really uses (plus headroom).
- */
 export async function prepareTrade(connection: Connection, request: TradeRequest): Promise<PreparedTrade> {
-  const instructions = tradeInstructions(request);
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-  const build = (units: number) =>
-    new VersionedTransaction(
-      new TransactionMessage({
-        payerKey: request.owner,
-        recentBlockhash: blockhash,
-        instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units }), ...instructions],
-      }).compileToV0Message()
-    );
-
-  const sim = await connection.simulateTransaction(build(1_400_000), { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
-  if (sim.value.err) {
-    throw new SimulationError(sim.value.logs ?? [], typeof sim.value.err === "string" ? sim.value.err : JSON.stringify(sim.value.err));
-  }
-  const used = sim.value.unitsConsumed ?? 400_000;
-  return { transaction: build(Math.min(1_400_000, Math.ceil(used * 1.2) + 10_000)), blockhash, lastValidBlockHeight };
+  return prepareTransaction(connection, request.owner, tradeInstructions(request));
 }
