@@ -77,7 +77,7 @@ function AttentionItem({ a }: { a: Attention }) {
   const l = a.launch;
   const n = name(l);
   const sym = l.entry.label?.symbol ?? "the security";
-  const toLaunch = `/asset/${mintOf(l)}`; // becomes /console/:mint in part B
+  const toLaunch = `/console/${mintOf(l)}`;
   const row = (icon: ReactNode, title: string, body: string, action: ReactNode) => (
     <li className="grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-4 border-b border-track px-5 py-4 last:border-b-0">
       {icon}
@@ -251,7 +251,7 @@ export function ConsolePage() {
               <StageCell l={l} />
               <WaitingCell l={l} />
               <Link
-                to={`/asset/${mintOf(l)}`}
+                to={["Live", "Graduated"].includes(l.entry.launch.stage) ? `/console/${mintOf(l)}` : `/asset/${mintOf(l)}`}
                 className="inline-flex min-h-10 items-center justify-center border border-ink px-4 text-sm font-semibold hover:bg-surface md:justify-self-end"
               >
                 {["Live", "Graduated"].includes(l.entry.launch.stage) ? "Manage" : "Open"}
