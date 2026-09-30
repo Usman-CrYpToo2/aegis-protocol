@@ -20,9 +20,16 @@ function readRpcUrl(value: string | undefined, cluster: Cluster): string {
   return url;
 }
 
-/** `mint=SYMBOL,mint=SYMBOL`. Invalid entries are dropped rather than crashing the app. */
-function readQuoteLabels(value: string | undefined): Map<string, string> {
-  const labels = new Map<string, string>();
+/** Quote mints whose symbol is known without configuration. */
+const KNOWN_QUOTES: Record<Cluster, Record<string, string>> = {
+  // Circle's devnet USDC.
+  devnet: { "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU": "USDC" },
+  localnet: {},
+};
+
+/** `mint=SYMBOL,mint=SYMBOL`, on top of the known ones. Invalid entries are dropped, not fatal. */
+function readQuoteLabels(value: string | undefined, cluster: Cluster): Map<string, string> {
+  const labels = new Map<string, string>(Object.entries(KNOWN_QUOTES[cluster]));
   for (const entry of (value ?? "").split(",")) {
     const [mint, symbol] = entry.split("=").map((s) => s.trim());
     if (!mint || !symbol || !/^[A-Za-z0-9.$]{1,10}$/.test(symbol)) continue;
@@ -40,7 +47,7 @@ const cluster = readCluster(import.meta.env.VITE_CLUSTER);
 export const config = {
   cluster,
   rpcUrl: readRpcUrl(import.meta.env.VITE_RPC_URL, cluster),
-  quoteLabels: readQuoteLabels(import.meta.env.VITE_QUOTE_LABELS),
+  quoteLabels: readQuoteLabels(import.meta.env.VITE_QUOTE_LABELS, cluster),
   /** How often on-chain state is re-read while the page is open. */
   refreshMs: 15_000,
 } as const;

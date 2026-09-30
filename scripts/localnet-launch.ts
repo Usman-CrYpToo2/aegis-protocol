@@ -202,6 +202,7 @@ async function main() {
   } else {
     console.log("  · USDC already whitelisted");
   }
+  labelQuoteForApp(usdc.publicKey);
 
   // ----------------------------------------------------------------------------------------------
   console.log("\nIssuer prepares the asset");
@@ -475,11 +476,29 @@ async function main() {
   if (!pegHolds) process.exit(1);
 }
 
+/**
+ * The stand-in USDC is a plain SPL mint with no metadata, and it gets a new address every time the
+ * node is wiped. Point the app's label at it so the UI says "USDC" rather than "tokens". Only the
+ * VITE_QUOTE_LABELS line of app/.env.local (git-ignored) is touched; Vite reloads on the change.
+ */
+function labelQuoteForApp(usdcMint: PublicKey) {
+  const file = "app/.env.local";
+  if (!fs.existsSync("app")) return;
+  const line = `VITE_QUOTE_LABELS=${usdcMint.toBase58()}=USDC`;
+  const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "VITE_CLUSTER=localnet\nVITE_RPC_URL=http://127.0.0.1:8899\n";
+  if (current.includes(line)) return;
+  const next = /^VITE_QUOTE_LABELS=.*$/m.test(current)
+    ? current.replace(/^VITE_QUOTE_LABELS=.*$/m, line)
+    : `${current.replace(/\n?$/, "\n")}${line}\n`;
+  fs.writeFileSync(file, next);
+  console.log(`  · labelled ${usdcMint.toBase58()} as USDC in ${file}`);
+}
+
 /** Printed when a run stops early, so the frontend can be pointed at what was created. */
 function summary(stage: StopAt, mint: PublicKey, usdcMint: PublicKey) {
   console.log(`\nStopped at ${stage}.`);
   console.log(`  RWA mint:  ${mint.toBase58()}`);
-  console.log(`  USDC mint: ${usdcMint.toBase58()}  (for app/.env.local: VITE_QUOTE_LABELS=${usdcMint.toBase58()}=USDC)\n`);
+  console.log(`  USDC mint: ${usdcMint.toBase58()}\n`);
 }
 
 main().catch((e) => {
