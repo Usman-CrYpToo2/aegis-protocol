@@ -5,6 +5,7 @@ import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token"
 import { PublicKey, type AccountInfo, type Connection } from "@solana/web3.js";
 import { creatorMigrationFee } from "../lib/money";
 import { isSet } from "./aegis";
+import { graduationStep } from "./graduate";
 import { TOKEN_2022_PROGRAM_ID, TRANSFER_RESTRICTIONS_PROGRAM_ID } from "./ids";
 import { holderAccounts, saaAddress } from "./holdings";
 import { CREATOR_MIGRATION_FEE_MASK } from "./meteora";
@@ -106,12 +107,17 @@ export async function loadConsole(connection: Connection, registry: Registry, is
 export type Attention =
   | { kind: "unsold-blocked"; launch: ConsoleLaunch }
   | { kind: "raise-ready"; launch: ConsoleLaunch }
+  | { kind: "graduate"; launch: ConsoleLaunch }
   | { kind: "waiting"; launch: ConsoleLaunch; count: number }
   | { kind: "unfinished"; launch: ConsoleLaunch };
 
 /** What needs the issuer, most urgent first. */
 export function attentionItems(launches: ConsoleLaunch[]): Attention[] {
   const items: Attention[] = [];
+  for (const l of launches) {
+    const g = graduationStep(l.entry.launch, l.entry.detail.pool, l.entry.detail.terms);
+    if (g === "migrate" || g === "finalize") items.push({ kind: "graduate", launch: l });
+  }
   for (const l of launches) if (l.payout.status === "ready") items.push({ kind: "raise-ready", launch: l });
   for (const l of launches) if (l.unsold > 0n && !l.issuerApproved) items.push({ kind: "unsold-blocked", launch: l });
   for (const l of launches) if (l.waiting.length > 0) items.push({ kind: "waiting", launch: l, count: l.waiting.length });

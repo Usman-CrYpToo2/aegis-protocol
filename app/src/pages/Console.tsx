@@ -91,6 +91,8 @@ function AttentionItem({ a }: { a: Attention }) {
   switch (a.kind) {
     case "raise-ready":
       return row(ICON.coin, `${money(l.payout.amount, l)} is ready to collect`, "The sale completed. Meteora holds your share of the raise until you collect it.", btn(toLaunch, "Collect", true));
+    case "graduate":
+      return row(ICON.coin, "Your sale filled: graduate it", "Trading on the curve has closed. Graduating moves it to its permanent pool and opens the bridge for your holders.", btn(toLaunch, "Graduate", true));
     case "unsold-blocked":
       return row(ICON.warn, "Your unsold stock can’t reach you", `Your own wallet isn’t on the register, and ${sym} can only move to approved wallets.`, btn(`${toLaunch}?tab=investors`, "Fix", true));
     case "waiting":

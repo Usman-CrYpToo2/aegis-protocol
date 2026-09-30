@@ -7,6 +7,7 @@ import { METEORA_PROTOCOL_FEE_PCT, type DbcConfig } from "../chain/meteora";
 import { ProgramNotDeployedError, type RegistryEntry } from "../chain/registry";
 import { CurveChart } from "../components/asset/CurveChart";
 import { Seal } from "../components/asset/Seal";
+import { GraduatePanel } from "../components/asset/GraduatePanel";
 import { TradePanel } from "../components/asset/TradePanel";
 import { useAsset } from "../hooks/useAsset";
 import { useChangeFlash } from "../hooks/useChangeFlash";
@@ -179,6 +180,7 @@ function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcCo
             <TradePanel entry={entry} />
           </div>
         )}
+        <GraduatePanel entry={entry} />
         <aside aria-label="Sale terms" className="flex h-fit flex-col gap-4 border border-line bg-surface p-5 sm:p-6">
           <h3 className="kicker">Sale terms · fixed on-chain</h3>
           <div className="flex flex-col gap-1">

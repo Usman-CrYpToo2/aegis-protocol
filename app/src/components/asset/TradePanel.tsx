@@ -168,6 +168,9 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
     }
   }
 
+  // Once the sale fills, the graduate panel takes over; only the last buyer's receipt stays.
+  if (filled && phase.kind !== "done") return null;
+
   const priceNow = sqrtPriceToQuoteAtoms(state.sqrtPrice, launch.decimals);
   const quickBuy = [100n, 500n, 1_000n].map((n) => n * 10n ** BigInt(q.decimals));
 
@@ -198,7 +201,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
             <span className="text-sm text-ink2">for {phase.paid}. It’s in your wallet now.</span>
             {filled && (
               <span className="border-l-2 border-green pl-3 text-[13px] leading-relaxed text-ink2">
-                Your purchase completed this sale. It is moving to its permanent Meteora pool, and the bridge opens once it lands.
+                Your purchase completed this sale. One step is left before the bridge opens: graduating it, which anyone can do from this page.
               </span>
             )}
             <a href={explorerUrl("tx", phase.signature)} target="_blank" rel="noopener noreferrer" className="w-fit text-sm text-blue underline underline-offset-2">
@@ -214,9 +217,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
           <div role="status" className="flex flex-col gap-2">
             <span className="kicker text-green">Sale filled</span>
             <span className="font-serif text-3xl leading-tight">The raise is complete.</span>
-            <span className="text-sm leading-relaxed text-ink2">
-              Trading on the curve has closed. The offering is moving to its permanent Meteora pool, and the bridge opens as soon as it lands. This page updates by itself.
-            </span>
+            <span className="text-sm leading-relaxed text-ink2">Trading on the curve has closed. Graduate the sale below to move it to its permanent pool and open the bridge.</span>
           </div>
         ) : (
           <>

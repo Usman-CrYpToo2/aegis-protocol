@@ -8,6 +8,7 @@ import type { ConsoleLaunch } from "../chain/console";
 import { loadHealth } from "../chain/health";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { Investors } from "../components/console/Investors";
+import { GraduatePanel } from "../components/asset/GraduatePanel";
 import { useAsset } from "../hooks/useAsset";
 import { useConsole } from "../hooks/useConsole";
 import { TX_STEP, useTxRunner, type TxPhase } from "../hooks/useTxRunner";
@@ -267,6 +268,8 @@ export function LaunchConsolePage() {
         <span className="pt-3.5 pb-3 text-[15px] text-mute" title="Arrives in a later part">Legal powers</span>
       </nav>
     </section>
+
+    <GraduatePanel entry={entry} tone="plain" />
 
     {!mine ? (
       <span aria-busy="true" aria-label="Loading" className="h-64 animate-pulse bg-track/70" />
