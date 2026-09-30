@@ -55,7 +55,7 @@ export async function readMany(connection: Connection, keys: PublicKey[]): Promi
   return out;
 }
 
-function quoteSymbol(mint: PublicKey, label: TokenLabel | null): string {
+export function quoteSymbol(mint: PublicKey, label: TokenLabel | null): string {
   return config.quoteLabels.get(mint.toBase58()) ?? label?.symbol ?? "tokens";
 }
 

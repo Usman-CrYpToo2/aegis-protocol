@@ -5,6 +5,11 @@ import idl from "../idl/aegis.json";
 export const AEGIS_PROGRAM_ID = new PublicKey(idl.address);
 
 /** Meteora Dynamic Bonding Curve, pinned to the same program the Aegis program CPIs into. */
+/** The transfer hook Meteora attaches to every wrapper, as the Aegis program names it. */
+export const AEGIS_HOOK_PROGRAM_ID = new PublicKey(
+  (idl.instructions.find((i) => i.name === "launch_pool")!.accounts as { name: string; address?: string }[]).find((a) => a.name === "aegis_hook_program")!.address!
+);
+
 export const METEORA_DBC_PROGRAM_ID = new PublicKey("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
 
 // Re-exported from the official package rather than typed by hand.
