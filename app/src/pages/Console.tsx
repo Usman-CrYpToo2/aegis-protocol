@@ -96,7 +96,7 @@ function AttentionItem({ a }: { a: Attention }) {
     case "waiting":
       return row(ICON.people, `${a.count} ${a.count === 1 ? "holder is" : "holders are"} waiting for approval`, `They hold the wrapper but can’t exchange it for ${sym} until you approve them.`, btn(`${toLaunch}?tab=investors`, "Review"));
     case "unfinished":
-      return row(ICON.clock, "This launch stopped part-way", `Its ${formatUnits(l.entry.launch.totalSupply, l.entry.launch.decimals, { maxFraction: 0 })} ${sym} ${l.entry.launch.stage === "TokenCreated" ? "were created but never escrowed" : "sit in escrow with no sale"}. Continue it, or cancel before the sale opens.`, btn(`/asset/${mintOf(l)}`, "Open"));
+      return row(ICON.clock, "This launch stopped part-way", `Its ${formatUnits(l.entry.launch.totalSupply, l.entry.launch.decimals, { maxFraction: 0 })} ${sym} ${l.entry.launch.stage === "TokenCreated" ? "were created but never escrowed" : "sit in escrow with no sale"}. Continue it, or cancel before the sale opens.`, btn(`/launch/${mintOf(l)}`, "Continue"));
   }
 }
 
@@ -167,10 +167,11 @@ export function ConsolePage() {
       <div className="flex flex-col items-start gap-3 border border-ink bg-surface p-8">
         <strong className="font-serif text-3xl font-normal">This wallet hasn’t issued an asset</strong>
         <p className="max-w-2xl text-[15px] leading-relaxed text-ink2">
-          The connected wallet, <span className="font-mono">{shortAddress(publicKey.toBase58())}</span>, isn’t recorded as the issuer of any launch on {config.cluster}. If you are an issuer, switch to the wallet you launched with.
+          The connected wallet, <span className="font-mono">{shortAddress(publicKey.toBase58())}</span>, isn’t recorded as the issuer of any launch on {config.cluster}. Start one now, or if you already issued, switch to the wallet you launched with.
         </p>
         <div className="mt-2 flex flex-wrap gap-3">
-          <button type="button" onClick={openConnect} className="min-h-11 cursor-pointer bg-ink px-5 text-sm font-semibold text-paper">Switch wallet</button>
+          <Link to="/launch" className="inline-flex min-h-11 items-center bg-blue px-5 text-sm font-semibold text-white hover:bg-blue-deep">Launch an asset</Link>
+          <button type="button" onClick={openConnect} className="min-h-11 cursor-pointer border border-line px-5 text-sm hover:border-ink">Switch wallet</button>
           <Link to="/" className="inline-flex min-h-11 items-center border border-line px-5 text-sm hover:border-ink">Back to the registry</Link>
         </div>
       </div>
@@ -234,7 +235,7 @@ export function ConsolePage() {
       <section aria-label="Launches" className="flex flex-col">
         <div className="flex flex-wrap items-baseline justify-between gap-2 pb-3">
           <h2 className="font-serif text-4xl">{count} in your name</h2>
-          <span className="text-[13px] text-mute">Read from the chain · no account or login</span>
+          <Link to="/launch" className="inline-flex min-h-10 items-center bg-blue px-4 text-sm font-semibold text-white hover:bg-blue-deep">Start a new launch</Link>
         </div>
         <div className="hidden border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,2fr)_7rem] md:gap-6">
           <span>ASSET</span><span>STAGE</span><span>WAITING FOR YOU</span><span />
@@ -251,10 +252,10 @@ export function ConsolePage() {
               <StageCell l={l} />
               <WaitingCell l={l} />
               <Link
-                to={["Live", "Graduated"].includes(l.entry.launch.stage) ? `/console/${mintOf(l)}` : `/asset/${mintOf(l)}`}
+                to={["Live", "Graduated"].includes(l.entry.launch.stage) ? `/console/${mintOf(l)}` : l.entry.launch.stage === "Aborted" ? `/asset/${mintOf(l)}` : `/launch/${mintOf(l)}`}
                 className="inline-flex min-h-10 items-center justify-center border border-ink px-4 text-sm font-semibold hover:bg-surface md:justify-self-end"
               >
-                {["Live", "Graduated"].includes(l.entry.launch.stage) ? "Manage" : "Open"}
+                {["Live", "Graduated"].includes(l.entry.launch.stage) ? "Manage" : l.entry.launch.stage === "Aborted" ? "Open" : "Continue"}
               </Link>
             </li>
           ))}

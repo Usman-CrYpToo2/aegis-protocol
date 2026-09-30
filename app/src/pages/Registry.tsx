@@ -460,6 +460,7 @@ export function RegistryPage() {
         <p className="max-w-3xl text-lg leading-relaxed text-ink2 lg:text-xl">
           Every asset issued through Aegis, and the proof behind it. Each one is a regulated security held in escrow, with a wrapper anyone can trade. The two are always exchangeable one for one.
         </p>
+        <Link to="/launch" className="w-fit text-sm text-ink2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink">Issuing an asset? Launch it on Aegis →</Link>
       </section>
 
       <Totals registry={data} failed={!data && registry.isError} />
