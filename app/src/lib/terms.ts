@@ -168,6 +168,10 @@ export function previewTerms(t: Terms, p: PlatformLimits, totalSupply: bigint, b
   const issuerPct = t.migrationFeePct === 0 ? 0 : 100 - p.aegisMigrationFeeSharePct;
   // Pool tokens at the closing price: quote / price, where price = s² / 2^128 in atoms.
   const poolBase = (toPool << 128n) / (plan.migrationSqrt * plan.migrationSqrt);
+  // Meteora's create_config also reserves the pool's tokens (plus the 25% swap buffer) out of the
+  // supply. The pool amount here is an estimate, so keep a 2% cushion: when the whole launch is
+  // approved at once, these terms can't be simulated before the escrow exists.
+  if (((plan.baseWithBuffer + poolBase) * 102n) / 100n > totalSupply) return { ok: false, error: "SupplyTooSmallForCurve" };
   const used = plan.baseSold + poolBase;
   return {
     ok: true,

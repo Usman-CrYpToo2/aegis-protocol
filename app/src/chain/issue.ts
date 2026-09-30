@@ -14,7 +14,7 @@
  * Each step is recorded on-chain as soon as it lands, so progress is read, never remembered.
  */
 import { createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { PublicKey, SystemProgram, type Connection, type TransactionInstruction } from "@solana/web3.js";
+import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, TransactionMessage, VersionedTransaction, type Connection, type TransactionInstruction } from "@solana/web3.js";
 import aegisIdl from "../idl/aegis.json";
 import trIdl from "../idl/transfer_restrictions.json";
 import type { Terms } from "../lib/terms";
@@ -157,7 +157,10 @@ export function meteoraPoolAddress(config: PublicKey, baseMint: PublicKey, quote
   return pda([text("pool"), config.toBytes(), hi.toBytes(), lo.toBytes()], METEORA_DBC_PROGRAM_ID);
 }
 
-export function openInstructions(launch: LaunchAccount, issuer: PublicKey, crwaMint: PublicKey, quoteProgram: PublicKey, wrapper: { name: string; symbol: string; uri: string }): TransactionInstruction[] {
+/** What opening the sale needs to know about a launch, before or after its terms are on-chain. */
+export type OpenTarget = Pick<LaunchAccount, "realRwaMint" | "meteoraConfig" | "quoteMint" | "escrowVault" | "vaultGroup" | "investorGroup">;
+
+export function openInstructions(launch: OpenTarget, issuer: PublicKey, crwaMint: PublicKey, quoteProgram: PublicKey, wrapper: { name: string; symbol: string; uri: string }): TransactionInstruction[] {
   const a = issueAddresses(launch.realRwaMint, issuer);
   const pool = meteoraPoolAddress(launch.meteoraConfig, crwaMint, launch.quoteMint);
   return [
@@ -223,4 +226,73 @@ export async function loadIssueProgress(connection: Connection, mint: PublicKey,
     open: rank >= 3,
   };
   return { launch, done, next: STEP_IDS.find((s) => !done[s]) ?? null, aborted: launch?.stage === "Aborted" };
+}
+
+// ------------------------------------------------------------------------------------------------
+// One approval for the whole launch
+// ------------------------------------------------------------------------------------------------
+
+/**
+ * Compute budgets per step when they are signed together. Only the first can be simulated (the rest
+ * depend on it landing), so each carries a fixed limit: measured use on a local node x ~1.5.
+ * Measured: create 99.7k, register 27k, groups 51.7k, vault 71.8k, yourself 67k, fund 71.4k,
+ * terms 77.2k, open 136.2k.
+ */
+export const STEP_UNITS: Record<StepId, number> = {
+  create: 150_000, register: 60_000, groups: 100_000, vault: 120_000, yourself: 120_000, fund: 120_000, terms: 150_000, open: 220_000,
+};
+
+export type LaunchPlan = {
+  mint: PublicKey;
+  issuer: PublicKey;
+  feeRecipient: PublicKey;
+  /** Needed only if the security isn't created yet. */
+  create?: { keypair: Keypair; details: AssetDetails };
+  /** Needed only if the terms aren't fixed yet. */
+  terms?: { quoteMint: PublicKey; terms: Terms };
+  quoteProgram: PublicKey;
+  decimals: number;
+  wrapper: { name: string; symbol: string; uri: string };
+  /** The next holder number Upside will accept; 0 before the register exists. */
+  firstHolderId: bigint;
+  /** On-chain facts once they exist; otherwise derived for this plan. */
+  existing: { meteoraConfig: PublicKey; quoteMint: PublicKey } | null;
+};
+
+/**
+ * Every step still to do, as signed-by-keypairs transactions sharing one blockhash, in order.
+ * The wallet signs them all at once; they are then sent one after another.
+ */
+export function launchTransactions(plan: LaunchPlan, remaining: StepId[], blockhash: string): { id: StepId; tx: VersionedTransaction }[] {
+  const { mint, issuer } = plan;
+  const a = issueAddresses(mint, issuer);
+  const config = plan.terms ? Keypair.generate() : null;
+  const crwa = Keypair.generate();
+  const target: OpenTarget = {
+    realRwaMint: mint,
+    escrowVault: a.escrowVault,
+    vaultGroup: VAULT_GROUP,
+    investorGroup: INVESTOR_GROUP,
+    meteoraConfig: plan.existing?.meteoraConfig ?? config?.publicKey ?? PublicKey.default,
+    quoteMint: plan.existing?.quoteMint ?? plan.terms?.quoteMint ?? PublicKey.default,
+  };
+  let holder = plan.firstHolderId;
+  const build = (id: StepId): { ixs: TransactionInstruction[]; signers: Keypair[] } => {
+    switch (id) {
+      case "create": return { ixs: createInstructions(mint, issuer, plan.feeRecipient, plan.create!.details), signers: [plan.create!.keypair] };
+      case "register": return { ixs: registerInstructions(mint, issuer), signers: [] };
+      case "groups": return { ixs: groupInstructions(mint, issuer), signers: [] };
+      case "vault": return { ixs: holderInstructions(mint, issuer, a.authority, VAULT_GROUP, holder++), signers: [] };
+      case "yourself": return { ixs: holderInstructions(mint, issuer, issuer, INVESTOR_GROUP, holder++), signers: [] };
+      case "fund": return { ixs: fundInstructions(mint, issuer), signers: [] };
+      case "terms": return { ixs: termsInstructions(mint, issuer, plan.terms!.quoteMint, config!.publicKey, plan.terms!.terms, plan.decimals), signers: [config!] };
+      case "open": return { ixs: openInstructions(target, issuer, crwa.publicKey, plan.quoteProgram, plan.wrapper), signers: [crwa] };
+    }
+  };
+  return remaining.map((id) => {
+    const { ixs, signers } = build(id);
+    const tx = new VersionedTransaction(new TransactionMessage({ payerKey: issuer, recentBlockhash: blockhash, instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: STEP_UNITS[id] }), ...ixs] }).compileToV0Message());
+    if (signers.length) tx.sign(signers);
+    return { id, tx };
+  });
 }

@@ -3,7 +3,7 @@
  * instructions, then a second launch cancelled before its sale opens. Needs the platform set up
  * (any yarn localnet:launch). Skipped unless AEGIS_LOCALNET=1.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { Connection, Keypair, LAMPORTS_PER_SOL, SystemProgram, type TransactionInstruction } from "@solana/web3.js";
 import { describe, expect, it } from "vitest";
@@ -12,7 +12,7 @@ import { ISSUE_ERRORS, explainTradeError } from "../lib/txErrors";
 import { TOKEN_2022_PROGRAM_ID } from "./ids";
 import {
   INVESTOR_GROUP, VAULT_GROUP, abortInstructions, createInstructions, fundInstructions, groupInstructions, holderInstructions, issueAddresses,
-  loadIssueProgress, nextHolderIdFor, openInstructions, registerInstructions, termsInstructions,
+  STEP_IDS, launchTransactions, loadIssueProgress, nextHolderIdFor, openInstructions, registerInstructions, termsInstructions,
 } from "./issue";
 import { decodeDbcConfig } from "./meteora";
 import { loadPlatform } from "./platform";
@@ -27,7 +27,9 @@ async function send(signers: Keypair[], ixs: TransactionInstruction[]) {
   const sig = await connection.sendTransaction(p.transaction);
   const r = await connection.confirmTransaction({ signature: sig, blockhash: p.blockhash, lastValidBlockHeight: p.lastValidBlockHeight }, "confirmed");
   expect(r.value.err).toBeNull();
+  UNITS.push((await connection.getTransaction(sig, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }))!.meta!.computeUnitsConsumed ?? 0);
 }
+const UNITS: number[] = [];
 
 async function newIssuer() {
   const actors = JSON.parse(readFileSync("../.localnet/actors.json", "utf8"));
@@ -89,6 +91,32 @@ describe.runIf(process.env.AEGIS_LOCALNET === "1")("issuing against a live node"
     expect(live.next).toBeNull();
     expect(live.launch!.stage).toBe("Live");
     expect(live.launch!.crwaMint.equals(crwa.publicKey)).toBe(true);
+    writeFileSync("/private/tmp/claude-502/-Users-usmandev-Downloads-aegis/08b75f22-d566-44e4-bd47-9762cb4dda93/scratchpad/issue-units.json", JSON.stringify(UNITS));
+  }, 120_000);
+
+  it("launches with one signature pass: all eight transactions signed together, sent in order", async () => {
+    const issuer = await newIssuer();
+    const platform = await loadPlatform(connection);
+    const quote = platform.quotes[0]!;
+    const rwa = Keypair.generate();
+    const d = 10n ** BigInt(quote.decimals);
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+    const batch = launchTransactions({
+      mint: rwa.publicKey, issuer: issuer.publicKey, feeRecipient: platform.config.feeRecipient,
+      create: { keypair: rwa, details: { name: "Canal Works", symbol: "CANL", uri: "", decimals: 6, totalSupply: 1_000_000n * unit } },
+      terms: { quoteMint: quote.mint, terms: { quoteAtomsPerToken: d, archetype: "BookBuilding", sqrtBps: 11_000, targetRaise: 10_000n * d, migrationFeePct: 50, permanentPct: 30, vestedPct: 100 - platform.config.aegisLpSharePct - 30, vestingMonths: 12, poolFeeBps: 100 } },
+      quoteProgram: quote.program, decimals: 6, wrapper: { name: "Wrapped Canal Works", symbol: "cCANL", uri: "" }, firstHolderId: 0n, existing: null,
+    }, [...STEP_IDS], blockhash);
+    expect(batch.map((b) => b.id)).toEqual([...STEP_IDS]);
+    for (const { tx } of batch) {
+      tx.sign([issuer]);
+      const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: true });
+      const r = await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+      expect(r.value.err).toBeNull();
+    }
+    const done = await loadIssueProgress(connection, rwa.publicKey, issuer.publicKey);
+    expect(done.next).toBeNull();
+    expect(done.launch!.stage).toBe("Live");
   }, 120_000);
 
   it("refuses terms the supply can't cover with a plain reason, and cancels a launch back to the issuer", async () => {
