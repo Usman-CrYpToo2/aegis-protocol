@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { config } from "../config";
 import { ProgramNotDeployedError } from "../chain/registry";
 import { useRegistry } from "../hooks/useRegistry";
@@ -26,6 +26,9 @@ const link = ({ isActive }: { isActive: boolean }) =>
   `inline-flex h-18 items-center border-b-2 text-[15px] ${isActive ? "border-ink font-semibold text-ink" : "border-transparent text-mute hover:text-ink"}`;
 
 export function Header() {
+  const { pathname } = useLocation();
+  // Asset pages are part of the registry, so its tab stays marked while one is open.
+  const inRegistry = pathname === "/" || pathname.startsWith("/asset/");
   return (
     <header className="border-b border-rule bg-paper">
       <div className="flex h-18 w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-10 2xl:px-14">
@@ -35,7 +38,7 @@ export function Header() {
             <span className="font-serif text-[26px] tracking-[0.08em]">AEGIS</span>
           </NavLink>
           <nav aria-label="Main" className="hidden gap-8 md:flex">
-            <NavLink to="/" end className={link}>
+            <NavLink to="/" className={() => link({ isActive: inRegistry })} aria-current={inRegistry ? "page" : undefined}>
               Registry
             </NavLink>
           </nav>

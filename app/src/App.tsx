@@ -8,6 +8,7 @@ import { config } from "./config";
 import { Header } from "./components/Header";
 import { Toast, type ToastMessage } from "./components/Toast";
 import { RegistryPage } from "./pages/Registry";
+import { AssetPage } from "./pages/Asset";
 import { NotFoundPage } from "./pages/NotFound";
 import { ProgramNotDeployedError } from "./chain/registry";
 
@@ -48,6 +49,7 @@ export function App() {
               <main id="main" tabIndex={-1} className="outline-none">
                 <Routes>
                   <Route path="/" element={<RegistryPage />} />
+                  <Route path="/asset/:mint" element={<AssetPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </main>

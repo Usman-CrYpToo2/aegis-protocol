@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import type { Backing } from "../chain/backing";
 import { ProgramNotDeployedError, type Registry, type RegistryEntry } from "../chain/registry";
@@ -159,9 +160,9 @@ function AssetCell({ entry }: { entry: RegistryEntry }) {
   const mint = entry.launch.realRwaMint.toBase58();
   return (
     <span className="flex min-w-0 flex-col gap-0.5">
-      <span className="truncate font-serif text-[28px] leading-tight" title={assetName(entry)}>
+      <Link to={`/asset/${mint}`} className="truncate font-serif text-[28px] leading-tight hover:underline hover:decoration-1 hover:underline-offset-4" title={assetName(entry)}>
         {assetName(entry)}
-      </span>
+      </Link>
       <span className="flex flex-wrap items-center gap-x-2 text-[13px] text-mute">
         {symbols(entry) && <span className="font-mono">{symbols(entry)}</span>}
         <ExplorerLink address={mint}>
@@ -313,6 +314,13 @@ function ago(ms: number) {
 
 export function RegistryPage() {
   const registry = useRegistry();
+  const navigate = useNavigate();
+  // The name is the real link (keyboard and screen readers); clicking anywhere else on the row is
+  // a convenience for mouse users, ignored when the click was on a link or while selecting text.
+  const openRow = (e: React.MouseEvent, mint: string) => {
+    if ((e.target as HTMLElement).closest("a, button, summary") || window.getSelection()?.toString()) return;
+    navigate(`/asset/${mint}`);
+  };
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
 
@@ -414,7 +422,7 @@ export function RegistryPage() {
           </thead>
           <tbody>
             {visible.map((e) => (
-              <tr key={e.launch.address.toBase58()} className={`border-b border-rule align-middle ${e.launch.stage === "Aborted" ? "opacity-60" : ""}`}>
+              <tr key={e.launch.address.toBase58()} onClick={(ev) => openRow(ev, e.launch.realRwaMint.toBase58())} className={`cursor-pointer border-b border-rule align-middle hover:bg-surface ${e.launch.stage === "Aborted" ? "opacity-60" : ""}`}>
                 <td className="max-w-[26rem] py-5 pr-6"><AssetCell entry={e} /></td>
                 <td className="py-5 pr-6"><StageCell entry={e} /></td>
                 <td className="py-5 pr-6"><PriceCell entry={e} /></td>
