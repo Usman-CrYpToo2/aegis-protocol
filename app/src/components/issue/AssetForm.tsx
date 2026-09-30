@@ -50,24 +50,29 @@ export function AssetForm({ draft, onChange, disabled }: { draft: AssetDraft; on
     <fieldset disabled={disabled} className="grid grid-cols-1 gap-6 md:grid-cols-2">
       <legend className="sr-only">The asset</legend>
       <div className="md:col-span-2">
-        <Field id={`${base}-name`} label="Name" hint="The legal name buyers will see, like the building or fund. Up to 32 characters." error={errorFor("name")}>
+        <Field id={`${base}-name`} label="Name" hint="As buyers will see it." error={errorFor("name")}>
           <input id={`${base}-name`} className={input} value={draft.name} maxLength={40} autoComplete="off" onBlur={blur("name")} onChange={(e) => set("name", e.target.value)} {...aria("name")} placeholder="Aegis Tower A" />
         </Field>
       </div>
-      <Field id={`${base}-symbol`} label="Symbol" hint={<>Short ticker for the security. The tradable wrapper becomes <span className="font-mono">{wrapper}</span>.</>} error={errorFor("symbol")}>
+      <Field id={`${base}-symbol`} label="Symbol" hint={<>The wrapper becomes <span className="font-mono">{wrapper}</span>.</>} error={errorFor("symbol")}>
         <input id={`${base}-symbol`} className={`${input} font-mono uppercase`} value={draft.symbol} maxLength={9} autoComplete="off" onBlur={blur("symbol")} onChange={(e) => set("symbol", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} {...aria("symbol")} placeholder="TWRA" />
       </Field>
-      <Field id={`${base}-supply`} label="Total supply" hint="Every unit that will ever exist. It all goes into escrow; the supply can’t be raised later without everyone seeing." error={errorFor("supply")}>
+      <Field id={`${base}-supply`} label="Total supply" hint="Fixed for good. All of it goes into escrow." error={errorFor("supply")}>
         <input id={`${base}-supply`} className={`${input} num`} value={draft.supply} inputMode="numeric" autoComplete="off" onBlur={blur("supply")} onChange={(e) => set("supply", e.target.value)} {...aria("supply")} placeholder="1,000,000" />
       </Field>
-      <Field id={`${base}-decimals`} label="Decimals" hint="How finely one unit divides. 6 suits most assets; Meteora accepts 6 to 9.">
-        <select id={`${base}-decimals`} className={input} value={draft.decimals} onChange={(e) => set("decimals", Number(e.target.value))}>
-          {[6, 7, 8, 9].map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
-      </Field>
-      <Field id={`${base}-uri`} label="Offering documents (optional)" hint="A link to your prospectus or data room, stored in the token’s metadata." error={errorFor("uri")}>
-        <input id={`${base}-uri`} className={input} value={draft.uri} type="url" autoComplete="off" onBlur={blur("uri")} onChange={(e) => set("uri", e.target.value)} {...aria("uri")} placeholder="https://" />
-      </Field>
+      <details className="group md:col-span-2">
+        <summary className="w-fit cursor-pointer list-none text-sm text-ink2 underline decoration-line underline-offset-4 hover:text-ink">More options</summary>
+        <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Field id={`${base}-decimals`} label="Decimals" hint="6 suits most assets.">
+            <select id={`${base}-decimals`} className={input} value={draft.decimals} onChange={(e) => set("decimals", Number(e.target.value))}>
+              {[6, 7, 8, 9].map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </Field>
+          <Field id={`${base}-uri`} label="Offering documents" hint="Optional link, stored in the token." error={errorFor("uri")}>
+            <input id={`${base}-uri`} className={input} value={draft.uri} type="url" autoComplete="off" onBlur={blur("uri")} onChange={(e) => set("uri", e.target.value)} {...aria("uri")} placeholder="https://" />
+          </Field>
+        </div>
+      </details>
     </fieldset>
   );
 }
