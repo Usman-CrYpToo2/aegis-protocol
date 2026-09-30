@@ -9,7 +9,11 @@
 //! launch would cost someone money.
 //!
 //! Call sites: `fund_vault` (before the asset is locked), `launch_pool` (state can change in
-//! between), and `bridge_redeem` (where a broken rule actually hurts a holder).
+//! between), `bridge_deposit` and `bridge_redeem` (where a broken rule actually hurts a holder),
+//! `finalize_graduation` and `abort_launch`.
+//!
+//! The supply-cap check is separate — `require_supply_cap_unchanged` — and runs only where a new
+//! buyer is about to enter. See its documentation for why.
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::spl_token_2022::extension::transfer_hook::TransferHook;
@@ -91,20 +95,6 @@ pub fn verify_compliance(input: ComplianceInputs) -> Result<()> {
     );
 
     // ------------------------------------------------------------------
-    // No dilution headroom.
-    //
-    // Upside's `set_max_total_supply` can only ever *raise* the cap, and the issuer keeps
-    // ReserveAdmin, so dilution is always possible. It cannot be prevented — but a raised cap
-    // is visible on-chain, and from here on it stops the launch rather than quietly diluting
-    // everyone who already bought.
-    // ------------------------------------------------------------------
-    require_eq!(
-        access_control.max_total_supply,
-        launch.total_supply,
-        AegisError::SupplyCapRaised
-    );
-
-    // ------------------------------------------------------------------
     // The vault is ours, usable, and unencumbered.
     // ------------------------------------------------------------------
     require_keys_eq!(vault.mint, mint_key, AegisError::VaultMintMismatch);
@@ -153,5 +143,25 @@ pub fn verify_compliance(input: ComplianceInputs) -> Result<()> {
         AegisError::RedemptionPathLocked
     );
 
+    Ok(())
+}
+
+/// The supply cap is still exactly the launch supply.
+///
+/// Deliberately **not** part of `verify_compliance`. Upside's `set_max_total_supply` can only
+/// ever raise the cap, so once the issuer issues more shares — a lawful corporate action — this
+/// can never pass again. Checked everywhere, it made that one action permanently block
+/// redemption, deposits, graduation and abort.
+///
+/// Dilution does not break the peg: every cRWA is still backed by one Real RWA in the vault.
+/// What a raised cap changes is the price a *new* buyer is paying for, so the check belongs only
+/// where someone is about to enter a launch — `fund_vault` and `launch_pool`, before anyone has
+/// bought. Holders who are already in must always be able to leave.
+pub fn require_supply_cap_unchanged(launch: &Launch, access_control: &AccessControl) -> Result<()> {
+    require_eq!(
+        access_control.max_total_supply,
+        launch.total_supply,
+        AegisError::SupplyCapRaised
+    );
     Ok(())
 }

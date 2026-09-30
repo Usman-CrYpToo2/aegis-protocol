@@ -9,7 +9,7 @@ use dynamic_bonding_curve::cpi::accounts::InitializeVirtualPoolWithToken2022Tran
 use dynamic_bonding_curve::InitializePoolParameters;
 
 use crate::access_control::accounts::AccessControl;
-use crate::compliance::{verify_compliance, ComplianceInputs};
+use crate::compliance::{require_supply_cap_unchanged, verify_compliance, ComplianceInputs};
 use crate::constants::*;
 use crate::errors::AegisError;
 use crate::events::PoolLaunched;
@@ -229,6 +229,10 @@ pub fn handler(ctx: Context<LaunchPool>, args: LaunchPoolArgs) -> Result<()> {
         aegis_authority: &ctx.accounts.aegis_authority.key(),
         transfer_restriction_data_key: &ctx.accounts.transfer_restriction_data.key(),
     })?;
+
+    // The last point before buyers arrive. A cap raised after funding means the curve was priced
+    // for a supply that no longer exists, so nobody should start buying into it.
+    require_supply_cap_unchanged(&ctx.accounts.launch, &ctx.accounts.access_control)?;
 
     // The asset itself must still be present and untouched. `verify_compliance` proves the vault
     // is usable; this proves it is still full. The issuer keeps ReserveAdmin and can force a

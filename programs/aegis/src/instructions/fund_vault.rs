@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::access_control::accounts::{AccessControl, WalletRole};
 use crate::access_control::cpi::accounts::MintSecurities;
 use crate::access_control::program::AccessControl as AccessControlProgram;
-use crate::compliance::{verify_compliance, ComplianceInputs};
+use crate::compliance::{require_supply_cap_unchanged, verify_compliance, ComplianceInputs};
 use crate::constants::*;
 use crate::errors::AegisError;
 use crate::events::VaultFunded;
@@ -161,6 +161,9 @@ pub fn handler(ctx: Context<FundVault>, args: FundVaultArgs) -> Result<()> {
         aegis_authority: &ctx.accounts.aegis_authority.key(),
         transfer_restriction_data_key: &ctx.accounts.transfer_restriction_data.key(),
     })?;
+
+    // No dilution headroom before the supply is locked. See `require_supply_cap_unchanged`.
+    require_supply_cap_unchanged(&ctx.accounts.launch, &ctx.accounts.access_control)?;
 
     // The vault must be empty. A pre-funded vault would mean tokens arrived by some path we did
     // not account for, and the "minted exactly once, exactly here" guarantee would be a guess.
