@@ -236,7 +236,7 @@ export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingL
           <span className="inline-flex items-center gap-2"><span className="inline-block w-4 border-t-2 border-ink" aria-hidden="true" />Price</span>
           <span className="inline-flex items-center gap-2"><span className="inline-block w-4 border-t-2 border-dashed border-ox" aria-hidden="true" />Price ceiling</span>
         </span>
-        <span id={helpId} className="text-mute">Point or tap anywhere on the curve to see the price there{finished ? "" : " and what it takes to get there"}. Arrow keys work too.</span>
+        <span id={helpId} className="sr-only">Point or tap anywhere on the curve to see the price there{finished ? "" : " and what it takes to get there"}. Arrow keys work too.</span>
       </figcaption>
     </figure>
   );

@@ -7,7 +7,10 @@ import { METEORA_PROTOCOL_FEE_PCT, type DbcConfig } from "../chain/meteora";
 import { ProgramNotDeployedError, type RegistryEntry } from "../chain/registry";
 import { CurveChart } from "../components/asset/CurveChart";
 import { Seal } from "../components/asset/Seal";
+import { BridgeBox } from "../components/asset/BridgeBox";
 import { GraduatePanel } from "../components/asset/GraduatePanel";
+import { Hint } from "../components/Hint";
+import { STAGE } from "../lib/stage";
 import { TradePanel } from "../components/asset/TradePanel";
 import { useAsset } from "../hooks/useAsset";
 import { useChangeFlash } from "../hooks/useChangeFlash";
@@ -31,186 +34,93 @@ function Addr({ value, label }: { value: string; label?: string }) {
   );
 }
 
-function Leader({ label, children, strong = false }: { label: ReactNode; children: ReactNode; strong?: boolean }) {
+// ------------------------------------------------------------------------------------------------
+// The numbers that matter, in one row
+// ------------------------------------------------------------------------------------------------
+
+const startPrice = (t: DbcConfig, d: number) => sqrtPriceToQuoteAtoms(t.sqrtStartPrice, d);
+const endPrice = (t: DbcConfig, d: number) => sqrtPriceToQuoteAtoms(t.migrationSqrtPrice, d);
+
+function Stat({ label, hint, children, sub }: { label: string; hint?: ReactNode; children: ReactNode; sub?: ReactNode }) {
   return (
-    <div className={`flex items-baseline gap-2 text-[15px] leading-relaxed ${strong ? "font-semibold" : ""}`}>
-      <span>{label}</span>
-      <span className="flex-1 -translate-y-1 border-b border-dotted border-[#A89F8A]" aria-hidden="true" />
-      <span className="font-mono num text-right">{children}</span>
+    <div className="flex min-w-0 flex-col gap-1.5 py-4 sm:px-5 sm:first:pl-0">
+      <span className="flex items-center gap-1 kicker">{label}{hint && <Hint>{hint}</Hint>}</span>
+      <span className="font-serif text-3xl leading-none num">{children}</span>
+      {sub && <span className="text-[13px] text-mute">{sub}</span>}
     </div>
   );
 }
 
-function Section({ id, title, aside, children }: { id?: string; title: string; aside?: ReactNode; children: ReactNode }) {
+function Stats({ entry, readAt, onProof }: { entry: RegistryEntry; readAt: number; onProof: () => void }) {
+  const now = useNow();
+  const flash = useChangeFlash(entry.price);
+  const { launch, quote, raise, backing, detail } = entry;
+  const d = launch.decimals;
+  const terms = detail.terms;
+  const q = (v: bigint, f = 0) => (quote ? formatUnits(v, quote.decimals, { maxFraction: f, minFraction: f }) : "—");
+  const price = entry.price ?? (terms ? (launch.stage === "Graduated" ? endPrice(terms, d) : startPrice(terms, d)) : null);
+  const pct = raise ? percentOf(raise.raised, raise.target) : 0;
+  const wsym = entry.wrapperLabel?.symbol ?? "the wrapper";
+  const sym = entry.label?.symbol ?? "the security";
+  const ok = backing.kind === "backed" || backing.kind === "escrowed";
   return (
-    <section id={id} aria-labelledby={id ? `${id}-h` : undefined} className="flex flex-col gap-6 border-t border-rule pt-10">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-baseline lg:justify-between">
-        <h2 id={id ? `${id}-h` : undefined} className="font-serif text-4xl">{title}</h2>
-        {aside && <span className="text-[15px] text-mute">{aside}</span>}
-      </div>
-      {children}
+    <section aria-label="Key numbers" className="grid grid-cols-2 border-y border-ink sm:grid-cols-4 sm:divide-x sm:divide-rule">
+      <Stat label={launch.stage === "Live" ? "Price" : launch.stage === "Graduated" ? "Final sale price" : "Opening price"} hint={`Price of one ${wsym} in ${quote?.symbol ?? "the quote token"}, on Meteora’s bonding curve.`}>
+        <span key={flash} className={`-mx-1 px-1 ${flash}`}>{price !== null ? q(price, 4) : "—"}</span> <span className="font-sans text-sm text-mute">{quote?.symbol}</span>
+      </Stat>
+      <Stat label="Raised" sub={raise ? <span className="flex items-center gap-2"><span className="block h-1 w-20 bg-track"><span className="bar-fill block h-1 bg-ink" style={{ width: `${pct}%` }} /></span>{pct}% of {q(raise.target)}</span> : "Opens with the sale"}>
+        {raise ? q(raise.raised) : "—"} <span className="font-sans text-sm text-mute">{quote?.symbol}</span>
+      </Stat>
+      <Stat label="Backing" hint={`Every ${wsym} is backed by one ${sym} in escrow. Checked from the chain every few seconds.`}
+        sub={<button type="button" onClick={onProof} className="cursor-pointer underline decoration-line underline-offset-2 hover:text-ink">Checked {Math.max(0, Math.round((now - readAt) / 1000))}s ago</button>}>
+        <span className={ok ? "text-green" : backing.kind === "short" ? "text-error" : "text-mute"}>{ok ? "1 : 1 ✓" : backing.kind === "short" ? "Short" : "—"}</span>
+      </Stat>
+      <Stat label="Supply" hint="Fixed for good. No more can ever be issued.">{formatUnits(launch.totalSupply, d, { maxFraction: 0 })}</Stat>
     </section>
   );
 }
 
 // ------------------------------------------------------------------------------------------------
-// Stage rail
+// Details, in tabs
 // ------------------------------------------------------------------------------------------------
 
-const RAIL = [
-  { stage: "TokenCreated", title: "Filed", text: "Security created; the issuer holds its legal powers" },
-  { stage: "Funded", title: "Escrowed", text: "The whole issue locked in the Aegis vault" },
-  { stage: "Configured", title: "Terms set", text: "Price, raise and liquidity rules fixed" },
-  { stage: "Live", title: "Offering open", text: "Anyone can buy or sell on the curve" },
-  { stage: "Graduated", title: "Graduated", text: "Moves to a permanent pool; the bridge opens" },
-] as const;
-
-function StageRail({ entry }: { entry: RegistryEntry }) {
-  const current = ORDER.indexOf(entry.launch.stage);
-  const pct = entry.raise ? percentOf(entry.raise.raised, entry.raise.target) : null;
+function Row({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
-    <ol aria-label="Launch stages" className="grid grid-cols-1 gap-4 border-t border-ink sm:grid-cols-5 sm:gap-0">
-      {RAIL.map((step, i) => {
-        const state = i < current ? "done" : i === current ? "now" : "next";
-        const text = step.stage === "Live" && state === "now" && pct !== null ? `${pct}% of the raise filled · anyone can buy or sell` : step.text;
-        return (
-          <li
-            key={step.stage}
-            aria-current={state === "now" ? "step" : undefined}
-            className={`flex flex-col gap-1 pt-4 sm:pr-4 ${state === "now" ? "-mt-px border-t-4 border-blue pt-3" : ""} ${state === "next" ? "text-mute" : ""}`}
-          >
-            <span className={`font-mono text-xs ${state === "now" ? "text-blue" : "text-mute"}`}>
-              0{i + 1} · {state === "done" ? "done" : state}
-            </span>
-            <span className="font-semibold text-ink">{step.title}</span>
-            <span className={`text-sm ${state === "now" ? "text-ink2" : "text-mute"}`}>{text}</span>
-          </li>
-        );
-      })}
-    </ol>
+    <div className="flex items-baseline justify-between gap-4 border-b border-rule py-3 text-[15px]">
+      <span className="flex items-center gap-1 text-ink2">{label}{hint && <Hint>{hint}</Hint>}</span>
+      <span className="text-right num">{children}</span>
+    </div>
   );
 }
 
-// ------------------------------------------------------------------------------------------------
-// §1 The offering
-// ------------------------------------------------------------------------------------------------
-
-function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcConfig; readAt: number }) {
-  const now = useNow();
-  const flash = useChangeFlash(entry.price);
-  const { launch, quote, raise } = entry;
-  const cap = ARCHETYPE_CEILING[launch.archetype];
+function Terms({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig | null }) {
+  const { launch, quote } = entry;
   const d = launch.decimals;
-  const ceiling = ceilingPrice(terms.sqrtStartPrice, cap.sqrtBps, d);
-  const wrapper = entry.wrapperLabel?.symbol ?? "the wrapper";
-  if (!quote) return null;
-
-  const fmtQ = (v: bigint, frac = 0) => formatUnits(v, quote.decimals, { maxFraction: frac });
-  const priceNow = entry.price;
-  // Full but not yet moved to its pool: the curve is finished even though the stage still says Live.
-  const filled = launch.stage === "Live" && raise !== null && raise.raised >= raise.target;
-  const live = launch.stage === "Live" && entry.detail.pool && !filled;
-  const pct = raise ? percentOf(raise.raised, raise.target) : 0;
-
+  const cap = ARCHETYPE_CEILING[launch.archetype];
+  const q = (v: bigint, f = 0) => (quote ? `${formatUnits(v, quote.decimals, { maxFraction: f, minFraction: f })} ${quote.symbol}` : "—");
   return (
-    <Section id="offering" title="§1 The offering" aside="Meteora dynamic bonding curve">
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className="flex flex-col gap-5 border border-line bg-surface p-5 sm:p-7">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <span className="kicker">{live ? `Price of one ${wrapper} now` : launch.stage === "Graduated" || filled ? "Final sale price" : "Opening price"}</span>
-              <span key={flash} className={`-mx-1 w-fit px-1 font-serif text-5xl num ${flash}`}>
-                {formatUnits(priceNow ?? (launch.stage === "Graduated" ? ceilingPriceAtEnd(terms, d) : startPrice(terms, d)), quote.decimals, { maxFraction: 4, minFraction: 3 })}{" "}
-                <span className="font-sans text-xl text-mute">{quote.symbol}</span>
-              </span>
-            </div>
-            {live && (
-              <span className="inline-flex items-center gap-2 font-mono text-xs text-mute" aria-live="off">
-                <span className="relative flex size-2" aria-hidden="true">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-green opacity-60" />
-                  <span className="relative inline-flex size-2 rounded-full bg-green" />
-                </span>
-                Live · updated {Math.max(0, Math.round((now - readAt) / 1000))}s ago
-              </span>
-            )}
-          </div>
-          <CurveChart
-            terms={terms}
-            sqrtNow={live ? entry.detail.pool!.sqrtPrice : launch.stage === "Graduated" || filled ? terms.migrationSqrtPrice : null}
-            finished={launch.stage === "Graduated" || filled}
-            ceiling={ceiling}
-            ceilingLabel={cap.label}
-            baseDecimals={d}
-            quote={quote}
-            wrapperSymbol={wrapper}
-          />
-          {raise && (
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between text-[15px]">
-                <span>
-                  <strong className="num">{fmtQ(raise.raised)}</strong> of {fmtQ(raise.target)} {quote.symbol} raised
-                </span>
-                <span className="font-mono num">{pct}%</span>
-              </div>
-              <span role="progressbar" aria-label="Raise" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="block h-1.5 bg-track">
-                <span className="bar-fill block h-1.5 bg-ink" style={{ width: `${pct}%` }} />
-              </span>
-            </div>
-          )}
-          <p className="text-sm leading-relaxed text-ink2">
-            {launch.stage === "Graduated"
-              ? `The raise completed and the offering moved to a permanent Meteora pool at the curve's final price.`
-              : `When the raise reaches ${fmtQ(terms.migrationQuoteThreshold)} ${quote.symbol}, the sale closes by itself and moves to a permanent trading pool at ${formatUnits(ceilingPriceAtEnd(terms, d), quote.decimals, { maxFraction: 4 })} — exactly where the curve ends, so the price does not jump.`}
-          </p>
-        </div>
-
-        <div className="flex h-fit flex-col gap-6">
-        {launch.stage === "Graduated" && (
-          <div className="flex flex-col gap-3 border border-ink bg-ink p-6 text-paper">
-            <span className="kicker text-[#6FCF97]">The bridge is open</span>
-            <span className="font-serif text-3xl leading-tight">Exchange {wrapper} for the security, one for one.</span>
-            <span className="text-sm leading-relaxed text-line">No fee and no price impact. Holding the security needs the issuer’s approval; the wrapper never does.</span>
-            <Link to={`/asset/${launch.realRwaMint.toBase58()}/bridge`} className="mt-2 inline-flex min-h-12 items-center justify-center bg-paper font-semibold text-ink hover:bg-surface">
-              Go to the bridge
-            </Link>
-          </div>
-        )}
-        {/* Stays mounted after graduation so the buyer who completed the sale keeps their receipt;
-            it renders nothing once the sale is filled unless it holds one. */}
-        {(launch.stage === "Live" || launch.stage === "Graduated") && (
-          <div id="trade" className="scroll-mt-6">
-            <TradePanel entry={entry} />
-          </div>
-        )}
-        <GraduatePanel entry={entry} />
-        <aside aria-label="Sale terms" className="flex h-fit flex-col gap-4 border border-line bg-surface p-5 sm:p-6">
-          <h3 className="kicker">Sale terms · fixed on-chain</h3>
-          <div className="flex flex-col gap-1">
-            <Leader label="Opening price">{formatUnits(startPrice(terms, d), quote.decimals, { maxFraction: 4, minFraction: 3 })}</Leader>
-            <Leader label="Price at graduation">{formatUnits(ceilingPriceAtEnd(terms, d), quote.decimals, { maxFraction: 4, minFraction: 3 })}</Leader>
-            <Leader label="Ceiling">{cap.multiple} · {cap.label}</Leader>
-            <Leader label="Raise target">{fmtQ(terms.migrationQuoteThreshold)} {quote.symbol}</Leader>
-            <Leader label="Fee per trade">{(terms.curveFeeBps / 100).toFixed(2)}%</Leader>
-            <Leader label="Supply, fixed">{formatUnits(launch.totalSupply, d, { maxFraction: 0 })}</Leader>
-          </div>
-          <p className="border-t border-rule pt-4 text-sm leading-relaxed text-ink2">
-            {launch.stage === "Graduated"
-              ? `The bridge is open. ${wrapper} trades freely on Meteora, and any holder the issuer has approved can exchange it one-for-one for the security.`
-              : `No KYC is needed to buy or hold ${wrapper}. To exchange it for the security itself after graduation, the issuer must approve your wallet.`}
-          </p>
-        </aside>
-        </div>
+    <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
+      <div>
+        {terms ? (
+          <>
+            <Row label="Opening price">{q(startPrice(terms, d), 4)}</Row>
+            <Row label="Price at graduation" hint="The sale closes here and the permanent pool opens at the same price, so it doesn’t jump.">{q(endPrice(terms, d), 4)}</Row>
+            <Row label="Price ceiling" hint="Set by the sale type. The curve can never pass it.">{cap.multiple} · {cap.label}</Row>
+            <Row label="Raise target">{q(terms.migrationQuoteThreshold)}</Row>
+            <Row label="Fee per sale trade">{(terms.curveFeeBps / 100).toFixed(2)}%</Row>
+          </>
+        ) : <p className="py-3 text-[15px] text-mute">The issuer hasn’t fixed the sale terms yet.</p>}
       </div>
-    </Section>
+      <div>
+        <Row label="Security">{entry.label?.symbol ?? "—"} · <Addr value={launch.realRwaMint.toBase58()} /></Row>
+        {isSet(launch.crwaMint) && <Row label="Wrapper" hint="Anyone can hold and trade it. No KYC.">{entry.wrapperLabel?.symbol ?? "—"} · <Addr value={launch.crwaMint.toBase58()} /></Row>}
+        <Row label="Issuer" hint="Approves who may hold the security, as securities law requires.">{<Addr value={launch.issuer.toBase58()} />}</Row>
+        {isSet(launch.escrowVault) && <Row label="Escrow vault">{<Addr value={launch.escrowVault.toBase58()} />}</Row>}
+        {terms && <Row label="Pool fee after graduation">{(terms.migratedPoolFeeBps / 100).toFixed(2)}%</Row>}
+      </div>
+    </div>
   );
 }
-
-const startPrice = (t: DbcConfig, d: number) => sqrtPriceToQuoteAtoms(t.sqrtStartPrice, d);
-const ceilingPriceAtEnd = (t: DbcConfig, d: number) => sqrtPriceToQuoteAtoms(t.migrationSqrtPrice, d);
-
-// ------------------------------------------------------------------------------------------------
-// §2 Proof
-// ------------------------------------------------------------------------------------------------
 
 function Proof({ entry }: { entry: RegistryEntry }) {
   const { launch, backing, detail } = entry;
@@ -218,150 +128,132 @@ function Proof({ entry }: { entry: RegistryEntry }) {
   const sym = entry.label?.symbol ?? "units";
   const wsym = entry.wrapperLabel?.symbol ?? "wrappers";
   const fmt = (v: bigint | undefined) => (v === undefined ? "couldn’t read" : formatUnits(v, d, { maxFraction: d }));
-
   const verdict =
-    backing.kind === "backed"
-      ? { tone: "text-green", text: `Every ${wsym} in circulation is backed by a ${sym} in escrow.` }
-      : backing.kind === "escrowed"
-        ? { tone: "text-green", text: `The whole issue is in escrow. Wrappers are created against it when the sale opens.` }
-        : backing.kind === "short"
-          ? { tone: "text-error", text: `The escrow holds less than it should. The bridge refuses to move tokens until this is fixed, so nobody is paid ahead of anyone else. This can only happen through the issuer's legal powers over the security.` }
-          : backing.kind === "unknown"
-            ? { tone: "text-amber", text: `This check could not be completed: ${backing.reason}. It will retry automatically.` }
-            : backing.kind === "not-funded"
-              ? { tone: "text-mute", text: "Nothing has been escrowed yet. No wrappers exist." }
-              : { tone: "text-mute", text: "The launch was withdrawn before the sale and the asset returned to the issuer." };
-
+    backing.kind === "backed" ? { tone: "text-green", text: `Every ${wsym} in circulation is backed.` }
+      : backing.kind === "escrowed" ? { tone: "text-green", text: "The whole issue is in escrow." }
+        : backing.kind === "short" ? { tone: "text-error", text: "The escrow holds less than it should. Exchanges are stopped for everyone until it’s fixed." }
+          : backing.kind === "unknown" ? { tone: "text-amber", text: `Couldn’t check: ${backing.reason}. Retrying.` }
+            : backing.kind === "not-funded" ? { tone: "text-mute", text: "Nothing is escrowed yet." }
+              : { tone: "text-mute", text: "Withdrawn before the sale; the asset went back to the issuer." };
   return (
-    <Section id="proof" title="§2 What backs every token" aside="Read from the chain, not from us">
-      <div className="grid grid-cols-1 border-y border-ink md:grid-cols-3">
-        <div className="flex flex-col gap-2 py-6 md:pr-6">
-          <span className="kicker">Held in escrow · {sym}</span>
-          <span className="font-serif text-4xl num">{fmt(detail.escrowed)}</span>
-          {isSet(launch.escrowVault) && <Addr value={launch.escrowVault.toBase58()} label={`Vault ${shortAddress(launch.escrowVault.toBase58())}`} />}
-        </div>
-        <div className="flex flex-col gap-2 border-t border-rule py-6 md:border-t-0 md:border-l md:px-6">
-          <span className="kicker">In circulation · {wsym}</span>
-          <span className="font-serif text-4xl num">{detail.circulating === undefined ? "—" : fmt(detail.circulating)}</span>
-          {launch.stage === "Live" && detail.pool && detail.circulating !== undefined && detail.circulating >= detail.pool.baseReserve && (
-            <span className="text-[13px] text-ink2">
-              {formatUnits(detail.circulating - detail.pool.baseReserve, d, { maxFraction: 0 })} held by buyers · {formatUnits(detail.pool.baseReserve, d, { maxFraction: 0 })} still in the sale
-            </span>
-          )}
-          {detail.circulating !== undefined && <Addr value={launch.crwaMint.toBase58()} label={`Mint ${shortAddress(launch.crwaMint.toBase58())}`} />}
-        </div>
-        <div className="flex flex-col gap-2 border-t border-rule py-6 md:border-t-0 md:border-l md:pl-6">
-          <span className="kicker">Owed to the issuer · unsold</span>
-          <span className="font-serif text-4xl num">{formatUnits(launch.issuerUnsold, d, { maxFraction: d })}</span>
-          <span className="text-[13px] text-mute">Paid only from what is above everyone else’s backing</span>
-        </div>
+    <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
+      <div>
+        <Row label={`Held in escrow · ${sym}`}>{fmt(detail.escrowed)}</Row>
+        <Row label={`In circulation · ${wsym}`} hint={launch.stage === "Live" && detail.pool && detail.circulating !== undefined && detail.circulating >= detail.pool.baseReserve
+          ? `${formatUnits(detail.circulating - detail.pool.baseReserve, d, { maxFraction: 0 })} held by buyers, ${formatUnits(detail.pool.baseReserve, d, { maxFraction: 0 })} still in the sale.` : undefined}>
+          {detail.circulating === undefined ? "—" : fmt(detail.circulating)}
+        </Row>
+        <Row label="Owed to the issuer · unsold" hint="Paid only from what is above everyone else’s backing.">{formatUnits(launch.issuerUnsold, d, { maxFraction: d })}</Row>
+        <p className={`mt-4 flex items-center gap-2 text-[15px] ${verdict.tone}`}>
+          <span aria-hidden="true">{backing.kind === "backed" || backing.kind === "escrowed" ? "✓" : "!"}</span>{verdict.text}
+          <Hint>Every Aegis instruction that moves either token ends by checking that the escrow still covers every wrapper. If it doesn’t, the transaction fails.</Hint>
+        </p>
       </div>
-      <p className={`flex max-w-3xl gap-3 text-[15px] leading-relaxed ${verdict.tone}`}>
-        <span aria-hidden="true">{backing.kind === "backed" || backing.kind === "escrowed" ? "✓" : backing.kind === "short" || backing.kind === "unknown" ? "!" : "·"}</span>
-        <span>{verdict.text}</span>
-      </p>
-      <p className="max-w-3xl text-sm leading-relaxed text-mute">
-        Every Aegis instruction that moves either token ends by checking that the escrow still covers the wrappers in existence; if not, the transaction fails. This page re-reads both numbers every few seconds.
-      </p>
-    </Section>
+      <div className="justify-self-center"><Seal backing={backing} decimals={d} id="seal-ring" /></div>
+    </div>
   );
 }
-
-// ------------------------------------------------------------------------------------------------
-// §3 Money
-// ------------------------------------------------------------------------------------------------
 
 function Money({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) {
   const quote = entry.quote;
   if (!quote) return null;
   const target = terms.migrationQuoteThreshold;
-  const fmt = (v: bigint) => formatUnits(v, quote.decimals, { maxFraction: 0 });
+  const q = (v: bigint) => `${formatUnits(v, quote.decimals, { maxFraction: 0 })} ${quote.symbol}`;
   const payout = (target * BigInt(terms.migrationFeePct)) / 100n;
   const toIssuer = (payout * BigInt(terms.creatorMigrationFeePct)) / 100n;
-  const toAegis = payout - toIssuer;
-  const toPool = target - payout;
-
   const vest = terms.creatorVesting;
   const months = vest ? Math.round((vest.periods * vest.frequency) / MONTH) : 0;
   const nonMeteora = 100 - METEORA_PROTOCOL_FEE_PCT;
   const fee = terms.curveFeeBps / 100;
   const issuerFee = (fee * nonMeteora * terms.creatorTradingFeePct) / 10_000;
-  const aegisFee = (fee * nonMeteora) / 100 - issuerFee;
-  const meteoraFee = (fee * METEORA_PROTOCOL_FEE_PCT) / 100;
   const pctFmt = (v: number) => `${v.toFixed(2).replace(/\.?0+$/, "")}%`;
-
   return (
-    <Section id="money" title={`§3 Where the ${fmt(target)} ${quote.symbol} goes`} aside="Set before the sale opened. Nobody can change it now.">
-      <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
-        <div className="flex items-baseline justify-between gap-4 bg-ink px-5 py-4 text-paper">
-          <span className="font-semibold">Paid out at graduation</span>
-          <span className="font-mono whitespace-nowrap num">{fmt(payout)} · {terms.migrationFeePct}%</span>
-        </div>
-        <div className="flex items-baseline justify-between gap-4 bg-blue px-5 py-4 text-white">
-          <span className="font-semibold">Becomes the permanent pool</span>
-          <span className="font-mono whitespace-nowrap num">{fmt(toPool)} · {100 - terms.migrationFeePct}%</span>
-        </div>
-        <div className="flex flex-col gap-1 px-1 py-3 text-sm text-ink2">
-          <span>To the issuer: <strong className="num">{fmt(toIssuer)} {quote.symbol}</strong>, the capital this offering raises.</span>
-          {toAegis > 0n && <span>To Aegis: <strong className="num">{fmt(toAegis)} {quote.symbol}</strong>.</span>}
-        </div>
-        <div className="grid grid-cols-1 gap-1 py-1 sm:grid-cols-3">
-          <div className="flex flex-col gap-0.5 border border-blue p-3">
-            <span className="font-mono text-sm num">{terms.partnerPermanentPct}%</span>
-            <span className="text-xs text-ink2">Aegis · locked forever</span>
-          </div>
-          <div className="flex flex-col gap-0.5 border border-blue p-3">
-            <span className="font-mono text-sm num">{terms.creatorPermanentPct}%</span>
-            <span className="text-xs text-ink2">Issuer · locked forever</span>
-          </div>
-          {vest && (
-            <div className="flex flex-col gap-0.5 border border-dashed border-blue p-3">
-              <span className="font-mono text-sm num">{vest.percentage}%</span>
-              <span className="text-xs text-ink2">Issuer · unlocks over {months} months</span>
-            </div>
-          )}
-        </div>
+    <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
+      <div>
+        <Row label="To the issuer at graduation" hint="The capital this offering raises.">{q(toIssuer)} · {terms.migrationFeePct}%</Row>
+        {payout > toIssuer && <Row label="To Aegis">{q(payout - toIssuer)}</Row>}
+        <Row label="Becomes the permanent pool">{q(target - payout)} · {100 - terms.migrationFeePct}%</Row>
       </div>
-      <p className="text-sm leading-relaxed text-mute">
-        Nobody can withdraw pool liquidity on day one. Each trade on the curve pays {pctFmt(fee)}: {pctFmt(aegisFee)} to Aegis, {pctFmt(meteoraFee)} to Meteora
-        {issuerFee > 0 ? `, ${pctFmt(issuerFee)} to the issuer` : ""}. Trades in the permanent pool pay {pctFmt(terms.migratedPoolFeeBps / 100)}.
-      </p>
-    </Section>
+      <div>
+        <Row label="Pool locked forever" hint="Nobody can ever withdraw it. It keeps a market open for good.">{terms.partnerPermanentPct + terms.creatorPermanentPct}%</Row>
+        {vest && <Row label="Issuer’s share unlocking" hint="Released monthly after graduation. None of it on day one.">{vest.percentage}% over {months} months</Row>}
+        <Row label="Fee per sale trade" hint={`${pctFmt((fee * METEORA_PROTOCOL_FEE_PCT) / 100)} to Meteora, ${pctFmt((fee * nonMeteora) / 100 - issuerFee)} to Aegis${issuerFee > 0 ? `, ${pctFmt(issuerFee)} to the issuer` : ""}.`}>{pctFmt(fee)}</Row>
+      </div>
+    </div>
   );
 }
 
-// ------------------------------------------------------------------------------------------------
-// §4 Guarantees
-// ------------------------------------------------------------------------------------------------
-
-function Guarantees({ entry }: { entry: RegistryEntry }) {
+function Rules({ entry }: { entry: RegistryEntry }) {
   const cap = ARCHETYPE_CEILING[entry.launch.archetype];
-  const supply = formatUnits(entry.launch.totalSupply, entry.launch.decimals, { maxFraction: 0 });
-  const configured = ORDER.indexOf(entry.launch.stage) >= ORDER.indexOf("Configured");
   const wrapper = entry.wrapperLabel?.symbol ?? "wrapper";
+  const item = (mark: string, tone: string, text: string) => <li className="flex gap-2.5 border-b border-rule py-3 text-[15px]"><span className={`font-mono ${tone}`}>{mark}</span>{text}</li>;
   return (
-    <Section id="guarantees" title="§4 What is guaranteed, and by whom">
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="flex flex-col gap-3">
-          <h3 className="font-semibold">Enforced by code — nobody can change these</h3>
-          <ul className="flex flex-col gap-2.5 text-[15px] leading-relaxed">
-            <li className="flex gap-2.5"><span className="font-mono text-green">✓</span>Supply is fixed at {supply}. No new {wrapper} can be printed.</li>
-            <li className="flex gap-2.5"><span className="font-mono text-green">✓</span>Every {wrapper} is backed by one unit of the security held in escrow.</li>
-            {configured && <li className="flex gap-2.5"><span className="font-mono text-green">✓</span>The sale price can never pass the {cap.multiple} ceiling.</li>}
-            <li className="flex gap-2.5"><span className="font-mono text-green">✓</span>The bridge opens at graduation even if the issuer does nothing.</li>
-          </ul>
-        </div>
-        <div className="flex flex-col gap-3">
-          <h3 className="font-semibold">Held by the issuer — required by securities law</h3>
-          <ul className="flex flex-col gap-2.5 text-[15px] leading-relaxed">
-            <li className="flex gap-2.5"><span className="font-mono text-amber">§</span>Decides who is approved to hold the security (KYC).</li>
-            <li className="flex gap-2.5"><span className="font-mono text-amber">§</span>Can freeze a holder or pause all transfers of the security.</li>
-            <li className="flex gap-2.5"><span className="font-mono text-amber">§</span>Can move the security under a court order — this includes the escrow.</li>
-            <li className="flex gap-2.5"><span className="font-mono text-amber">§</span>If the escrow ever falls short, §2 above shows it within seconds.</li>
-          </ul>
-        </div>
+    <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
+      <div>
+        <h3 className="kicker pb-1">Enforced by code</h3>
+        <ul>
+          {item("✓", "text-green", "Supply can never grow.")}
+          {item("✓", "text-green", `Every ${wrapper} is backed 1 : 1 in escrow.`)}
+          {item("✓", "text-green", `The sale price can’t pass ${cap.multiple}.`)}
+          {item("✓", "text-green", "Exchanges open at graduation, whatever the issuer does.")}
+        </ul>
       </div>
-    </Section>
+      <div>
+        <h3 className="kicker pb-1">Held by the issuer, by law</h3>
+        <ul>
+          {item("§", "text-amber", "Approves who may hold the security (KYC).")}
+          {item("§", "text-amber", "Can freeze a holder or pause transfers.")}
+          {item("§", "text-amber", "Can move the security under a court order.")}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+type Tab = "terms" | "proof" | "money" | "rules";
+
+function Details({ entry, tab, onTab }: { entry: RegistryEntry; tab: Tab; onTab: (t: Tab) => void }) {
+  const terms = entry.detail.terms ?? null;
+  const tabs: [Tab, string][] = [["terms", "Terms"], ["proof", "Proof of backing"], ...(terms ? [["money", "Where the money goes"] as [Tab, string]] : []), ["rules", "Guarantees"]];
+  return (
+    <section id="details" className="flex scroll-mt-6 flex-col gap-2">
+      <div role="tablist" aria-label="Details" className="flex gap-6 overflow-x-auto border-b border-rule">
+        {tabs.map(([id, label]) => (
+          <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => onTab(id)}
+            className={`-mb-px shrink-0 cursor-pointer pt-2 pb-3 text-[15px] ${tab === id ? "border-b-2 border-ink font-semibold" : "text-mute hover:text-ink"}`}>{label}</button>
+        ))}
+      </div>
+      <div role="tabpanel">
+        {tab === "terms" && <Terms entry={entry} terms={terms} />}
+        {tab === "proof" && <Proof entry={entry} />}
+        {tab === "money" && terms && <Money entry={entry} terms={terms} />}
+        {tab === "rules" && <Rules entry={entry} />}
+      </div>
+    </section>
+  );
+}
+
+/** Chart of the curve, in its own card. */
+function Chart({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) {
+  const { launch, quote, raise } = entry;
+  if (!quote) return null;
+  const cap = ARCHETYPE_CEILING[launch.archetype];
+  const d = launch.decimals;
+  const filled = launch.stage === "Live" && raise !== null && raise.raised >= raise.target;
+  const live = launch.stage === "Live" && entry.detail.pool && !filled;
+  return (
+    <div className="border border-line bg-surface p-4 sm:p-6">
+      <CurveChart
+        terms={terms}
+        sqrtNow={live ? entry.detail.pool!.sqrtPrice : launch.stage === "Graduated" || filled ? terms.migrationSqrtPrice : null}
+        finished={launch.stage === "Graduated" || filled}
+        ceiling={ceilingPrice(terms.sqrtStartPrice, cap.sqrtBps, d)}
+        ceilingLabel={cap.label}
+        baseDecimals={d}
+        quote={quote}
+        wrapperSymbol={entry.wrapperLabel?.symbol ?? "the wrapper"}
+      />
+    </div>
   );
 }
 
@@ -414,10 +306,10 @@ function useInView(id: string, active: boolean) {
 
 export function AssetPage() {
   const { mint } = useParams();
-  const now = useNow();
   const asset = useAsset(mint);
   const entry = asset.data;
   const panelInView = useInView("trade", entry?.launch.stage === "Live");
+  const [tab, setTab] = useState<Tab>(() => (typeof location !== "undefined" && location.hash === "#proof" ? "proof" : "terms"));
 
   useEffect(() => {
     document.title = entry?.label?.name ? `${entry.label.name} — Aegis` : "Aegis";
@@ -454,61 +346,57 @@ export function AssetPage() {
   const name = label?.name || "Unnamed asset";
   const sym = label?.symbol;
   const wsym = wrapperLabel?.symbol;
-  const cap = ARCHETYPE_CEILING[launch.archetype];
   const configured = ORDER.indexOf(launch.stage) >= ORDER.indexOf("Configured") && launch.stage !== "Aborted";
-  const supply = formatUnits(launch.totalSupply, launch.decimals, { maxFraction: 0 });
+  const stage = STAGE[launch.stage];
+  const pill = stage.group === "open" ? "border-blue text-blue" : stage.group === "graduated" ? "border-green text-green" : "border-line text-mute";
+  const showProof = () => { setTab("proof"); document.getElementById("details")?.scrollIntoView({ behavior: "smooth" }); };
 
   return (
-    <div className={`shell flex flex-col gap-12 pt-8 lg:pt-10 ${launch.stage === "Live" ? "pb-32 md:pb-24" : "pb-24"}`}>
+    <div className={`shell flex flex-col gap-8 pt-6 lg:pt-8 ${launch.stage === "Live" ? "pb-32 md:pb-24" : "pb-24"}`}>
       {asset.isError && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border border-amber bg-amber-wash px-4 py-3 text-sm">
-          <span>Couldn’t refresh from the network. The numbers below may be out of date.</span>
+          <span>Couldn’t refresh from the network. The numbers may be out of date.</span>
           <button type="button" onClick={() => void asset.refetch()} className="min-h-11 cursor-pointer font-semibold underline underline-offset-4">Try again</button>
         </div>
       )}
-      {launch.stage === "Aborted" && (
-        <div role="status" className="border border-line bg-surface px-4 py-3 text-[15px]">This launch was withdrawn before its sale opened. The asset went back to the issuer, and no wrappers exist.</div>
-      )}
 
-      <section className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="flex flex-col gap-5">
-          <Crumb name={name} />
-          <span className="kicker">Registered security · {supply} units</span>
-          <h1 className="font-serif text-6xl leading-[0.95] sm:text-7xl xl:text-[104px]">{name}</h1>
-          <p className="max-w-3xl text-lg leading-relaxed text-ink2 lg:text-[19px]">
-            A registered security of {supply} units.
-            {wsym ? (
-              <> It trades freely as <strong className="text-ink">{wsym}</strong>. Any approved holder can exchange it one-for-one for the security itself{sym ? <>, <strong className="text-ink">{sym}</strong>,</> : ""} after graduation.</>
-            ) : (
-              <> Its tradable wrapper is created when the sale opens.</>
-            )}
-          </p>
-          <div className="flex flex-wrap gap-2 text-[13px] text-ink2">
-            {sym && <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5"><strong className="font-mono font-medium">{sym}</strong> the security · holders must be approved</span>}
-            {wsym && <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5"><strong className="font-mono font-medium">{wsym}</strong> the wrapper · anyone can hold</span>}
-            {configured && <span className="inline-flex h-7 items-center rounded-full border border-line bg-surface px-2.5">{cap.label} · price may rise up to {cap.multiple}</span>}
-            <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5">Issuer <Addr value={launch.issuer.toBase58()} /></span>
-          </div>
+      {/* Three blocks: on phones they stack as name/numbers, action box, details; on wide screens
+          the action box sits beside both, sticky. */}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-x-10">
+        <div className="order-1 flex min-w-0 flex-col gap-8 lg:order-none lg:col-start-1 lg:row-start-1">
+          <header className="flex flex-col gap-4">
+            <Crumb name={name} />
+            <h1 className="font-serif text-5xl leading-[0.98] sm:text-6xl xl:text-7xl">{name}</h1>
+            <div className="flex flex-wrap items-center gap-2 text-[13px] text-ink2">
+              <span className={`inline-flex h-7 items-center rounded-full border px-2.5 font-semibold ${pill}`}>{stage.label}</span>
+              {sym && <span className="inline-flex h-7 items-center gap-1 rounded-full border border-line bg-surface px-2.5"><strong className="font-mono font-medium">{sym}</strong> security</span>}
+              {wsym && <span className="inline-flex h-7 items-center gap-1 rounded-full border border-line bg-surface px-2.5"><strong className="font-mono font-medium">{wsym}</strong> tradable wrapper</span>}
+              <Hint label="How the two tokens work">
+                {sym ?? "The security"} is the regulated security: only wallets the issuer approves can hold it. {wsym ?? "The wrapper"} is backed by it 1 : 1 and anyone can trade it. After the sale, approved holders can exchange one for the other.
+              </Hint>
+            </div>
+          </header>
+          {launch.stage === "Aborted" && <p role="status" className="border border-line bg-surface px-4 py-3 text-[15px]">Withdrawn before the sale. The asset went back to the issuer.</p>}
+          {launch.stage !== "Aborted" && <Stats entry={entry} readAt={entry.readAt} onProof={showProof} />}
         </div>
-        <figure className="m-0 flex flex-col items-center gap-3 justify-self-center lg:justify-self-end">
-          <Seal backing={entry.backing} decimals={launch.decimals} id="seal-ring" />
-          <figcaption className="font-mono text-xs text-mute">
-            Checked {Math.max(0, Math.round((now - entry.readAt) / 1000))}s ago · <a href="#proof" className="underline underline-offset-2 hover:text-ink">see the proof</a>
-          </figcaption>
-        </figure>
-      </section>
+        <div className="order-3 flex min-w-0 flex-col gap-8 lg:order-none lg:col-start-1 lg:row-start-2">
+          {configured && detail.terms && <Chart entry={entry} terms={detail.terms} />}
+          <Details entry={entry} tab={tab} onTab={setTab} />
+        </div>
 
-      {launch.stage !== "Aborted" && <StageRail entry={entry} />}
-
-      {configured && detail.terms ? (
-        <Offering entry={entry} terms={detail.terms} readAt={entry.readAt} />
-      ) : launch.stage !== "Aborted" ? (
-        <Section id="offering" title="§1 The offering">
-          <p className="max-w-2xl text-[15px] leading-relaxed text-ink2">
-            {configured ? "The sale terms couldn’t be read right now. They will appear here on the next refresh." : "The issuer hasn’t set the sale terms yet. Price, raise and liquidity rules appear here once they are fixed on-chain, before anyone can buy."}
-          </p>
-        </Section>
-      ) : null}
+        <aside aria-label="Trade" className="order-2 flex flex-col gap-4 empty:hidden lg:order-none lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          {/* Stays mounted after graduation so the buyer who completed the sale keeps their receipt;
+              it renders nothing once the sale is filled unless it holds one. */}
+          {(launch.stage === "Live" || launch.stage === "Graduated") && (
+            <div id="trade" className="scroll-mt-6 empty:hidden"><TradePanel entry={entry} /></div>
+          )}
+          <GraduatePanel entry={entry} />
+          {launch.stage === "Graduated" && <div id="exchange" className="scroll-mt-6"><BridgeBox entry={entry} /></div>}
+          {(launch.stage === "TokenCreated" || launch.stage === "Funded" || launch.stage === "Configured") && (
+            <div className="border border-line bg-surface p-5 text-[15px] text-ink2">The sale hasn’t opened yet. {stage.detail}.</div>
+          )}
+        </aside>
+      </div>
 
       {launch.stage === "Live" && !panelInView && entry.price !== null && entry.quote && entry.raise && entry.raise.raised < entry.raise.target && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink bg-paper/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
@@ -524,10 +412,6 @@ export function AssetPage() {
           </a>
         </div>
       )}
-
-      <Proof entry={entry} />
-      {configured && detail.terms && <Money entry={entry} terms={detail.terms} />}
-      <Guarantees entry={entry} />
     </div>
   );
 }

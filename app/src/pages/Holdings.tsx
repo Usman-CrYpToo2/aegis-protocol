@@ -126,7 +126,7 @@ function HoldingRow({ h, address }: { h: Holding; address: string }) {
       <span className="flex flex-col gap-2">
         {graduated ? (
           <>
-            <Link to={`/asset/${mint}/bridge`} className="inline-flex min-h-10 items-center justify-center bg-blue px-4 text-sm font-semibold text-white hover:bg-blue-deep">Exchange</Link>
+            <Link to={`/asset/${mint}#exchange`} className="inline-flex min-h-10 items-center justify-center bg-blue px-4 text-sm font-semibold text-white hover:bg-blue-deep">Exchange</Link>
             {h.pool && (
               <a href={explorerUrl("address", h.pool.toBase58())} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center justify-center border border-line px-4 text-sm hover:border-ink">
                 Meteora pool ↗
