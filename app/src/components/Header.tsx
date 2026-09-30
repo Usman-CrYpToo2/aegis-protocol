@@ -28,7 +28,7 @@ const link = ({ isActive }: { isActive: boolean }) =>
 export function Header() {
   return (
     <header className="border-b border-rule bg-paper">
-      <div className="mx-auto flex h-18 max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-8 lg:px-20">
+      <div className="flex h-18 w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-10 2xl:px-14">
         <div className="flex items-center gap-6 lg:gap-12">
           <NavLink to="/" className="flex items-center gap-3 text-ink no-underline" aria-label="Aegis — the Registry">
             <LogoMark />

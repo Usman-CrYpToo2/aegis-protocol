@@ -138,7 +138,7 @@ function RaiseCell({ entry }: { entry: RegistryEntry }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
-        className="block h-1 w-full max-w-60 bg-track"
+        className="block h-1 w-full max-w-80 bg-track"
       >
         <span className="block h-1 bg-ink" style={{ width: `${pct}%` }} />
       </span>
@@ -213,7 +213,7 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
   );
 
   return (
-    <section aria-label="Registry totals" className="grid grid-cols-2 border-y border-ink lg:grid-cols-4">
+    <section aria-label="Registry totals" className="grid grid-cols-2 border-y border-ink">
       <div className={cell}>
         <span className="kicker">Assets registered</span>
         {stats ? <span className={value}>{stats.assets}</span> : skeleton}
@@ -222,7 +222,7 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
         <span className="kicker">Offerings open now</span>
         {stats ? <span className={value}>{stats.open}</span> : skeleton}
       </div>
-      <div className={`${cell} border-t border-rule lg:border-t-0 lg:border-l lg:pl-6`}>
+      <div className={`${cell} border-t border-rule`}>
         <span className="kicker">Raised through Aegis</span>
         {!stats ? (
           skeleton
@@ -236,7 +236,7 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
           ))
         )}
       </div>
-      <div className={`${cell} border-t border-l border-rule pl-6 lg:border-t-0`}>
+      <div className={`${cell} border-t border-l border-rule pl-6`}>
         <span className="kicker">Backing checked</span>
         {!stats ? (
           skeleton
@@ -444,7 +444,8 @@ export function RegistryPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-10 px-4 pt-10 pb-24 sm:px-8 lg:gap-12 lg:px-20 lg:pt-16">
+    <div className="shell flex flex-col gap-10 pt-10 pb-24 lg:gap-12 lg:pt-16">
+      <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,40rem)] xl:items-end xl:gap-16">
       <section className="flex flex-col gap-5">
         <span className="kicker">A public register of real assets on Solana</span>
         <h1 className="font-serif text-6xl leading-[0.98] sm:text-7xl lg:text-[88px]">The Registry</h1>
@@ -454,6 +455,7 @@ export function RegistryPage() {
       </section>
 
       <Totals registry={data} failed={!data && registry.isError} />
+      </div>
 
       {data && registry.isError && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border border-amber bg-amber-wash px-4 py-3 text-sm">
