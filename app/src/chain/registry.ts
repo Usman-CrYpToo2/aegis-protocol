@@ -23,6 +23,8 @@ export type RegistryEntry = {
   raise: { raised: bigint; target: bigint } | null;
   /** Human-readable reasons some part of this entry could not be read. */
   problems: string[];
+  /** The decoded accounts behind the summary, for pages that show more than a row. */
+  detail: { pool?: DbcPool; terms?: DbcConfig; escrowed?: bigint; circulating?: bigint };
 };
 
 export type Registry = {
@@ -42,7 +44,7 @@ export class ProgramNotDeployedError extends Error {
 type Info = AccountInfo<Uint8Array>;
 
 /** getMultipleAccountsInfo accepts at most 100 keys per call. */
-async function readMany(connection: Connection, keys: PublicKey[]): Promise<Map<string, Info | null>> {
+export async function readMany(connection: Connection, keys: PublicKey[]): Promise<Map<string, Info | null>> {
   const unique = [...new Map(keys.map((k) => [k.toBase58(), k])).values()];
   const out = new Map<string, Info | null>();
   for (let i = 0; i < unique.length; i += 100) {
@@ -70,7 +72,7 @@ function attempt<T>(problems: string[], what: string, read: () => T): T | undefi
   }
 }
 
-function buildEntry(launch: LaunchAccount, accounts: Map<string, Info | null>): RegistryEntry {
+export function buildEntry(launch: LaunchAccount, accounts: Map<string, Info | null>): RegistryEntry {
   const problems: string[] = [];
   const get = (key: PublicKey, what: string): Info | undefined => {
     const info = accounts.get(key.toBase58());
@@ -140,17 +142,20 @@ function buildEntry(launch: LaunchAccount, accounts: Map<string, Info | null>): 
     price: launch.stage === "Live" && pool && !pool.isMigrated ? sqrtPriceToQuoteAtoms(pool.sqrtPrice, launch.decimals) : null,
     raise,
     problems,
+    detail: { pool, terms: dbcConfig, escrowed, circulating },
   };
 }
+
+/** Every account a launch's entry is built from. */
+export const relatedAccounts = (l: LaunchAccount) =>
+  [l.realRwaMint, l.crwaMint, l.escrowVault, l.quoteMint, l.virtualPool, l.meteoraConfig].filter(isSet);
 
 export async function loadRegistry(connection: Connection): Promise<Registry> {
   const program = await connection.getAccountInfo(AEGIS_PROGRAM_ID, "confirmed");
   if (!program?.executable) throw new ProgramNotDeployedError();
 
   const { launches, unreadable } = await fetchAllLaunches(connection);
-  const keys = launches.flatMap((l) =>
-    [l.realRwaMint, l.crwaMint, l.escrowVault, l.quoteMint, l.virtualPool, l.meteoraConfig].filter(isSet)
-  );
+  const keys = launches.flatMap(relatedAccounts);
   const accounts = await readMany(connection, keys);
   return { entries: launches.map((l) => buildEntry(l, accounts)), unreadable, readAt: Date.now() };
 }
