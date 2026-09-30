@@ -63,3 +63,25 @@ export const ARCHETYPE_CEILING = {
 export function ceilingPrice(startSqrt: bigint, sqrtBps: bigint, baseDecimals: number): bigint {
   return sqrtPriceToQuoteAtoms((startSqrt * sqrtBps) / 10_000n, baseDecimals);
 }
+
+/**
+ * The inverse of `walkCurve`: the sqrt price reached once `sold` wrapper atoms have been bought.
+ * Within a segment, base = L (b - a) / (a b) solves to b = L a / (L - base a). Beyond the last
+ * segment the curve's end is returned.
+ */
+export function sqrtAtSold(start: bigint, curve: CurveSegment[], sold: bigint): bigint {
+  let lower = start;
+  let remaining = sold < 0n ? 0n : sold;
+  for (const seg of curve) {
+    const whole = baseBetween(lower, seg.sqrtPrice, seg.liquidity);
+    if (remaining <= whole) {
+      const denominator = seg.liquidity - remaining * lower;
+      if (denominator <= 0n) return seg.sqrtPrice;
+      const b = (seg.liquidity * lower) / denominator;
+      return b > seg.sqrtPrice ? seg.sqrtPrice : b;
+    }
+    remaining -= whole;
+    lower = seg.sqrtPrice;
+  }
+  return lower;
+}

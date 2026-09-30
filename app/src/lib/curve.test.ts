@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { baseBetween, ceilingPrice, quoteBetween, sampleCurve, walkCurve } from "./curve";
+import { baseBetween, ceilingPrice, quoteBetween, sampleCurve, sqrtAtSold, walkCurve } from "./curve";
 
 const Q64 = 1n << 64n;
 
@@ -48,5 +48,20 @@ describe("curve math", () => {
   it("puts the Book Building ceiling at 1.25", () => {
     // sqrt 1.118 squared = 1.2499…, floored in atoms
     expect(ceilingPrice(Q64, 11_180n, 6)).toBe(1_249_923n);
+  });
+
+  it("inverts: the price after selling N tokens sells N tokens", () => {
+    const mid = (Q64 * 105n) / 100n;
+    const curve = [
+      { sqrtPrice: mid, liquidity: L },
+      { sqrtPrice: b, liquidity: 2n * L },
+    ];
+    const total = walkCurve(a, curve, b).base;
+    for (const n of [0n, 1n, 1_000n, total / 3n, total / 2n, total - 1n]) {
+      const back = walkCurve(a, curve, sqrtAtSold(a, curve, n)).base;
+      const diff = back > n ? back - n : n - back;
+      expect(diff, `n=${n}`).toBeLessThanOrEqual(2n);
+    }
+    expect(sqrtAtSold(a, curve, total * 2n)).toBe(b); // past the end, clamps to it
   });
 });
