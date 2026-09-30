@@ -18,6 +18,8 @@
  *   AEGIS_STOP_AT=funded|live|graduated            where to stop (default: graduated, then bridge
  *                                                  and claims, the full lifecycle)
  *   AEGIS_BUY=6200                                 USDC to buy when stopping at live
+ *   AEGIS_SKIP_CLAIMS=1                            graduate, but leave the issuer's raise and unsold
+ *                                                  stock uncollected (to collect from the app)
  */
 import * as fs from "fs";
 import {
@@ -435,6 +437,11 @@ async function main() {
     ],
     [buyer]
   );
+
+  if (process.env.AEGIS_SKIP_CLAIMS === "1") {
+    console.log("\nClaims skipped: the raise and unsold stock are left for the issuer to collect.");
+    return summary("graduated", mint, usdc.publicKey);
+  }
 
   // ----------------------------------------------------------------------------------------------
   console.log("\nClaims");
