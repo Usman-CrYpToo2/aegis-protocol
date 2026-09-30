@@ -13,6 +13,7 @@ import { BridgePage } from "./pages/Bridge";
 import { HoldingsPage } from "./pages/Holdings";
 import { ConsolePage } from "./pages/Console";
 import { LaunchConsolePage } from "./pages/LaunchConsole";
+import { IssuePage } from "./pages/Issue";
 import { NotFoundPage } from "./pages/NotFound";
 import { ProgramNotDeployedError } from "./chain/registry";
 
@@ -62,6 +63,8 @@ export function App() {
                   <Route path="/holdings" element={<HoldingsPage />} />
                   <Route path="/console" element={<ConsolePage />} />
                   <Route path="/console/:mint" element={<LaunchConsolePage />} />
+                  <Route path="/launch" element={<IssuePage />} />
+                  <Route path="/launch/:mint" element={<IssuePage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </main>
