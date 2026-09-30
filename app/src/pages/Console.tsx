@@ -92,9 +92,9 @@ function AttentionItem({ a }: { a: Attention }) {
     case "raise-ready":
       return row(ICON.coin, `${money(l.payout.amount, l)} is ready to collect`, "The sale completed. Meteora holds your share of the raise until you collect it.", btn(toLaunch, "Collect", true));
     case "unsold-blocked":
-      return row(ICON.warn, "Your unsold stock can’t reach you", `Your own wallet isn’t on the register, and ${sym} can only move to approved wallets.`, btn(toLaunch, "Fix", true));
+      return row(ICON.warn, "Your unsold stock can’t reach you", `Your own wallet isn’t on the register, and ${sym} can only move to approved wallets.`, btn(`${toLaunch}?tab=investors`, "Fix", true));
     case "waiting":
-      return row(ICON.people, `${a.count} ${a.count === 1 ? "holder is" : "holders are"} waiting for approval`, `They hold the wrapper but can’t exchange it for ${sym} until you approve them.`, btn(toLaunch, "Review"));
+      return row(ICON.people, `${a.count} ${a.count === 1 ? "holder is" : "holders are"} waiting for approval`, `They hold the wrapper but can’t exchange it for ${sym} until you approve them.`, btn(`${toLaunch}?tab=investors`, "Review"));
     case "unfinished":
       return row(ICON.clock, "This launch stopped part-way", `Its ${formatUnits(l.entry.launch.totalSupply, l.entry.launch.decimals, { maxFraction: 0 })} ${sym} ${l.entry.launch.stage === "TokenCreated" ? "were created but never escrowed" : "sit in escrow with no sale"}. Continue it, or cancel before the sale opens.`, btn(`/asset/${mintOf(l)}`, "Open"));
   }

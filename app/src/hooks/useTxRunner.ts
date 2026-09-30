@@ -46,7 +46,7 @@ export function useTxRunner() {
         return false;
       } finally {
         inFlight.current = false;
-        for (const key of ["asset", "registry", "console", "health", "holdings", "balances"]) void queryClient.invalidateQueries({ queryKey: [key] });
+        for (const key of ["asset", "registry", "console", "health", "holdings", "balances", "register"]) void queryClient.invalidateQueries({ queryKey: [key] });
       }
     },
     [connection, publicKey, queryClient, sendTransaction]

@@ -1,12 +1,13 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import { claimUnsoldInstruction, collectRaiseInstructions } from "../chain/collect";
 import type { ConsoleLaunch } from "../chain/console";
 import { loadHealth } from "../chain/health";
 import { useConnectModal } from "../components/connect/ConnectModal";
+import { Investors } from "../components/console/Investors";
 import { useAsset } from "../hooks/useAsset";
 import { useConsole } from "../hooks/useConsole";
 import { TX_STEP, useTxRunner, type TxPhase } from "../hooks/useTxRunner";
@@ -124,7 +125,7 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
         }
       >
         {l.unsold > 0n && !l.issuerApproved && (
-          <p className="mt-1 text-[13px] leading-relaxed text-amber">Blocked: your wallet isn’t on the register for {sym}, and the security can only move to approved wallets. Approving your own wallet comes with the Investors tab, the next part of the console.</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-amber">Blocked: your wallet isn’t on the register for {sym}, and the security can only move to approved wallets. <Link to="?tab=investors" replace className="font-semibold underline underline-offset-2">Approve your wallet</Link> first; it takes one signature.</p>
         )}
         <Status phase={unsoldTx.phase} />
       </Row>
@@ -189,6 +190,8 @@ function Health({ launch: l }: { launch: ConsoleLaunch }) {
 
 export function LaunchConsolePage() {
   const { mint } = useParams();
+  const [params] = useSearchParams();
+  const tab = params.get("tab") === "investors" ? "investors" : "money";
   const { publicKey } = useWallet();
   const { open: openConnect } = useConnectModal();
   const asset = useAsset(mint);
@@ -249,14 +252,26 @@ export function LaunchConsolePage() {
         <Link to={`/asset/${mint}`} className="inline-flex min-h-11 items-center border border-line bg-surface px-5 text-sm font-semibold hover:border-ink">See the page your buyers see ↗</Link>
       </div>
       <nav aria-label="Launch sections" className="flex gap-8 border-b border-rule">
-        <span aria-current="page" className="border-b-2 border-ink pt-3.5 pb-3 text-[15px] font-semibold">Money</span>
-        <span className="pt-3.5 pb-3 text-[15px] text-mute" title="Arrives in the next part">Investors{mine && mine.waiting.length > 0 && <span className="font-mono text-xs text-amber"> · {mine.waiting.length} waiting</span>}</span>
+        {(["money", "investors"] as const).map((id) => (
+          <Link
+            key={id}
+            to={id === "money" ? "?" : "?tab=investors"}
+            replace
+            aria-current={tab === id ? "page" : undefined}
+            className={`-mb-px pt-3.5 pb-3 text-[15px] ${tab === id ? "border-b-2 border-ink font-semibold" : "text-ink2 hover:text-ink"}`}
+          >
+            {id === "money" ? "Money" : "Investors"}
+            {id === "investors" && mine && mine.waiting.length > 0 && <span className="font-mono text-xs text-amber"> · {mine.waiting.length} waiting</span>}
+          </Link>
+        ))}
         <span className="pt-3.5 pb-3 text-[15px] text-mute" title="Arrives in a later part">Legal powers</span>
       </nav>
     </section>
 
     {!mine ? (
-      <span aria-busy="true" aria-label="Loading your money" className="h-64 animate-pulse bg-track/70" />
+      <span aria-busy="true" aria-label="Loading" className="h-64 animate-pulse bg-track/70" />
+    ) : tab === "investors" ? (
+      <Investors launch={mine} />
     ) : (
       <div className="grid grid-cols-1 gap-12 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <Money launch={mine} />
