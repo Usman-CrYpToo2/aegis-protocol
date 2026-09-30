@@ -175,7 +175,9 @@ function Offering({ entry, terms, readAt }: { entry: RegistryEntry; terms: DbcCo
             </Link>
           </div>
         )}
-        {launch.stage === "Live" && (
+        {/* Stays mounted after graduation so the buyer who completed the sale keeps their receipt;
+            it renders nothing once the sale is filled unless it holds one. */}
+        {(launch.stage === "Live" || launch.stage === "Graduated") && (
           <div id="trade" className="scroll-mt-6">
             <TradePanel entry={entry} />
           </div>

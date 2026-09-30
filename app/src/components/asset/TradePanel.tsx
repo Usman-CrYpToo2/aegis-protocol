@@ -4,6 +4,7 @@ import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { config, explorerUrl } from "../../config";
 import { useConnectModal } from "../connect/ConnectModal";
 import { loadAsset } from "../../chain/asset";
+import { GRADUATION_DEPOSIT_LAMPORTS, graduationTransactions } from "../../chain/graduate";
 import type { RegistryEntry } from "../../chain/registry";
 import { loadTradeAccounts, prepareTrade, type Side } from "../../chain/trade";
 import { useWalletBalances } from "../../hooks/useWalletBalances";
@@ -18,7 +19,7 @@ const SLIPPAGES = [50, 100, 200] as const;
 type Phase =
   | { kind: "idle" }
   | { kind: "busy"; step: "checking" | "signing" | "sending" | "confirming" }
-  | { kind: "done"; side: Side; paid: string; received: string; signature: string }
+  | { kind: "done"; side: Side; paid: string; received: string; signature: string; graduated: boolean | null }
   | { kind: "failed"; error: Explained };
 
 const STEP_TEXT = {
@@ -46,7 +47,7 @@ function Line({ label, children, strong }: { label: ReactNode; children: ReactNo
 export function TradePanel({ entry }: { entry: RegistryEntry }) {
   const { launch, quote, detail } = entry;
   const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, sendTransaction, signAllTransactions } = useWallet();
   const { open: openConnect } = useConnectModal();
   const queryClient = useQueryClient();
   const inputId = useId();
@@ -140,13 +141,40 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
       }
       const prepared = await prepareTrade(connection, { launch: fresh.launch, pool: fresh.detail.pool, accounts: accounts.data, owner: publicKey, side, amountIn, minimumOut });
 
+      // The buy that fills the sale also graduates it: the two permissionless graduation
+      // transactions ride along, approved in the same wallet prompt, so no one is ever asked to
+      // "graduate" separately. If they fail, the sale still completed and the fallback panel shows.
+      const completes = side === "buy" && "fillsSale" in again && (again.fillsSale || again.nextSqrt >= state!.migrationSqrtPrice);
+      const bundle = completes && signAllTransactions ? graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash) : [];
+      const confirm = async (signature: string) => {
+        const result = await connection.confirmTransaction({ signature, blockhash: prepared.blockhash, lastValidBlockHeight: prepared.lastValidBlockHeight }, "confirmed");
+        if (result.value.err) {
+          const tx = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
+          throw Object.assign(new Error(JSON.stringify(result.value.err)), { logs: tx?.meta?.logMessages ?? [] });
+        }
+      };
+
       setPhase({ kind: "busy", step: "signing" });
-      const signature = await sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed" });
-      setPhase({ kind: "busy", step: "confirming" });
-      const result = await connection.confirmTransaction({ signature, blockhash: prepared.blockhash, lastValidBlockHeight: prepared.lastValidBlockHeight }, "confirmed");
-      if (result.value.err) {
-        const tx = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
-        throw Object.assign(new Error(JSON.stringify(result.value.err)), { logs: tx?.meta?.logMessages ?? [] });
+      let signature: string;
+      let graduated: boolean | null = null;
+      if (bundle.length) {
+        const [buy, ...rest] = await signAllTransactions!([prepared.transaction, ...bundle]);
+        setPhase({ kind: "busy", step: "confirming" });
+        signature = await connection.sendRawTransaction(buy!.serialize(), { preflightCommitment: "confirmed" });
+        await confirm(signature);
+        graduated = true;
+        for (const tx of rest) {
+          try {
+            await confirm(await connection.sendRawTransaction(tx.serialize(), { skipPreflight: true }));
+          } catch {
+            graduated = false;
+            break;
+          }
+        }
+      } else {
+        signature = await sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed" });
+        setPhase({ kind: "busy", step: "confirming" });
+        await confirm(signature);
       }
       const spent = side === "buy" && "spend" in again ? again.spend : amountIn;
       setPhase({
@@ -155,6 +183,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
         paid: `${fmtIn(spent)} ${inSymbol}`,
         received: `${fmtOut(again.out)} ${outSymbol}`,
         signature,
+        graduated,
       });
       setText("");
       setTouched(false);
@@ -199,9 +228,9 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
             <span className="kicker text-green">{phase.side === "buy" ? "Purchase complete" : "Sale complete"}</span>
             <span className="font-serif text-4xl leading-tight">{phase.received}</span>
             <span className="text-sm text-ink2">for {phase.paid}. It’s in your wallet now.</span>
-            {filled && (
+            {phase.graduated !== null && (
               <span className="border-l-2 border-green pl-3 text-[13px] leading-relaxed text-ink2">
-                Your purchase completed this sale. One step is left before the bridge opens: graduating it, which anyone can do from this page.
+                {phase.graduated ? "Your purchase completed the sale and opened the bridge." : "Your purchase completed the sale. Opening the bridge didn’t go through; anyone can finish it below."}
               </span>
             )}
             <a href={explorerUrl("tx", phase.signature)} target="_blank" rel="noopener noreferrer" className="w-fit text-sm text-blue underline underline-offset-2">
@@ -280,7 +309,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
                 <Line label="Guaranteed minimum" strong>{fmtOut(minimumOut)} {outSymbol}</Line>
                 {preview.fillsSale && (
                   <p className="mt-2 border-l-2 border-blue pl-3 text-[13px] leading-relaxed text-ink2">
-                    This purchase completes the sale.
+                    This purchase completes the sale{signAllTransactions ? ` and opens the bridge in the same approval (about ${formatUnits(GRADUATION_DEPOSIT_LAMPORTS, 9, { maxFraction: 3 })} SOL in deposits)` : ""}.
                     {preview.refunds && ` Only ${formatUnits(preview.spend, q.decimals, { maxFraction: 2 })} ${q.symbol} is needed; the rest stays in your wallet.`}
                   </p>
                 )}

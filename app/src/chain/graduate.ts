@@ -8,7 +8,7 @@
  *   2 finalize  Aegis `finalize_graduation`: settles the launch and opens the bridge.
  */
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
+import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, TransactionInstruction, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import aegisIdl from "../idl/aegis.json";
 import type { LaunchAccount } from "./aegis";
 import { idlInstruction } from "./idlix";
@@ -96,4 +96,26 @@ export function graduationStep(launch: LaunchAccount, pool: DbcPool | null | und
   if (launch.stage !== "Live" || !pool || !terms) return "selling";
   if (pool.isMigrated) return "finalize";
   return pool.quoteReserve >= terms.migrationQuoteThreshold ? "migrate" : "selling";
+}
+
+/**
+ * Compute budgets for the two graduation transactions when they ride along with the buy that fills
+ * the sale. They can't be simulated in advance (they depend on that buy landing), so they carry
+ * fixed limits measured on a local node (282k and 86k units used) with headroom.
+ */
+export const GRADUATION_UNITS = { migrate: 400_000, finalize: 150_000 } as const;
+/** What graduating costs whoever sends it: the new pool's and positions' deposits (measured). */
+export const GRADUATION_DEPOSIT_LAMPORTS = 35_000_000n;
+
+/**
+ * The two graduation transactions, unsigned by the payer, sharing `blockhash` with the buy they
+ * follow so a wallet can approve all three at once.
+ */
+export function graduationTransactions(launch: LaunchAccount, payer: PublicKey, quoteProgram: PublicKey, blockhash: string): VersionedTransaction[] {
+  const nfts = [Keypair.generate(), Keypair.generate()];
+  const tx = (units: number, ix: TransactionInstruction) =>
+    new VersionedTransaction(new TransactionMessage({ payerKey: payer, recentBlockhash: blockhash, instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units }), ix] }).compileToV0Message());
+  const migrate = tx(GRADUATION_UNITS.migrate, migrateInstruction(launch, payer, nfts[0]!.publicKey, nfts[1]!.publicKey, quoteProgram));
+  migrate.sign(nfts);
+  return [migrate, tx(GRADUATION_UNITS.finalize, finalizeInstruction(launch, payer))];
 }

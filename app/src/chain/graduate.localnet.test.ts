@@ -2,7 +2,7 @@
  * A sale filled by a buyer, then graduated by a third party with the app's own instructions, on a
  * local node. Makes its own launch. Skipped unless AEGIS_LOCALNET=1.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createAssociatedTokenAccountIdempotentInstruction, createMintToInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { Connection, Keypair, LAMPORTS_PER_SOL, SystemProgram, type TransactionInstruction } from "@solana/web3.js";
 import { describe, expect, it } from "vitest";
@@ -25,7 +25,9 @@ async function send(signers: Keypair[], ixs: TransactionInstruction[]) {
   const sig = await connection.sendTransaction(p.transaction);
   const r = await connection.confirmTransaction({ signature: sig, blockhash: p.blockhash, lastValidBlockHeight: p.lastValidBlockHeight }, "confirmed");
   expect(r.value.err).toBeNull();
+  return (await connection.getTransaction(sig, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }))!.meta!.computeUnitsConsumed ?? 0;
 }
+const units: Record<string, number> = {};
 
 describe.runIf(process.env.AEGIS_LOCALNET === "1")("graduating against a live node", () => {
   it("lets anyone move a filled sale to its pool and open the bridge", async () => {
@@ -68,10 +70,11 @@ describe.runIf(process.env.AEGIS_LOCALNET === "1")("graduating against a live no
     // A stranger graduates it: two permissionless transactions.
     const before = await connection.getBalance(stranger.publicKey);
     const [first, second] = [Keypair.generate(), Keypair.generate()];
-    await send([stranger, first, second], [migrateInstruction(entry.launch, stranger.publicKey, first.publicKey, second.publicKey, quote.program)]);
+    units.migrate = await send([stranger, first, second], [migrateInstruction(entry.launch, stranger.publicKey, first.publicKey, second.publicKey, quote.program)]);
     entry = await loadAsset(connection, mint);
     expect(graduationStep(entry.launch, entry.detail.pool, entry.detail.terms)).toBe("finalize");
-    await send([stranger], [finalizeInstruction(entry.launch, stranger.publicKey)]);
+    units.finalize = await send([stranger], [finalizeInstruction(entry.launch, stranger.publicKey)]);
+    writeFileSync("/private/tmp/claude-502/-Users-usmandev-Downloads-aegis/08b75f22-d566-44e4-bd47-9762cb4dda93/scratchpad/grad-units.json", JSON.stringify({ ...units, cost: before - (await connection.getBalance(stranger.publicKey)) }));
     entry = await loadAsset(connection, mint);
     expect(entry.launch.stage).toBe("Graduated");
     expect(graduationStep(entry.launch, entry.detail.pool, entry.detail.terms)).toBe("done");
