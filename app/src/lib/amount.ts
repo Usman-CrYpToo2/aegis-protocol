@@ -41,3 +41,27 @@ export function percentOf(part: bigint, whole: bigint): number {
 
 export const shortAddress = (address: string, keep = 4) =>
   address.length <= keep * 2 + 1 ? address : `${address.slice(0, keep)}…${address.slice(-keep)}`;
+
+export type Parsed = { ok: true; atoms: bigint } | { ok: false; reason: string };
+
+/**
+ * What someone typed, as atoms. Strict on purpose: plain digits with at most one "." and no more
+ * fraction digits than the token has. Commas are accepted as thousands separators ("1,000"), never
+ * as a decimal point, so "1,5" is rejected rather than silently read as 15.
+ */
+export function parseUnits(text: string, decimals: number): Parsed {
+  const s = text.trim().replace(/,(?=\d{3}(\D|$))/g, "");
+  if (s === "") return { ok: false, reason: "Enter an amount" };
+  if (!/^\d*\.?\d*$/.test(s) || s === ".") return { ok: false, reason: "Use digits only, like 250 or 12.5" };
+  const [whole = "", fraction = ""] = s.split(".");
+  if (fraction.length > decimals) return { ok: false, reason: `At most ${decimals} digits after the point` };
+  const atoms = BigInt(whole || "0") * 10n ** BigInt(decimals) + BigInt((fraction || "").padEnd(decimals, "0") || "0");
+  if (atoms === 0n) return { ok: false, reason: "Enter more than zero" };
+  if (atoms > 18_446_744_073_709_551_615n) return { ok: false, reason: "That amount is too large" };
+  return { ok: true, atoms };
+}
+
+/** Atoms back to the plain text an input field shows (no grouping), for "Max" buttons. */
+export function toInputText(atoms: bigint, decimals: number): string {
+  return formatUnits(atoms, decimals).replace(/,/g, "");
+}

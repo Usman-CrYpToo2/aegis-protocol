@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms } from "./amount";
+import { formatUnits, parseUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms, toInputText } from "./amount";
 
 describe("formatUnits", () => {
   it("groups thousands and trims trailing zeros", () => {
@@ -43,5 +43,30 @@ describe("percentOf", () => {
 describe("shortAddress", () => {
   it("keeps both ends", () => {
     expect(shortAddress("FRR7Ff4HW8nPdutTGQmRGoEzkkoqTk57Vy7bfpnMtFy")).toBe("FRR7…MtFy");
+  });
+});
+
+describe("parseUnits", () => {
+  const ok = (s: string, d = 6) => { const r = parseUnits(s, d); return r.ok ? r.atoms : r.reason; };
+  it("reads plain amounts exactly", () => {
+    expect(ok("250")).toBe(250_000_000n);
+    expect(ok("12.5")).toBe(12_500_000n);
+    expect(ok(".5")).toBe(500_000n);
+    expect(ok("0.000001")).toBe(1n);
+    expect(ok("1,000")).toBe(1_000_000_000n);
+    expect(ok(" 7 ")).toBe(7_000_000n);
+  });
+  it("rejects anything ambiguous or impossible, with a reason", () => {
+    expect(ok("")).toBe("Enter an amount");
+    expect(ok("0")).toBe("Enter more than zero");
+    expect(ok("1,5")).toMatch(/digits only/);
+    expect(ok("-3")).toMatch(/digits only/);
+    expect(ok("1e6")).toMatch(/digits only/);
+    expect(ok("1.2.3")).toMatch(/digits only/);
+    expect(ok("0.0000001")).toMatch(/At most 6/);
+    expect(ok("99999999999999999999")).toMatch(/too large/);
+  });
+  it("round-trips a max amount into the input", () => {
+    expect(toInputText(12_345_670_000n, 6)).toBe("12345.67");
   });
 });
