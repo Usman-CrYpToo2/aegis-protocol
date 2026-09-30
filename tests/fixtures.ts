@@ -64,8 +64,13 @@ export async function registerHolder(
   );
 }
 
-/** A fully graduated launch with the bridge open. */
-export async function graduatedLaunch(env: Env) {
+/**
+ * A fully graduated launch with the bridge open.
+ *
+ * With `finalize: false` it stops after Meteora's migration, before `finalize_graduation`, so a
+ * test can change state in between.
+ */
+export async function graduatedLaunch(env: Env, opts = { finalize: true }) {
   const quote = await env.makeSplMint(6);
   env.sendOk([await env.whitelistQuoteTokenIx(quote.publicKey)], [env.admin]);
 
@@ -209,6 +214,10 @@ export async function graduatedLaunch(env: Env) {
       [env.admin, f, s]
     )
   );
+
+  if (!opts.finalize) {
+    return { mint, crwaMint, quote, buyer, buyerCrwa, meteoraConfig, pool };
+  }
 
   expectSuccess(
     env.send(

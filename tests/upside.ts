@@ -263,6 +263,23 @@ export const ix = {
       .instruction();
   },
 
+  /** Raises the supply cap. Upside only ever lets it go up, never down. ReserveAdmin only. */
+  async setMaxTotalSupply(
+    mint: PublicKey,
+    authority: PublicKey,
+    maxTotalSupply: bigint
+  ): Promise<TransactionInstruction> {
+    return accessControlProgram.methods
+      .setMaxTotalSupply(bn(maxTotalSupply))
+      .accountsPartial({
+        accessControlAccount: pda.accessControl(mint),
+        mint,
+        authorityWalletRole: pda.walletRole(mint, authority),
+        payer: authority,
+      })
+      .instruction();
+  },
+
   async initHolder(
     mint: PublicKey,
     authority: PublicKey,
