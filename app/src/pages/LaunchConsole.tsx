@@ -8,6 +8,7 @@ import type { ConsoleLaunch } from "../chain/console";
 import { loadHealth } from "../chain/health";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { Investors } from "../components/console/Investors";
+import { Hint } from "../components/Hint";
 import { GraduatePanel } from "../components/asset/GraduatePanel";
 import { useAsset } from "../hooks/useAsset";
 import { useConsole } from "../hooks/useConsole";
@@ -35,12 +36,12 @@ function Status({ phase }: { phase: TxPhase }) {
   return null;
 }
 
-function Row({ title, body, amount, action, children }: { title: string; body: ReactNode; amount: ReactNode; action: ReactNode; children?: ReactNode }) {
+function Row({ title, body, hint, amount, action, children }: { title: string; body: ReactNode; hint?: ReactNode; amount: ReactNode; action: ReactNode; children?: ReactNode }) {
   return (
-    <div className="grid grid-cols-1 gap-3 border-b border-rule py-6 sm:grid-cols-[minmax(0,1fr)_12rem_9rem] sm:items-center sm:gap-6">
-      <div className="flex flex-col gap-1">
-        <strong className="text-[17px]">{title}</strong>
-        <div className="text-sm leading-relaxed text-ink2">{body}</div>
+    <div className="grid grid-cols-1 gap-3 border-b border-rule py-5 sm:grid-cols-[minmax(0,1fr)_12rem_9rem] sm:items-center sm:gap-6">
+      <div className="flex flex-col gap-0.5">
+        <strong className="flex items-center gap-1 text-[17px]">{title}{hint && <Hint>{hint}</Hint>}</strong>
+        <div className="text-sm text-ink2">{body}</div>
         {children}
       </div>
       <div className="font-serif text-3xl leading-none num sm:text-right">{amount}</div>
@@ -84,7 +85,7 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
     <section aria-labelledby="money-h" className="flex flex-col">
       <div className="flex flex-wrap items-baseline justify-between gap-2 pb-2">
         <h2 id="money-h" className="font-serif text-4xl">What you can collect</h2>
-        <span className="text-[13px] text-mute">Every amount is read live from Meteora and the escrow</span>
+
       </div>
       <div className="hidden border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute sm:grid sm:grid-cols-[minmax(0,1fr)_12rem_9rem] sm:gap-6">
         <span>SOURCE</span><span className="text-right">AVAILABLE NOW</span><span />
@@ -94,9 +95,10 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
         title="Your raise"
         body={
           terms && quote ? (
-            <>Your {terms.creatorMigrationFeePct === 100 ? "" : `${terms.creatorMigrationFeePct}% of the `}{terms.migrationFeePct}% of the {formatUnits(terms.migrationQuoteThreshold, quote.decimals, { maxFraction: 0 })} {quote.symbol} the sale raises. Meteora holds it for you as the pool’s creator until you collect it.</>
-          ) : "Set when the sale terms are fixed."
+            <>{terms.creatorMigrationFeePct === 100 ? "" : `${terms.creatorMigrationFeePct}% of `}{terms.migrationFeePct}% of {formatUnits(terms.migrationQuoteThreshold, quote.decimals, { maxFraction: 0 })} {quote.symbol}</>
+          ) : "Set with the sale terms"
         }
+        hint="Meteora holds your share of the raise for you, as the pool’s creator, until you collect it."
         amount={<>{fmtQ(l.payout.amount)} <span className="font-mono text-sm text-mute">{quote?.symbol}</span></>}
         action={
           l.payout.status === "collected" || raiseTx.phase.kind === "done" ? (
@@ -104,7 +106,7 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
           ) : l.payout.status === "ready" ? (
             <CollectButton phase={raiseTx.phase} onClick={() => void collectRaise()} />
           ) : (
-            <span className="text-[13px] text-mute">{l.payout.status === "at-graduation" ? "Unlocks when the sale completes" : "Nothing to collect"}</span>
+            <span className="text-[13px] text-mute">{l.payout.status === "at-graduation" ? "At graduation" : "—"}</span>
           )
         }
       >
@@ -113,11 +115,12 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
 
       <Row
         title="Unsold stock"
-        body={launch.stage === "Graduated" ? "The part of your issue the sale did not sell. It waits in escrow and is paid only from what is above your holders’ backing." : "Whatever the sale does not sell comes back to you here after graduation."}
+        body="What the sale didn’t sell"
+        hint="It waits in escrow and is paid only from what is above your holders’ backing."
         amount={<>{formatUnits(l.unsold, launch.decimals, { maxFraction: 2 })} <span className="font-mono text-sm text-mute">{sym}</span></>}
         action={
           l.unsold === 0n ? (
-            <span className="text-[13px] text-mute">{launch.stage === "Graduated" ? "Nothing owed" : "After graduation"}</span>
+            <span className="text-[13px] text-mute">{launch.stage === "Graduated" ? "—" : "At graduation"}</span>
           ) : unsoldTx.phase.kind === "done" ? (
             <span className="text-sm font-semibold text-green">Collected ✓</span>
           ) : (
@@ -126,33 +129,32 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
         }
       >
         {l.unsold > 0n && !l.issuerApproved && (
-          <p className="mt-1 text-[13px] leading-relaxed text-amber">Blocked: your wallet isn’t on the register for {sym}, and the security can only move to approved wallets. <Link to="?tab=investors" replace className="font-semibold underline underline-offset-2">Approve your wallet</Link> first; it takes one signature.</p>
+          <p className="mt-1 text-[13px] text-amber">Your wallet needs approval first. <Link to="?tab=investors" replace className="font-semibold underline underline-offset-2">Approve it</Link></p>
         )}
         <Status phase={unsoldTx.phase} />
       </Row>
 
       <Row
         title="Trading fees from the pool"
-        body={terms ? <>After graduation your pool positions earn {(terms.migratedPoolFeeBps / 100).toFixed(2).replace(/\.?0+$/, "")}% of every trade. The liquidity stays locked; only the fees come out. Collecting them from this page is being added next; until then they accrue safely in your positions.</> : "Set with the sale terms."}
+        body={terms ? <>{(terms.migratedPoolFeeBps / 100).toFixed(2).replace(/\.?0+$/, "")}% of every pool trade</> : "Set with the sale terms"}
+        hint="Your locked liquidity earns fees after graduation. They build up safely in your positions until collecting them here is added."
         amount={<span className="text-base text-mute">—</span>}
-        action={<span className="text-[13px] text-mute">Coming next</span>}
+        action={<span className="text-[13px] text-mute">Coming soon</span>}
       />
 
       {vest && (
         <Row
           title="Pool liquidity that unlocks"
-          body={<>{vest.percentage}% of the pool unlocks in {vest.periods} monthly steps over {months} months after graduation. Taking it out makes the pool thinner for your buyers, and their page shows it.</>}
+          body={<>Over {months} months after graduation</>}
+          hint="Released in monthly steps. Taking it out makes the market thinner for your buyers."
           amount={<span className="text-base">{vest.percentage}%</span>}
           action={<span className="text-[13px] text-mute">Schedule only</span>}
         />
       )}
 
-      <Row
-        title="Fees from the sale"
-        body={feeShare === 0 ? "At the platform’s settings, the fee on sale trades is Aegis’s, not yours. Shown so the ledger is complete." : `Your ${feeShare}% of the platform’s share of every sale trade.`}
-        amount={<span className="text-base">Share: {feeShare}%</span>}
-        action={null}
-      />
+      {feeShare > 0 && (
+        <Row title="Fees from the sale" body={`${feeShare}% of the platform’s share of each sale trade`} amount={<span className="text-base">{feeShare}%</span>} action={null} />
+      )}
     </section>
   );
 }
@@ -169,8 +171,7 @@ function Health({ launch: l }: { launch: ConsoleLaunch }) {
   return (
     <aside aria-label="What your holders are experiencing" className="flex h-fit flex-col gap-4">
       <div className="flex flex-col border border-ink bg-surface p-6">
-        <h2 className="text-[17px] font-semibold">What your holders are experiencing</h2>
-        <p className="mt-1 mb-2 text-[13px] leading-relaxed text-mute">The bridge needs all of these to be true. Several depend on settings only you control in Upside.</p>
+        <h2 className="flex items-center gap-1 pb-2 text-[17px] font-semibold">Health<Hint>What your holders experience. Exchanges need every check to pass, and several depend on settings only you control in Upside. Buyers see the same on the asset page.</Hint></h2>
         {!health.data ? (
           <span aria-busy="true" className="my-3 h-24 animate-pulse bg-track/70" />
         ) : (
@@ -178,13 +179,13 @@ function Health({ launch: l }: { launch: ConsoleLaunch }) {
             {health.data.map((c) => (
               <li key={c.id} className="grid grid-cols-[22px_minmax(0,1fr)] gap-3 border-b border-track py-3.5 text-sm leading-relaxed last:border-b-0">
                 <span aria-hidden="true" className={`font-mono ${c.ok ? "text-green" : "text-amber"}`}>{c.ok ? "✓" : "!"}</span>
-                <span><strong>{c.title}</strong> {c.detail}<span className="sr-only">{c.ok ? " (ok)" : " (needs attention)"}</span></span>
+                <span className="flex items-center gap-1">{c.ok ? c.title : <strong>{c.title}</strong>}{!c.ok && <Hint>{c.detail}</Hint>}<span className="sr-only">{c.ok ? " (ok)" : ` (needs attention: ${c.detail})`}</span></span>
               </li>
             ))}
           </ul>
         )}
       </div>
-      <p className="text-[13px] leading-relaxed text-mute">If a check above fails, your buyers see the same message on the bridge page at the same moment. Nothing about the state of your asset is hidden from them.</p>
+
     </aside>
   );
 }

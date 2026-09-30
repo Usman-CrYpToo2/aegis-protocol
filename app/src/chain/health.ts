@@ -27,28 +27,28 @@ export async function loadHealth(connection: Connection, entry: RegistryEntry, w
 
   const checks: Check[] = [
     backing.kind === "backed"
-      ? { id: "backing", ok: true, title: "Backing holds.", detail: "The escrow covers every wrapper in existence." }
+      ? { id: "backing", ok: true, title: "Backing holds", detail: "The escrow covers every wrapper in existence." }
       : backing.kind === "short"
-        ? { id: "backing", ok: false, title: "Backing is short.", detail: "The escrow holds less than the wrappers in existence. The bridge has stopped for everyone." }
-        : { id: "backing", ok: false, title: "Backing couldn’t be verified.", detail: "A read failed; this retries automatically." },
+        ? { id: "backing", ok: false, title: "Backing is short", detail: "The escrow holds less than the wrappers in existence. The bridge has stopped for everyone." }
+        : { id: "backing", ok: false, title: "Backing couldn’t be verified", detail: "A read failed; this retries automatically." },
     t && t[96] !== 1
-      ? { id: "paused", ok: true, title: "Transfers are running.", detail: `You have not paused ${sym}.` }
-      : { id: "paused", ok: false, title: "Transfers are paused.", detail: `Nobody can redeem or deposit until you resume ${sym} transfers.` },
+      ? { id: "paused", ok: true, title: "Transfers are running", detail: `You have not paused ${sym}.` }
+      : { id: "paused", ok: false, title: "Transfers are paused", detail: `Nobody can redeem or deposit until you resume ${sym} transfers.` },
     vs && u64(vs, 8) === launch.vaultGroup && !vaultFrozen
-      ? { id: "vault", ok: true, title: "The escrow is in its group.", detail: "Still in the group it was locked into when you funded it." }
-      : { id: "vault", ok: false, title: "The escrow is out of place.", detail: "Its group changed or it was frozen, so the bridge refuses to move tokens." },
+      ? { id: "vault", ok: true, title: "The escrow is in its group", detail: "Still in the group it was locked into when you funded it." }
+      : { id: "vault", ok: false, title: "The escrow is out of place", detail: "Its group changed or it was frozen, so the bridge refuses to move tokens." },
     rule
-      ? { id: "rule", ok: true, title: "Escrow can pay investors.", detail: "A transfer rule allows escrow → Investors." }
-      : { id: "rule", ok: false, title: "Escrow can’t pay investors.", detail: "The transfer rule from the escrow group to investors is missing." },
+      ? { id: "rule", ok: true, title: "Escrow can pay investors", detail: "A transfer rule allows escrow → Investors." }
+      : { id: "rule", ok: false, title: "Escrow can’t pay investors", detail: "The transfer rule from the escrow group to investors is missing." },
     waiting === 0
-      ? { id: "waiting", ok: true, title: "Every holder can redeem.", detail: `No ${wsym} holder is waiting for approval.` }
-      : { id: "waiting", ok: false, title: `${waiting} ${waiting === 1 ? "holder can’t" : "holders can’t"} redeem.`, detail: `They hold ${wsym} but are not approved.` },
+      ? { id: "waiting", ok: true, title: "Every holder can redeem", detail: `No ${wsym} holder is waiting for approval.` }
+      : { id: "waiting", ok: false, title: `${waiting} ${waiting === 1 ? "holder can’t" : "holders can’t"} redeem`, detail: `They hold ${wsym} but are not approved.` },
   ];
   if (launch.issuerUnsold > 0n) {
     checks.push(
       is && u64(is, 8) === launch.investorGroup
-        ? { id: "issuer", ok: true, title: "You can receive your unsold stock.", detail: "Your wallet is in the investor group." }
-        : { id: "issuer", ok: false, title: "You can’t receive your unsold stock.", detail: "Your wallet is not in the investor group." }
+        ? { id: "issuer", ok: true, title: "You can receive your unsold stock", detail: "Your wallet is in the investor group." }
+        : { id: "issuer", ok: false, title: "You can’t receive your unsold stock", detail: "Your wallet is not in the investor group." }
     );
   }
   return checks;

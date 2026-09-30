@@ -58,10 +58,10 @@ function WaitingCell({ l }: { l: ConsoleLaunch }) {
   if (l.unsold > 0n) lines.push(<span key="u"><span className="num">{formatUnits(l.unsold, launch.decimals, { maxFraction: 2 })}</span> {l.entry.label?.symbol} unsold stock</span>);
   if (l.waiting.length > 0) lines.push(<span key="w" className="text-amber">{l.waiting.length} {l.waiting.length === 1 ? "holder" : "holders"} waiting for approval</span>);
   if (launch.stage === "Live" && l.payout.status === "at-graduation") {
-    lines.push(<span key="g" className="text-ink2">Nothing to do yet. Your <span className="num">{money(l.payout.amount, l, 0)}</span> unlocks when the sale completes.</span>);
+    lines.push(<span key="g" className="text-ink2"><span className="num">{money(l.payout.amount, l, 0)}</span> at graduation</span>);
   }
   if (["TokenCreated", "Funded", "Configured"].includes(launch.stage)) {
-    lines.push(<span key="s" className="text-ink2">{launch.stage === "Configured" ? "Terms are set; the sale hasn’t opened yet." : "Sale terms were never set."}</span>);
+    lines.push(<span key="s" className="text-ink2">{launch.stage === "Configured" ? "Terms set, not opened" : "Not finished"}</span>);
   }
   return <span className="flex flex-col gap-1 text-sm">{lines.length ? lines : <span className="text-mute">Nothing waiting</span>}</span>;
 }
@@ -90,15 +90,15 @@ function AttentionItem({ a }: { a: Attention }) {
   );
   switch (a.kind) {
     case "raise-ready":
-      return row(ICON.coin, `${money(l.payout.amount, l)} is ready to collect`, "The sale completed. Meteora holds your share of the raise until you collect it.", btn(toLaunch, "Collect", true));
+      return row(ICON.coin, `${money(l.payout.amount, l)} is ready to collect`, "Your share of the raise", btn(toLaunch, "Collect", true));
     case "graduate":
-      return row(ICON.coin, "Your sale filled: graduate it", "Trading on the curve has closed. Graduating moves it to its permanent pool and opens the bridge for your holders.", btn(toLaunch, "Graduate", true));
+      return row(ICON.coin, "Sale filled: graduate it", "Opens the bridge for your holders", btn(toLaunch, "Graduate", true));
     case "unsold-blocked":
-      return row(ICON.warn, "Your unsold stock can’t reach you", `Your own wallet isn’t on the register, and ${sym} can only move to approved wallets.`, btn(`${toLaunch}?tab=investors`, "Fix", true));
+      return row(ICON.warn, "Your unsold stock can’t reach you", "Approve your own wallet first", btn(`${toLaunch}?tab=investors`, "Fix", true));
     case "waiting":
-      return row(ICON.people, `${a.count} ${a.count === 1 ? "holder is" : "holders are"} waiting for approval`, `They hold the wrapper but can’t exchange it for ${sym} until you approve them.`, btn(`${toLaunch}?tab=investors`, "Review"));
+      return row(ICON.people, `${a.count} ${a.count === 1 ? "holder is" : "holders are"} waiting for approval`, `They can’t redeem ${sym} yet`, btn(`${toLaunch}?tab=investors`, "Review"));
     case "unfinished":
-      return row(ICON.clock, "This launch stopped part-way", `Its ${formatUnits(l.entry.launch.totalSupply, l.entry.launch.decimals, { maxFraction: 0 })} ${sym} ${l.entry.launch.stage === "TokenCreated" ? "were created but never escrowed" : "sit in escrow with no sale"}. Continue it, or cancel before the sale opens.`, btn(`/launch/${mintOf(l)}`, "Continue"));
+      return row(ICON.clock, "Launch not finished", "Finish it with one approval", btn(`/launch/${mintOf(l)}`, "Continue"));
   }
 }
 
@@ -147,7 +147,7 @@ export function ConsolePage() {
       <div className="flex max-w-3xl flex-col gap-4">
         <span className="kicker">{kicker}</span>
         <h1 className="font-serif text-6xl leading-[0.98] sm:text-7xl lg:text-[80px]">Your launches</h1>
-        <p className="text-lg leading-relaxed text-ink2">{text}</p>
+        {text && <p className="text-lg leading-relaxed text-ink2">{text}</p>}
       </div>
       {right}
     </section>
@@ -205,7 +205,7 @@ export function ConsolePage() {
   return shell(<>
     {title(
       <>Issuer console · <span className="font-mono tracking-normal normal-case">{shortAddress(publicKey.toBase58())}</span></>,
-      "This page exists because the connected wallet issued the assets below. Everything here needs this wallet’s signature: collecting your money, approving investors, and finishing launches you started.",
+      "",
     )}
 
     <section aria-label="Totals" className="grid grid-cols-1 border-y border-ink sm:grid-cols-2 xl:grid-cols-4">
@@ -262,7 +262,7 @@ export function ConsolePage() {
             </li>
           ))}
         </ul>
-        <p className="mt-4 text-sm leading-relaxed text-mute">A launch you started but never finished stays here until you continue or cancel it. Cancelling is only possible before the sale opens, because after that, buyers hold wrappers backed by your asset.</p>
+
       </section>
 
       <aside aria-label="Needs your attention" className="flex flex-col border border-ink bg-surface">
@@ -275,7 +275,7 @@ export function ConsolePage() {
         ) : (
           <ul>{console_.attention.map((a) => <AttentionItem key={`${a.kind}-${a.launch.entry.launch.address.toBase58()}`} a={a} />)}</ul>
         )}
-        <p className="border-t border-ink bg-paper px-5 py-4 text-[13px] leading-relaxed text-ink2">Your buyers never see this panel. They see the public page of each asset, which shows the same backing and the same facts.</p>
+
       </aside>
     </div>
   </>);

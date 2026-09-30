@@ -458,7 +458,7 @@ export function RegistryPage() {
         <span className="kicker">A public register of real assets on Solana</span>
         <h1 className="font-serif text-6xl leading-[0.98] sm:text-7xl lg:text-[88px]">The Registry</h1>
         <p className="max-w-3xl text-lg leading-relaxed text-ink2 lg:text-xl">
-          Every asset issued through Aegis, and the proof behind it. Each one is a regulated security held in escrow, with a wrapper anyone can trade. The two are always exchangeable one for one.
+          Real assets held in escrow, each with a wrapper anyone can trade, 1 : 1.
         </p>
         <Link to="/launch" className="w-fit text-sm text-ink2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink">Issuing an asset? Launch it on Aegis →</Link>
       </section>
