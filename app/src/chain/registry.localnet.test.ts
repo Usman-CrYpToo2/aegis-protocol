@@ -9,6 +9,8 @@
 import { Connection } from "@solana/web3.js";
 import { describe, expect, it } from "vitest";
 import { loadRegistry } from "./registry";
+import { loadAsset } from "./asset";
+import { walkCurve } from "../lib/curve";
 
 const USDC = 1_000_000n;
 
@@ -43,6 +45,33 @@ describe.runIf(process.env.AEGIS_LOCALNET === "1")("registry against a live node
     expect(c.launch.stage).toBe("Funded");
     expect(c.backing.kind).toBe("escrowed");
     expect(c.raise).toBeNull();
+
+    // Sale terms, as scripts/localnet-launch.ts sets them (tests/helpers.ts defaultConfigArgs).
+    const terms = a.detail.terms!;
+    expect(terms.sqrtStartPrice).toBe(1n << 64n); // opens at exactly 1.00
+    expect(terms.migrationFeePct).toBe(50);
+    expect(terms.creatorMigrationFeePct).toBe(100); // Aegis takes no second cut of the raise
+    expect(terms.curveFeeBps).toBe(100);
+    expect(terms.creatorTradingFeePct).toBe(0);
+    expect(terms.partnerPermanentPct).toBe(10);
+    expect(terms.creatorPermanentPct).toBe(30);
+    expect(terms.creatorVesting).toMatchObject({ percentage: 60, periods: 12, frequency: 2_592_000 });
+    expect(terms.migratedPoolFeeBps).toBe(100);
+    expect(terms.curve.length).toBeGreaterThan(0);
+
+    // The curve maths reproduces what really happened on-chain.
+    const toEnd = walkCurve(terms.sqrtStartPrice, terms.curve, terms.migrationSqrtPrice);
+    expect(toEnd.quote).toBeGreaterThanOrEqual(terms.migrationQuoteThreshold - 10n);
+    expect(toEnd.quote).toBeLessThanOrEqual(terms.migrationQuoteThreshold + 10n);
+    const sold = walkCurve(terms.sqrtStartPrice, terms.curve, a.detail.pool!.sqrtPrice).base;
+    const buyerReceived = 5_783_037_000n; // printed by the launch script for AEGIS_BUY=6200
+    const diff = sold > buyerReceived ? sold - buyerReceived : buyerReceived - sold;
+    expect(diff).toBeLessThan(1_000n); // within a thousandth of a token
+
+    // The asset loader reads the same launch the registry does.
+    const one = await loadAsset(new Connection("http://127.0.0.1:8899", "confirmed"), a.launch.realRwaMint);
+    expect(one.launch.address.equals(a.launch.address)).toBe(true);
+    expect(one.backing.kind).toBe("backed");
 
     console.log(
       registry.entries.map((e) => ({
