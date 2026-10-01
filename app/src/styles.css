@@ -78,3 +78,44 @@
 @keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
 @media (width < 40rem) { .connect-sheet { animation-name: sheet-slide; } }
 @keyframes sheet-slide { from { transform: translateY(100%); } }
+
+/* Landing page. The app screens stay still; this page moves, and every motion says something:
+   the seal's rings turn like a banknote's, tokens travel the bridge, the sale climbs to its
+   ceiling, the steps of a launch light in order. All of it stops for reduced motion (above). */
+.lp-ease { transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+.ring { transform-box: fill-box; transform-origin: center; }
+.ring-outer { animation: lp-spin 140s linear infinite; }
+.ring-mid { animation: lp-spin 100s linear infinite reverse; }
+.ring-inner { animation: lp-spin 70s linear infinite; }
+@keyframes lp-spin { to { transform: rotate(360deg); } }
+.lp-draw path { stroke-dasharray: 6000; animation: lp-draw 3.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes lp-draw { from { stroke-dashoffset: 6000; } }
+.lp-pulse { animation: lp-pulse 1.8s ease-in-out infinite; }
+@keyframes lp-pulse { 50% { opacity: 0.25; } }
+.lp-tape { animation: lp-tape 48s linear infinite; }
+.lp-tape:hover { animation-play-state: paused; }
+@keyframes lp-tape { to { transform: translateX(-50%); } }
+.lp-rise { animation: lp-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes lp-rise { from { opacity: 0; transform: translateY(24px); } }
+.lp-roll { display: inline-block; overflow: hidden; vertical-align: bottom; }
+.lp-roll > span { display: inline-block; animation: lp-roll 1.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes lp-roll { from { transform: translateY(100%); } }
+.lp-grow { transform-origin: right; animation: lp-grow 4s cubic-bezier(0.22, 1, 0.36, 1) infinite alternate; }
+@keyframes lp-grow { from { transform: scaleX(1); } to { transform: scaleX(0.05); } }
+.lp-sig > span { animation: lp-sig 9s steps(1) infinite; }
+@keyframes lp-sig { 0% { background: transparent; } 11% { background: var(--color-ink); } }
+.lp-stage-bar { transform-origin: left; animation: lp-stages 12s linear infinite; }
+@keyframes lp-stages { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lp-st { color: #a89f8a; animation: lp-st 12s steps(1) infinite; }
+@keyframes lp-st { 0% { color: var(--color-ink); } 25% { color: #a89f8a; } }
+.lp-card { transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (hover: hover) { .lp-card:hover { transform: translateY(-6px); box-shadow: 0 18px 40px rgb(22 20 15 / 0.12); } }
+/* Sections rise into view as they scroll in, where the browser can do it without script. */
+@supports (animation-timeline: view()) {
+  .lp-reveal { animation: lp-rise linear both; animation-timeline: view(); animation-range: entry 0% entry 40%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal { animation: none; }
+  .lp-st { animation: none; color: var(--color-ink); }
+  .lp-sig > span { animation: none; background: var(--color-ink); }
+}
