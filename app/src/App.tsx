@@ -10,6 +10,7 @@ import { Footer } from "./components/Footer";
 import { Toast, type ToastMessage } from "./components/Toast";
 import { RegistryPage } from "./pages/Registry";
 import { LandingPage } from "./pages/Landing";
+import { DocsPage } from "./pages/Docs";
 import { AssetPage } from "./pages/Asset";
 import { BridgePage } from "./pages/Bridge";
 import { HoldingsPage } from "./pages/Holdings";
@@ -80,6 +81,8 @@ export function App() {
                   <Route path="/console/:mint" element={<LaunchConsolePage />} />
                   <Route path="/launch" element={<IssuePage />} />
                   <Route path="/launch/:mint" element={<IssuePage />} />
+                  <Route path="/docs" element={<DocsPage />} />
+                  <Route path="/docs/:slug" element={<DocsPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
