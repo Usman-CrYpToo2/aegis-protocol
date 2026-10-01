@@ -112,7 +112,7 @@ function SealFigure({ summary, state, readAt }: { summary: LandingSummary | null
     ? `Backing short on ${summary!.short} ${summary!.short === 1 ? "entry" : "entries"}`
     : seal ? `Live backing seal: ${whole(seal.escrowed)} held in escrow, ${whole(seal.circulating)} in circulation` : "The backing seal: every wrapper is matched one for one in escrow";
   return (
-    <figure aria-label={label} className="relative m-0 aspect-square w-[min(100%,358px)] justify-self-center sm:w-[520px] lg:w-[calc(100%+48px)] xl:ml-[max(calc(100%-712px),-72px)] xl:w-[min(760px,calc(100%+120px))] lg:max-w-none lg:justify-self-start">
+    <figure aria-label={label} className="relative m-0 aspect-square w-[min(100%,358px)] justify-self-center sm:w-[520px] lg:w-[min(760px,calc(100%+56px))] xl:-ml-9 xl:w-[min(760px,calc(100%+92px))] lg:max-w-none lg:justify-self-start">
       <Rosette className="absolute inset-0 size-full opacity-55" />
       <div className="absolute top-1/2 left-1/2 flex size-[38%] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-0.5 rounded-full border bg-surface text-center sm:gap-1"
         style={{ borderColor: short ? "var(--color-error)" : "var(--color-ox)", boxShadow: `0 0 0 8px var(--color-paper), 0 0 0 9px ${short ? "var(--color-error)" : "var(--color-ox)"}` }}>
@@ -135,7 +135,7 @@ function Hero({ summary, state, readAt }: { summary: LandingSummary | null; stat
     <section className={`${wrap} grid items-center gap-6 overflow-x-clip pt-6 lg:min-h-[820px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:pt-0`}>
       <div className="relative z-10 flex flex-col gap-5 lg:gap-7">
         <span className={`${kb} lp-rise hidden self-start rounded-full border border-rule bg-surface px-3.5 py-2 !tracking-[0.1em] text-mute sm:inline-flex`}>Real-world assets · Solana · Meteora</span>
-        <h1 className="lp-rise m-0 font-serif text-[52px] leading-[0.94] tracking-[-0.015em] sm:text-[76px] lg:text-[clamp(56px,6vw,96px)]" style={{ animationDelay: ".08s" }}>
+        <h1 className="lp-rise m-0 font-serif text-[52px] leading-[0.94] tracking-[-0.015em] sm:text-[76px] lg:text-[5.2vw] xl:text-[clamp(72px,5.6vw,84px)]" style={{ animationDelay: ".08s" }}>
           Real assets.<br />Traded freely.<br /><em className="text-ox">Backed</em> one for one.
         </h1>
         <p className="lp-rise m-0 max-w-[520px] text-[17px] leading-relaxed text-ink2 sm:text-xl" style={{ animationDelay: ".16s" }}>
