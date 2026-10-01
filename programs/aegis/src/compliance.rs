@@ -10,7 +10,7 @@
 //!
 //! Call sites: `fund_vault` (before the asset is locked), `launch_pool` (state can change in
 //! between), `bridge_deposit` and `bridge_redeem` (where a broken rule actually hurts a holder),
-//! `finalize_graduation` and `abort_launch`.
+//! `abort_launch` and `claim_unsold`.
 //!
 //! The supply-cap check is separate — `require_supply_cap_unchanged` — and runs only where a new
 //! buyer is about to enter. See its documentation for why.
