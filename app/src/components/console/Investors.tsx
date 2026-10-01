@@ -9,6 +9,8 @@ import { TX_STEP, useTxRunner } from "../../hooks/useTxRunner";
 import { LINE_NOTE, parseWalletLines } from "../../lib/addresses";
 import { formatUnits, shortAddress } from "../../lib/amount";
 import { PlainError } from "../../lib/txErrors";
+import { removeInstruction } from "../../chain/powers";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { Hint } from "../Hint";
 
 const LAMPORTS = 1_000_000_000;
@@ -203,6 +205,10 @@ function Paste({ launch, registered }: { launch: ConsoleLaunch; registered: Set<
 }
 
 function Register({ launch, register }: { launch: ConsoleLaunch; register: ReturnType<typeof useRegister> }) {
+  const { connection } = useConnection();
+  const { publicKey } = useWallet();
+  const tx = useTxRunner();
+  const [removing, setRemoving] = useState<PublicKey | null>(null);
   const [find, setFind] = useState("");
   const sym = launch.entry.label?.symbol ?? "the security";
   const all = register.data ?? [];
@@ -220,8 +226,8 @@ function Register({ launch, register }: { launch: ConsoleLaunch; register: Retur
         <span aria-busy="true" className="h-32 animate-pulse bg-track/70" />
       ) : (
         <div className="flex flex-col">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_5rem] gap-4 border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute">
-            <span>WALLET</span><span className="text-right">HOLDS {sym}</span><span className="text-right">STATUS</span>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_5rem_5.5rem] gap-4 border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute">
+            <span>WALLET</span><span className="text-right">HOLDS {sym}</span><span className="text-right">STATUS</span><span />
           </div>
           {shown.length === 0 ? (
             <p className="py-4 text-sm text-mute">{find ? "No approved wallet matches." : "No one is approved yet."}</p>
@@ -230,18 +236,30 @@ function Register({ launch, register }: { launch: ConsoleLaunch; register: Retur
               {shown.slice(0, LIMIT).map((w) => {
                 const k = w.owner.toBase58();
                 return (
-                  <li key={k} className="grid grid-cols-[minmax(0,1fr)_auto_5rem] items-center gap-4 border-b border-rule py-3 text-sm">
+                  <li key={k} className="grid grid-cols-[minmax(0,1fr)_auto_5rem_5.5rem] items-center gap-4 border-b border-rule py-3 text-sm">
                     <a href={explorerUrl("address", k)} target="_blank" rel="noopener noreferrer" title={k} className="font-mono underline decoration-line underline-offset-2 hover:decoration-ink">
                       {shortAddress(k)}{launch.entry.launch.issuer.equals(w.owner) && <span className="ml-2 font-sans text-xs text-mute no-underline">(you)</span>}
                     </a>
                     <span className="text-right num">{formatUnits(w.security, launch.entry.launch.decimals, { maxFraction: 2, minFraction: 2 })}</span>
                     <span className={`text-right text-[13px] ${w.frozen ? "text-error" : "text-green"}`}>{w.frozen ? "Frozen" : "Active"}</span>
+                    <span className="text-right">
+                      {!launch.entry.launch.issuer.equals(w.owner) && (
+                        <button type="button" onClick={() => { tx.reset(); setRemoving(w.owner); }} className="min-h-9 cursor-pointer px-2 text-[13px] text-error underline underline-offset-2">Remove…</button>
+                      )}
+                    </span>
                   </li>
                 );
               })}
             </ul>
           )}
           {shown.length > LIMIT && <p className="pt-3 text-[13px] text-mute">Showing {LIMIT} of {shown.length}. Search to find a wallet.</p>}
+          {removing && (
+            <ConfirmDialog open title={`Remove ${shortAddress(removing.toBase58())}?`} symbol={launch.entry.label?.symbol ?? ""} action="Remove from register" busy={tx.phase.kind === "busy"}
+              points={[`It can no longer receive ${sym} or redeem.`, `What it already holds stays with it. Freeze it to stop that moving.`]}
+              error={tx.phase.kind === "failed" ? <><strong className="text-error">{tx.phase.error.title}.</strong> <span className="text-ink2">{tx.phase.error.detail}</span></> : undefined}
+              onConfirm={() => void tx.run(async () => [await removeInstruction(connection, launch.entry.launch.realRwaMint, publicKey!, removing)]).then((sig) => { if (sig) setRemoving(null); })}
+              onClose={() => { if (tx.phase.kind !== "busy") setRemoving(null); }} />
+          )}
         </div>
       )}
     </Section>

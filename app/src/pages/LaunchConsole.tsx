@@ -8,6 +8,7 @@ import type { ConsoleLaunch } from "../chain/console";
 import { loadHealth } from "../chain/health";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { Investors } from "../components/console/Investors";
+import { Powers } from "../components/console/Powers";
 import { Hint } from "../components/Hint";
 import { GraduatePanel } from "../components/asset/GraduatePanel";
 import { useAsset } from "../hooks/useAsset";
@@ -193,7 +194,7 @@ function Health({ launch: l }: { launch: ConsoleLaunch }) {
 export function LaunchConsolePage() {
   const { mint } = useParams();
   const [params] = useSearchParams();
-  const tab = params.get("tab") === "investors" ? "investors" : "money";
+  const tab = params.get("tab") === "investors" ? "investors" : params.get("tab") === "powers" ? "powers" : "money";
   const { publicKey } = useWallet();
   const { open: openConnect } = useConnectModal();
   const asset = useAsset(mint);
@@ -254,19 +255,18 @@ export function LaunchConsolePage() {
         <Link to={`/asset/${mint}`} className="inline-flex min-h-11 items-center border border-line bg-surface px-5 text-sm font-semibold hover:border-ink">See the page your buyers see ↗</Link>
       </div>
       <nav aria-label="Launch sections" className="flex gap-8 border-b border-rule">
-        {(["money", "investors"] as const).map((id) => (
+        {(["money", "investors", "powers"] as const).map((id) => (
           <Link
             key={id}
-            to={id === "money" ? "?" : "?tab=investors"}
+            to={id === "money" ? "?" : `?tab=${id}`}
             replace
             aria-current={tab === id ? "page" : undefined}
             className={`-mb-px pt-3.5 pb-3 text-[15px] ${tab === id ? "border-b-2 border-ink font-semibold" : "text-ink2 hover:text-ink"}`}
           >
-            {id === "money" ? "Money" : "Investors"}
+            {id === "money" ? "Money" : id === "investors" ? "Investors" : "Legal powers"}
             {id === "investors" && mine && mine.waiting.length > 0 && <span className="font-mono text-xs text-amber"> · {mine.waiting.length} waiting</span>}
           </Link>
         ))}
-        <span className="pt-3.5 pb-3 text-[15px] text-mute" title="Arrives in a later part">Legal powers</span>
       </nav>
     </section>
 
@@ -276,6 +276,8 @@ export function LaunchConsolePage() {
       <span aria-busy="true" aria-label="Loading" className="h-64 animate-pulse bg-track/70" />
     ) : tab === "investors" ? (
       <Investors launch={mine} />
+    ) : tab === "powers" ? (
+      <Powers launch={mine} />
     ) : (
       <div className="grid grid-cols-1 gap-12 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <Money launch={mine} />

@@ -1,10 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useConnection } from "@solana/wallet-adapter-react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import { isSet, type LaunchStage } from "../chain/aegis";
 import { AssetNotFoundError } from "../chain/asset";
 import { METEORA_PROTOCOL_FEE_PCT, type DbcConfig } from "../chain/meteora";
 import { ProgramNotDeployedError, type RegistryEntry } from "../chain/registry";
+import { loadPaused } from "../chain/powers";
 import { CurveChart } from "../components/asset/CurveChart";
 import { Seal } from "../components/asset/Seal";
 import { BridgeBox } from "../components/asset/BridgeBox";
@@ -309,6 +312,14 @@ export function AssetPage() {
   const asset = useAsset(mint);
   const entry = asset.data;
   const panelInView = useInView("trade", entry?.launch.stage === "Live");
+  const { connection } = useConnection();
+  // A pause by the issuer is public: every visitor sees it next to the stage.
+  const paused = useQuery({
+    queryKey: ["register", "paused", config.rpcUrl, entry?.launch.realRwaMint.toBase58()],
+    enabled: Boolean(entry && isSet(entry.launch.realRwaMint) && entry.launch.stage !== "Aborted"),
+    queryFn: () => loadPaused(connection, entry!.launch.realRwaMint),
+    refetchInterval: config.refreshMs,
+  });
   const [tab, setTab] = useState<Tab>(() => (typeof location !== "undefined" && location.hash === "#proof" ? "proof" : "terms"));
 
   useEffect(() => {
@@ -369,6 +380,11 @@ export function AssetPage() {
             <h1 className="font-serif text-5xl leading-[0.98] sm:text-6xl xl:text-7xl">{name}</h1>
             <div className="flex flex-wrap items-center gap-2 text-[13px] text-ink2">
               <span className={`inline-flex h-7 items-center rounded-full border px-2.5 font-semibold ${pill}`}>{stage.label}</span>
+              {paused.data && (
+                <span className="inline-flex h-7 items-center gap-1 rounded-full border border-amber bg-amber-wash px-2.5 font-semibold text-amber">
+                  Transfers paused by the issuer<Hint>{sym ?? "The security"} can’t move or be redeemed until the issuer resumes. {wsym ?? "The wrapper"} still trades.</Hint>
+                </span>
+              )}
               {sym && <span className="inline-flex h-7 items-center gap-1 rounded-full border border-line bg-surface px-2.5"><strong className="font-mono font-medium">{sym}</strong> security</span>}
               {wsym && <span className="inline-flex h-7 items-center gap-1 rounded-full border border-line bg-surface px-2.5"><strong className="font-mono font-medium">{wsym}</strong> tradable wrapper</span>}
               <Hint label="How the two tokens work">
