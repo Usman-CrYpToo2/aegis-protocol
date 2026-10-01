@@ -252,7 +252,10 @@ function NewLaunch({ platform }: { platform: Platform }) {
   const me = publicKey!;
   const saved = useMemo(() => readDraft(me.toBase58()), [me]);
   const [asset, setAsset] = useState<AssetDraft>(saved?.asset ?? EMPTY_ASSET);
-  const [terms, setTerms] = useState<TermsDraft>(saved?.terms ?? defaultTerms(platform.config, platform.quotes[0]!));
+  // A saved draft can name a currency that no longer exists (it was delisted, or a local node was
+  // reset): fall back to an approved one rather than leaving the issuer stuck.
+  const [terms, setTerms] = useState<TermsDraft>(() =>
+    saved?.terms && platform.quotes.some((q) => q.mint.toBase58() === saved.terms.quote) ? saved.terms : saved?.terms ? { ...saved.terms, quote: platform.quotes[0]!.mint.toBase58() } : defaultTerms(platform.config, platform.quotes[0]!));
   const [step, setStep] = useState(saved?.step ?? 0);
   const runner = useLaunchRunner();
   useEffect(() => writeDraft(me.toBase58(), { asset, terms, step }), [me, asset, terms, step]);

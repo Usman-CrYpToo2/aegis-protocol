@@ -103,9 +103,10 @@ export function TermsForm({ draft, onChange, quotes, platform, disabled }: { dra
   return (
     <fieldset disabled={disabled} className="flex flex-col border-t border-ink">
       <legend className="sr-only">Sale terms</legend>
-      {quotes.length > 1 && (
+      {(quotes.length > 1 || !quote) && (
         <Q n={0} title="Which currency do buyers pay in?">
-          <select className={inputCls} value={draft.quote} onChange={(e) => set("quote", e.target.value)} aria-label="Currency">
+          <select className={inputCls} value={quote ? draft.quote : ""} onChange={(e) => set("quote", e.target.value)} aria-label="Currency">
+            {!quote && <option value="" disabled>Choose a currency</option>}
             {quotes.map((q) => <option key={q.mint.toBase58()} value={q.mint.toBase58()}>{q.symbol}</option>)}
           </select>
         </Q>
