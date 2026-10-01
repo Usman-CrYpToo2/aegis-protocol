@@ -20,6 +20,7 @@ export function Footer() {
         </p>
         <nav aria-label="Footer" className="flex shrink-0 gap-5">
           <Link to="/" className={link}>About Aegis</Link>
+          <Link to="/docs" className={link}>Docs</Link>
           <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className={link}>GitHub ↗</a>
           <a href={explorerUrl("address", AEGIS_PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className={link}>Program ↗</a>
         </nav>

@@ -52,6 +52,9 @@ export function Header() {
                 My holdings
               </NavLink>
             )}
+            <NavLink to="/docs" className={link}>
+              Docs
+            </NavLink>
             {/* Only a wallet recorded as some launch's issuer sees the console. Anyone else can start one. */}
             {publicKey && console_.isIssuer === false && (
               <NavLink to="/launch" className={link}>

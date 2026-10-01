@@ -74,6 +74,7 @@ function Nav() {
           {SECTIONS.map(([id, label]) => (
             <a key={id} href={`#${id}`} className="rounded-full px-3.5 py-2.5 text-sm text-ink2 no-underline hover:bg-[#ECE7DB] hover:text-ink">{label}</a>
           ))}
+          <Link to="/docs" className="rounded-full px-3.5 py-2.5 text-sm text-ink2 no-underline hover:bg-[#ECE7DB] hover:text-ink">Docs</Link>
         </nav>
         <div className="flex items-center gap-1">
           <Link to="/registry" className="inline-flex min-h-11 items-center rounded-full bg-ink px-5 text-sm font-semibold text-paper no-underline hover:bg-ink2 hover:text-paper">Launch app</Link>
@@ -89,6 +90,7 @@ function Nav() {
             {SECTIONS.map(([id, label]) => (
               <a key={id} href={`#${id}`} onClick={() => setOpen(false)} className="flex min-h-12 items-center rounded-2xl px-4 text-[15px] text-ink no-underline hover:bg-[#ECE7DB]">{label}</a>
             ))}
+            <Link to="/docs" className="flex min-h-12 items-center rounded-2xl px-4 text-[15px] text-ink no-underline hover:bg-[#ECE7DB]">Docs</Link>
             <Link to="/launch" className="flex min-h-12 items-center rounded-2xl px-4 text-[15px] font-semibold text-blue no-underline hover:bg-[#ECE7DB]">Launch an asset →</Link>
           </nav>
         )}
@@ -543,6 +545,7 @@ function Footer() {
         </div>
         <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
           <a href={REPO} target="_blank" rel="noopener noreferrer" className={link}>GitHub</a>
+          <Link to="/docs" className={link}>Docs</Link>
           <a href={`${REPO}/blob/main/design.md`} target="_blank" rel="noopener noreferrer" className={link}>Design</a>
           <a href={explorerUrl("address", AEGIS_PROGRAM_ID.toBase58())} target="_blank" rel="noopener noreferrer" className={link}>Program</a>
           <Link to="/registry" className={link}>Registry</Link>
