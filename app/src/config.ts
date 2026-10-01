@@ -58,3 +58,8 @@ export function explorerUrl(kind: "address" | "tx", value: string): string {
   if (config.cluster === "devnet") return `${base}?cluster=devnet`;
   return `${base}?cluster=custom&customUrl=${encodeURIComponent(config.rpcUrl)}`;
 }
+
+/** Where a graduated pool can be traded. A local node has no Meteora site, so it falls back to the explorer. */
+export function meteoraPoolUrl(pool: string): string {
+  return config.cluster === "devnet" ? `https://devnet.meteora.ag/dammv2/${pool}` : explorerUrl("address", pool);
+}

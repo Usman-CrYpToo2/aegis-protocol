@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { config, explorerUrl } from "../config";
+import { config, explorerUrl, meteoraPoolUrl } from "../config";
+import { dammPoolAddress } from "../chain/graduate";
 import { isSet, type LaunchStage } from "../chain/aegis";
 import { AssetNotFoundError } from "../chain/asset";
 import { METEORA_PROTOCOL_FEE_PCT, type DbcConfig } from "../chain/meteora";
@@ -218,6 +219,22 @@ function Rules({ entry }: { entry: RegistryEntry }) {
   );
 }
 
+/** After the sale, the wrapper trades on Meteora's permanent pool rather than here. */
+function PoolCard({ entry }: { entry: RegistryEntry }) {
+  const { launch } = entry;
+  const wsym = entry.wrapperLabel?.symbol ?? "The wrapper";
+  const pool = dammPoolAddress(launch.crwaMint, launch.quoteMint).toBase58();
+  return (
+    <div className="flex flex-col gap-2 border border-line bg-surface p-5">
+      <h2 className="kicker">Buy or sell {wsym}</h2>
+      <p className="m-0 text-[15px] text-ink2">The sale is over. {wsym} now trades on its permanent Meteora pool, open to anyone.</p>
+      <a href={meteoraPoolUrl(pool)} target="_blank" rel="noopener noreferrer" className="w-fit font-semibold text-blue underline underline-offset-2 hover:text-blue-deep">
+        {config.cluster === "devnet" ? "Open the pool on Meteora ↗" : "View the pool ↗"}
+      </a>
+    </div>
+  );
+}
+
 type Tab = "terms" | "proof" | "money" | "rules";
 
 function Details({ entry, tab, onTab }: { entry: RegistryEntry; tab: Tab; onTab: (t: Tab) => void }) {
@@ -412,6 +429,7 @@ export function AssetPage() {
             <div id="trade" className="scroll-mt-6 empty:hidden"><TradePanel entry={entry} /></div>
           )}
           <GraduatePanel entry={entry} />
+          {launch.stage === "Graduated" && <PoolCard entry={entry} />}
           {launch.stage === "Graduated" && <div id="exchange" className="scroll-mt-6"><BridgeBox entry={entry} /></div>}
           {(launch.stage === "TokenCreated" || launch.stage === "Funded" || launch.stage === "Configured") && (
             <div className="border border-line bg-surface p-5 text-[15px] text-ink2">The sale hasn’t opened yet. {stage.detail}.</div>
