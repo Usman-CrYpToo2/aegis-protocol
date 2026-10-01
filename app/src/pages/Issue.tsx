@@ -6,7 +6,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import type { LaunchAccount } from "../chain/aegis";
 import { STEP_IDS, abortInstructions, launchTransactions, loadIssueProgress, nextHolderIdFor, type AssetDetails, type StepId } from "../chain/issue";
-import { loadPlatform, type Platform } from "../chain/platform";
+import type { Platform } from "../chain/platform";
+import { usePlatform } from "../hooks/usePlatform";
 import { decodeMint, mintLabel } from "../chain/token";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { Hint } from "../components/Hint";
@@ -34,11 +35,6 @@ const STEP_TITLE: Record<StepId, string> = {
   terms: "Fix the sale terms with Meteora",
   open: "Open the sale",
 };
-
-function usePlatform() {
-  const { connection } = useConnection();
-  return useQuery({ queryKey: ["platform", config.rpcUrl], queryFn: () => loadPlatform(connection), staleTime: 60_000 });
-}
 
 function useSol() {
   const { connection } = useConnection();
