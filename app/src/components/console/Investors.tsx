@@ -1,48 +1,69 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { PublicKey } from "@solana/web3.js";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { config, explorerUrl } from "../../config";
 import type { ConsoleLaunch } from "../../chain/console";
-import { alreadyApproved, approvalBatch, approvalChunks, approvalDeposit, loadRegister } from "../../chain/investors";
-import { TX_STEP, useTxRunner } from "../../hooks/useTxRunner";
+import { alreadyApproved, approvalDeposit, approvalTransactions, loadRegister } from "../../chain/investors";
+import { TX_STEP, useTxRunner, type TxPhase } from "../../hooks/useTxRunner";
 import { LINE_NOTE, parseWalletLines } from "../../lib/addresses";
 import { formatUnits, shortAddress } from "../../lib/amount";
-import { PlainError } from "../../lib/txErrors";
+import { PlainError, explainTradeError } from "../../lib/txErrors";
 import { removeInstruction } from "../../chain/powers";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { Hint } from "../Hint";
 
 const LAMPORTS = 1_000_000_000;
 
-/** Approves wallets in as few signatures as fit, one transaction at a time, and reports progress. */
+/**
+ * Approves any number of wallets with one wallet approval: every transaction is built up front,
+ * signed together, then sent in order. Wallets already on the register are skipped first.
+ */
 function useApprove(launch: ConsoleLaunch) {
   const { connection } = useConnection();
-  const { publicKey } = useWallet();
-  const tx = useTxRunner();
+  const { publicKey, signAllTransactions, signTransaction } = useWallet();
+  const queryClient = useQueryClient();
+  const [phase, setPhase] = useState<TxPhase>({ kind: "idle" });
   const [progress, setProgress] = useState<{ at: number; of: number } | null>(null);
   const [approved, setApproved] = useState<string[]>([]);
   const l = launch.entry.launch;
 
   const approve = async (wallets: PublicKey[]) => {
-    if (!publicKey || !wallets.length) return false;
-    const chunks = approvalChunks(l, publicKey, wallets);
-    let ok = true;
-    for (const [i, chunk] of chunks.entries()) {
-      setProgress({ at: i + 1, of: chunks.length });
-      ok = (await tx.run(async () => {
-        const done = await alreadyApproved(connection, l, chunk);
-        const todo = chunk.filter((_, j) => !done[j]);
-        if (!todo.length) throw new PlainError("Already approved", "These wallets are already on the register.");
-        return approvalBatch(connection, l, publicKey, todo);
-      })) !== null;
-      if (!ok) break;
-      setApproved((prev) => [...prev, ...chunk.map(String)]);
+    if (!publicKey || !wallets.length || phase.kind === "busy") return false;
+    try {
+      setPhase({ kind: "busy", step: "checking" });
+      const done = await alreadyApproved(connection, l, wallets);
+      const todo = wallets.filter((_, i) => !done[i]);
+      if (!todo.length) throw new PlainError("Already approved", "These wallets are already on the register.");
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      const txs = await approvalTransactions(connection, l, publicKey, todo, blockhash);
+      const sim = await connection.simulateTransaction(txs[0]!, { sigVerify: false, commitment: "confirmed" });
+      if (sim.value.err) throw Object.assign(new Error(JSON.stringify(sim.value.err)), { logs: sim.value.logs ?? [] });
+      setPhase({ kind: "busy", step: "signing" });
+      const signed = signAllTransactions ? await signAllTransactions(txs) : await Promise.all(txs.map((x) => signTransaction!(x)));
+      setPhase({ kind: "busy", step: "confirming" });
+      let signature = "";
+      for (const [i, x] of signed.entries()) {
+        setProgress({ at: i + 1, of: signed.length });
+        signature = await connection.sendRawTransaction(x.serialize(), { skipPreflight: i > 0, preflightCommitment: "confirmed" });
+        const r = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+        if (r.value.err) {
+          const info = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
+          throw Object.assign(new Error(JSON.stringify(r.value.err)), { logs: info?.meta?.logMessages ?? [] });
+        }
+      }
+      setApproved((prev) => [...prev, ...wallets.map(String)]);
+      setPhase({ kind: "done", signature });
+      return true;
+    } catch (e) {
+      setPhase({ kind: "failed", error: explainTradeError(e) });
+      return false;
+    } finally {
+      setProgress(null);
+      for (const key of ["register", "console", "registry"]) void queryClient.invalidateQueries({ queryKey: [key] });
     }
-    setProgress(null);
-    return ok;
   };
-  return { approve, phase: tx.phase, progress, approved, reset: tx.reset };
+  return { approve, phase, progress, approved, reset: () => setPhase({ kind: "idle" }) };
 }
 
 function Section({ title, intro, hint, children, id }: { title: string; intro?: ReactNode; hint?: ReactNode; children: ReactNode; id: string }) {
@@ -63,7 +84,7 @@ function Feedback({ phase, progress, doneText }: { phase: ReturnType<typeof useA
       </p>
     );
   }
-  if (phase.kind === "busy" && progress && progress.of > 1) return <p role="status" className="text-[13px] text-mute">Signature {progress.at} of {progress.of}: {TX_STEP[phase.step]}</p>;
+  if (phase.kind === "busy" && progress && progress.of > 1) return <p role="status" className="text-[13px] text-mute">Confirming {progress.at} of {progress.of}…</p>;
   if (phase.kind === "done") {
     return (
       <p role="status" className="text-[13px] text-green">
@@ -156,48 +177,71 @@ function Waiting({ launch }: { launch: ConsoleLaunch }) {
 
 function Paste({ launch, registered }: { launch: ConsoleLaunch; registered: Set<string> }) {
   const { connection } = useConnection();
-  const [text, setText] = useState("");
+  const [input, setInput] = useState("");
+  const [list, setList] = useState<PublicKey[]>([]);
+  const [note, setNote] = useState<{ text: string; error: boolean } | null>(null);
   const flow = useApprove(launch);
   const fieldId = useId();
-  const known = useMemo(() => new Set(launch.waiting.map((w) => w.owner.toBase58())), [launch.waiting]);
-  const lines = useMemo(() => parseWalletLines(text, known, registered), [text, known, registered]);
-  const ready = lines.flatMap((l) => (l.kind === "ready" ? [l.wallet] : []));
   const deposit = useQuery({ queryKey: ["approval-deposit", config.rpcUrl], queryFn: () => approvalDeposit(connection), staleTime: Infinity });
-  const { publicKey } = useWallet();
-  const signatures = publicKey && ready.length ? approvalChunks(launch.entry.launch, publicKey, ready).length : 0;
   const perWallet = deposit.data !== undefined ? Number(deposit.data) / LAMPORTS : null;
+  const busy = flow.phase.kind === "busy";
+
+  // Adds what was typed or pasted: one address, or several separated by lines, commas or spaces.
+  const add = () => {
+    const listed = new Set(list.map(String));
+    const lines = parseWalletLines(input.replace(/[\s,;]+/g, "\n"), listed, registered);
+    const ready = lines.flatMap((l) => (l.kind === "ready" ? [l.wallet] : []));
+    const skipped = lines.filter((l) => l.kind !== "ready");
+    if (ready.length) setList((prev) => [...prev, ...ready]);
+    const why = (k: (typeof skipped)[number]["kind"]) => (k === "known" ? "already in your list" : LINE_NOTE[k]);
+    setNote(skipped.length === 0 ? null
+      : lines.length === 1 ? { text: `${why(skipped[0]!.kind)[0]!.toUpperCase()}${why(skipped[0]!.kind).slice(1)}.`, error: true }
+        : { text: `Added ${ready.length}, skipped ${skipped.length}: ${[...new Set(skipped.map((l) => why(l.kind)))].join("; ")}.`, error: ready.length === 0 });
+    if (ready.length || !skipped.length) setInput("");
+    if (flow.phase.kind !== "busy") flow.reset();
+  };
 
   return (
-    <Section id="paste-h" title="Approve wallets you’ve already checked" hint="For investors who passed your KYC before buying. A spreadsheet column, or a CSV with the address first, works too.">
-      <label htmlFor={fieldId} className="text-[13px] font-semibold">Wallet addresses, one per line</label>
-      <textarea
-        id={fieldId}
-        value={text}
-        onChange={(e) => { setText(e.target.value); if (flow.phase.kind !== "busy") flow.reset(); }}
-        rows={5}
-        spellCheck={false}
-        autoComplete="off"
-        placeholder="Paste Solana wallet addresses"
-        className="w-full max-w-3xl border border-line bg-surface p-3 font-mono text-sm leading-relaxed outline-none focus:border-ink"
-      />
-      {lines.length > 0 && (
-        <ul aria-label="What will happen to each line" className="flex max-w-3xl flex-col gap-1 font-mono text-[13px]">
-          {lines.map((l) => (
-            <li key={l.line} className={l.kind === "ready" ? "text-green" : l.kind === "invalid" || l.kind === "program" ? "text-error" : "text-mute"}>
-              {l.kind === "ready" ? "✓" : l.kind === "invalid" || l.kind === "program" ? "✕" : "–"} line {l.line} · {LINE_NOTE[l.kind]}
+    <Section id="paste-h" title="Approve wallets you’ve already checked" hint="For investors who passed your KYC before buying. You can paste several addresses at once.">
+      <div className="flex max-w-3xl flex-col gap-1.5">
+        <label htmlFor={fieldId} className="text-[13px] font-semibold">Wallet address</label>
+        <div className="flex gap-2">
+          <input id={fieldId} value={input} disabled={busy} spellCheck={false} autoComplete="off" placeholder="Paste a Solana wallet address"
+            onChange={(e) => { setInput(e.target.value); setNote(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (input.trim()) add(); } }}
+            aria-invalid={Boolean(note?.error)} aria-describedby={`${fieldId}-note`}
+            className="min-h-11 min-w-0 flex-1 border border-line bg-surface px-3 font-mono text-sm outline-none focus:border-ink" />
+          <button type="button" disabled={!input.trim() || busy} onClick={add} className="min-h-11 cursor-pointer border border-ink px-5 text-sm font-semibold hover:bg-paper disabled:cursor-not-allowed disabled:opacity-40">Add</button>
+        </div>
+        <p id={`${fieldId}-note`} aria-live="polite" className={`min-h-5 text-[13px] ${note?.error ? "text-error" : "text-ink2"}`}>{note?.text ?? ""}</p>
+      </div>
+
+      {list.length > 0 && (
+        <ul aria-label="Wallets to approve" className="flex max-w-3xl flex-col border-t border-ink">
+          {list.map((w, i) => (
+            <li key={w.toBase58()} className="flex items-center justify-between gap-3 border-b border-rule py-2">
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="w-6 text-right font-mono text-xs text-mute">{i + 1}</span>
+                <span className="truncate font-mono text-sm" title={w.toBase58()}>{w.toBase58()}</span>
+              </span>
+              <button type="button" disabled={busy} onClick={() => setList((prev) => prev.filter((x) => !x.equals(w)))} aria-label={`Remove ${w.toBase58()} from the list`}
+                className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center text-lg text-mute hover:text-error disabled:opacity-40">×</button>
             </li>
           ))}
         </ul>
       )}
-      <div className="flex max-w-3xl flex-wrap items-center justify-between gap-3 pt-1">
-        <span className="text-[13px] text-mute">
-          {ready.length
-            ? <>{ready.length} new {ready.length === 1 ? "wallet" : "wallets"} · {signatures} {signatures === 1 ? "signature" : "signatures"}{perWallet !== null && <> · each approval holds about {perWallet.toFixed(4)} SOL as Solana’s account deposit, paid by you</>}</>
-            : "Nothing to approve yet"}
+
+      <div className="flex max-w-3xl flex-wrap items-center justify-between gap-3">
+        <span className="flex items-center gap-1 text-[13px] text-mute">
+          {list.length ? <>{list.length} {list.length === 1 ? "wallet" : "wallets"} · one approval</> : "Add wallets to approve them together"}
+          {list.length > 0 && perWallet !== null && <Hint>Each approval holds about {perWallet.toFixed(4)} SOL as Solana’s account deposit, paid by you.</Hint>}
         </span>
-        <button type="button" disabled={!ready.length || flow.phase.kind === "busy"} onClick={() => void flow.approve(ready).then((ok) => ok && setText(""))} className={primary}>
-          {buttonLabel(flow.phase, ready.length ? `Approve ${ready.length} ${ready.length === 1 ? "wallet" : "wallets"}` : "Approve")}
-        </button>
+        <div className="flex gap-2">
+          {list.length > 1 && <button type="button" disabled={busy} onClick={() => setList([])} className="min-h-11 cursor-pointer px-3 text-sm text-ink2 underline underline-offset-4 disabled:opacity-40">Clear</button>}
+          <button type="button" disabled={!list.length || busy} onClick={() => void flow.approve(list).then((ok) => ok && setList([]))} className={primary}>
+            {buttonLabel(flow.phase, list.length > 1 ? `Approve all ${list.length}` : "Approve")}
+          </button>
+        </div>
       </div>
       <Feedback phase={flow.phase} progress={flow.progress} doneText="Approved and added to the register." />
     </Section>

@@ -9,7 +9,7 @@
  * Aegis only reads this register. The issuer signs every change, as the holder of Upside's roles.
  */
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
-import { PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction, type Connection } from "@solana/web3.js";
+import { ComputeBudgetProgram, PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction, type Connection } from "@solana/web3.js";
 import type { LaunchAccount } from "./aegis";
 import { bridgeAddresses } from "./bridge";
 import { holderInstructions } from "./issue";
@@ -85,6 +85,26 @@ export function approvalChunks(launch: LaunchAccount, issuer: PublicKey, wallets
 export async function approvalBatch(connection: Connection, launch: LaunchAccount, issuer: PublicKey, wallets: PublicKey[]): Promise<TransactionInstruction[]> {
   const first = await nextHolderId(connection, launch);
   return wallets.flatMap((w, i) => approveInstructions(launch, issuer, w, first + BigInt(i)));
+}
+
+/** Compute per approved wallet when approvals are signed together (measured: 79k for one, 140k for two). */
+const UNITS_PER_WALLET = 110_000;
+
+/**
+ * Every approval as transactions that share one blockhash, for the wallet to sign at once and the
+ * app to send in order. Only the first can be simulated (the holder numbers that follow depend on
+ * it landing), so each carries a fixed compute limit. Holder numbers are consecutive from the
+ * register's next one.
+ */
+export async function approvalTransactions(connection: Connection, launch: LaunchAccount, issuer: PublicKey, wallets: PublicKey[], blockhash: string): Promise<VersionedTransaction[]> {
+  let next = await nextHolderId(connection, launch);
+  return approvalChunks(launch, issuer, wallets).map((chunk) => {
+    const ixs = chunk.flatMap((w) => approveInstructions(launch, issuer, w, next++));
+    return new VersionedTransaction(new TransactionMessage({
+      payerKey: issuer, recentBlockhash: blockhash,
+      instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: UNITS_PER_WALLET * chunk.length }), ...ixs],
+    }).compileToV0Message());
+  });
 }
 
 /** The refundable deposit Solana holds for one approval's four new accounts, in lamports. */
