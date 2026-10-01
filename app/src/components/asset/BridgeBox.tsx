@@ -1,3 +1,4 @@
+import { confirmSignature } from "../../chain/send";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
@@ -85,11 +86,7 @@ export function BridgeBox({ entry }: { entry: RegistryEntry }) {
       setPhase({ kind: "busy", step: "signing" });
       const signature = await sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed" });
       setPhase({ kind: "busy", step: "confirming" });
-      const result = await connection.confirmTransaction({ signature, blockhash: prepared.blockhash, lastValidBlockHeight: prepared.lastValidBlockHeight }, "confirmed");
-      if (result.value.err) {
-        const tx = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
-        throw Object.assign(new Error(JSON.stringify(result.value.err)), { logs: tx?.meta?.logMessages ?? [] });
-      }
+      await confirmSignature(connection, signature, prepared.lastValidBlockHeight);
       setPhase({ kind: "done", direction, amount: fmt(parsed.atoms), signature });
       setText("");
     } catch (e) {

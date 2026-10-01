@@ -1,3 +1,4 @@
+import { sendSigned } from "../../chain/send";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { PublicKey } from "@solana/web3.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -45,12 +46,7 @@ function useApprove(launch: ConsoleLaunch) {
       let signature = "";
       for (const [i, x] of signed.entries()) {
         setProgress({ at: i + 1, of: signed.length });
-        signature = await connection.sendRawTransaction(x.serialize(), { skipPreflight: i > 0, preflightCommitment: "confirmed" });
-        const r = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-        if (r.value.err) {
-          const info = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
-          throw Object.assign(new Error(JSON.stringify(r.value.err)), { logs: info?.meta?.logMessages ?? [] });
-        }
+        signature = await sendSigned(connection, x, lastValidBlockHeight, i === 0);
       }
       setApproved((prev) => [...prev, ...wallets.map(String)]);
       setPhase({ kind: "done", signature });

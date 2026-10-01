@@ -1,3 +1,4 @@
+import { confirmSignature } from "../chain/send";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { Keypair, TransactionInstruction } from "@solana/web3.js";
 import { useQueryClient } from "@tanstack/react-query";
@@ -35,11 +36,7 @@ export function useTxRunner(errors: ErrorTable = {}) {
         // New accounts created from a fresh keypair (a mint, a config) sign alongside the wallet.
         const signature = await sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed", signers });
         setPhase({ kind: "busy", step: "confirming" });
-        const result = await connection.confirmTransaction({ signature, blockhash: prepared.blockhash, lastValidBlockHeight: prepared.lastValidBlockHeight }, "confirmed");
-        if (result.value.err) {
-          const tx = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
-          throw Object.assign(new Error(JSON.stringify(result.value.err)), { logs: tx?.meta?.logMessages ?? [] });
-        }
+        await confirmSignature(connection, signature, prepared.lastValidBlockHeight);
         setPhase({ kind: "done", signature });
         return signature;
       } catch (e) {

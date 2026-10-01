@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { config, explorerUrl } from "../../config";
 import { useConnectModal } from "../connect/ConnectModal";
+import { confirmSignature, sendSigned } from "../../chain/send";
 import { loadAsset } from "../../chain/asset";
 import { GRADUATION_DEPOSIT_LAMPORTS, graduationTransactions } from "../../chain/graduate";
 import type { RegistryEntry } from "../../chain/registry";
@@ -146,13 +147,6 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
       // "graduate" separately. If they fail, the sale still completed and the fallback panel shows.
       const completes = side === "buy" && "fillsSale" in again && (again.fillsSale || again.nextSqrt >= state!.migrationSqrtPrice);
       const bundle = completes && signAllTransactions ? graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash) : [];
-      const confirm = async (signature: string) => {
-        const result = await connection.confirmTransaction({ signature, blockhash: prepared.blockhash, lastValidBlockHeight: prepared.lastValidBlockHeight }, "confirmed");
-        if (result.value.err) {
-          const tx = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
-          throw Object.assign(new Error(JSON.stringify(result.value.err)), { logs: tx?.meta?.logMessages ?? [] });
-        }
-      };
 
       setPhase({ kind: "busy", step: "signing" });
       let signature: string;
@@ -160,12 +154,11 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
       if (bundle.length) {
         const [buy, ...rest] = await signAllTransactions!([prepared.transaction, ...bundle]);
         setPhase({ kind: "busy", step: "confirming" });
-        signature = await connection.sendRawTransaction(buy!.serialize(), { preflightCommitment: "confirmed" });
-        await confirm(signature);
+        signature = await sendSigned(connection, buy!, prepared.lastValidBlockHeight, true);
         graduated = true;
         for (const tx of rest) {
           try {
-            await confirm(await connection.sendRawTransaction(tx.serialize(), { skipPreflight: true }));
+            await sendSigned(connection, tx, prepared.lastValidBlockHeight, false);
           } catch {
             graduated = false;
             break;
@@ -174,7 +167,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
       } else {
         signature = await sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed" });
         setPhase({ kind: "busy", step: "confirming" });
-        await confirm(signature);
+        await confirmSignature(connection, signature, prepared.lastValidBlockHeight);
       }
       const spent = side === "buy" && "spend" in again ? again.spend : amountIn;
       setPhase({
