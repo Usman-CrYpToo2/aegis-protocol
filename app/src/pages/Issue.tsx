@@ -2,11 +2,12 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Keypair, PublicKey, type VersionedTransaction } from "@solana/web3.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import type { LaunchAccount } from "../chain/aegis";
 import { STEP_IDS, abortInstructions, launchTransactions, loadIssueProgress, nextHolderIdFor, type AssetDetails, type StepId } from "../chain/issue";
 import type { Platform } from "../chain/platform";
+import { isExpired, sendSigned } from "../chain/send";
 import { usePlatform } from "../hooks/usePlatform";
 import { decodeMint, mintLabel } from "../chain/token";
 import { useConnectModal } from "../components/connect/ConnectModal";
@@ -77,18 +78,19 @@ function useLaunchRunner() {
       for (const [i, tx] of signed.entries()) {
         at = ids[i]!;
         setRun({ kind: "sending", at: i + 1, of: signed.length, ids, done: { ...done } });
-        const signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: i > 0, preflightCommitment: "confirmed" });
-        const result = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-        if (result.value.err) {
-          const info = await connection.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
-          throw Object.assign(new Error(JSON.stringify(result.value.err)), { logs: info?.meta?.logMessages ?? [] });
-        }
-        done[at] = signature;
+        // Each step waits for the one before: it uses the accounts that step creates.
+        done[at] = await sendSigned(connection, tx, lastValidBlockHeight, i === 0);
       }
       setRun({ kind: "idle" });
       return "done";
     } catch (e) {
-      setRun({ kind: "failed", at, error: explainTradeError(e, ISSUE_ERRORS), done });
+      // A blockhash that ran out part-way is the network being slow, not the launch being wrong:
+      // everything sent so far is on-chain and saved, and the rest goes out with a fresh one.
+      const landed = Object.keys(done).length;
+      const error = isExpired(e) && landed
+        ? { title: "The network was slow", detail: `${landed} ${landed === 1 ? "step" : "steps"} went through and ${landed === 1 ? "is" : "are"} saved. Approve once more to finish the rest; nothing is repeated.`, retry: true, charged: true }
+        : explainTradeError(e, ISSUE_ERRORS);
+      setRun({ kind: "failed", at, error, done });
       return Object.keys(done).length ? "partial" : "none";
     } finally {
       for (const key of ["issue", "registry", "console", "sol", "asset"]) void queryClient.invalidateQueries({ queryKey: [key] });
@@ -197,7 +199,7 @@ function termsBlocker(t: TermsDraft, platform: Platform, totalSupply: bigint, de
   return null;
 }
 
-function TermsStep({ terms, setTerms, platform, preview }: { terms: TermsDraft; setTerms: (t: TermsDraft) => void; platform: Platform; preview: ReactNode }) {
+function TermsStep({ terms, setTerms, platform, preview, yours = false }: { terms: TermsDraft; setTerms: (t: TermsDraft) => void; platform: Platform; preview: ReactNode; yours?: boolean }) {
   const [custom, setCustom] = useState(false);
   const rows = termsSummary(terms, platform);
   return (
@@ -205,7 +207,7 @@ function TermsStep({ terms, setTerms, platform, preview }: { terms: TermsDraft; 
       {!custom ? (
         <div className="flex flex-col border border-ink bg-surface">
           <div className="flex items-center justify-between border-b border-ink px-5 py-3">
-            <span className="flex items-center gap-2 font-semibold">Recommended terms<Hint>A sensible start within the platform’s limits. Customize any of it; the numbers update as you go.</Hint></span>
+            <span className="flex items-center gap-2 font-semibold">{yours ? "Your terms" : "Recommended terms"}<Hint>{yours ? "The terms you chose when you started this launch. Customize any of it before you finish." : "A sensible start within the platform’s limits. Customize any of it; the numbers update as you go."}</Hint></span>
             <button type="button" onClick={() => setCustom(true)} className="min-h-10 cursor-pointer text-sm font-semibold text-blue underline underline-offset-4">Customize</button>
           </div>
           <div className="px-5 pb-2">{rows?.map(([k, v]) => <Row key={k} k={k}>{v}</Row>)}</div>
@@ -241,6 +243,15 @@ function writeDraft(wallet: string, d: Draft | null) {
   try { if (d) localStorage.setItem(draftKey(wallet), JSON.stringify(d)); else localStorage.removeItem(draftKey(wallet)); } catch { /* convenience only */ }
 }
 
+/** The terms an issuer chose, kept per launch so finishing an interrupted launch doesn't reset them. */
+const termsKey = (mint: string) => `aegis.launch-terms.${mint}`;
+function readSavedTerms(mint: string): TermsDraft | null {
+  try { const raw = localStorage.getItem(termsKey(mint)); return raw ? (JSON.parse(raw) as TermsDraft) : null; } catch { return null; }
+}
+function saveTerms(mint: string, t: TermsDraft | null) {
+  try { if (t) localStorage.setItem(termsKey(mint), JSON.stringify(t)); else localStorage.removeItem(termsKey(mint)); } catch { /* convenience only */ }
+}
+
 function NewLaunch({ platform }: { platform: Platform }) {
   const { publicKey } = useWallet();
   const navigate = useNavigate();
@@ -269,6 +280,7 @@ function NewLaunch({ platform }: { platform: Platform }) {
   const launch = async () => {
     if (!details || !result.ok || blocker) return;
     const rwa = Keypair.generate();
+    saveTerms(rwa.publicKey.toBase58(), terms);
     const wrapperName = bytes(`Wrapped ${details.name}`) <= 32 ? `Wrapped ${details.name}` : details.name;
     const outcome = await runner.start(async (blockhash) => launchTransactions({
       mint: rwa.publicKey, issuer: me, feeRecipient: platform.config.feeRecipient,
@@ -279,7 +291,7 @@ function NewLaunch({ platform }: { platform: Platform }) {
     // Anything that landed is on-chain now: the launch's own page shows it, and finishes it if needed.
     if (outcome !== "none") {
       writeDraft(me.toBase58(), null);
-      navigate(`/launch/${rwa.publicKey.toBase58()}`, { replace: true });
+      navigate(`/launch/${rwa.publicKey.toBase58()}`, { replace: true, state: { interrupted: outcome === "partial" } });
     }
   };
 
@@ -357,8 +369,13 @@ function Continue({ mint, platform }: { mint: PublicKey; platform: Platform }) {
     queryKey: ["issue-label", config.rpcUrl, key],
     queryFn: async () => { const info = await connection.getAccountInfo(mint, "confirmed"); return info ? mintLabel(decodeMint(mint, info)) : null; },
   });
-  const [terms, setTerms] = useState<TermsDraft>(() => defaultTerms(platform.config, platform.quotes[0]!));
+  const [restored] = useState(() => Boolean(readSavedTerms(key)));
+  const [terms, setTerms] = useState<TermsDraft>(() => {
+    const saved = readSavedTerms(key);
+    return saved && platform.quotes.some((q) => q.mint.toBase58() === saved.quote) ? saved : defaultTerms(platform.config, platform.quotes[0]!);
+  });
   const runner = useLaunchRunner();
+  const interrupted = Boolean((useLocation().state as { interrupted?: boolean } | null)?.interrupted);
 
   const p = progress.data;
   const box = (children: ReactNode) => <div className="flex max-w-3xl flex-col items-start gap-4 border border-ink bg-surface p-8">{children}</div>;
@@ -372,6 +389,7 @@ function Continue({ mint, platform }: { mint: PublicKey; platform: Platform }) {
   const supply = formatUnits(launch.totalSupply, launch.decimals, { maxFraction: 0 });
   if (p.aborted) return box(<><span className="kicker">{name}</span><strong className="font-serif text-4xl font-normal">Cancelled</strong><p className="text-ink2">All {supply} {symbol} went back to your wallet.</p><Link to="/launch" className={`${btn} inline-flex items-center`}>Start a new launch</Link></>);
   if (p.next === null) {
+    saveTerms(key, null);
     return box(<>
       <span className="kicker text-green">Launched</span>
       <strong className="font-serif text-5xl leading-tight font-normal">{name} is open for sale</strong>
@@ -411,10 +429,15 @@ function Continue({ mint, platform }: { mint: PublicKey; platform: Platform }) {
         <span className="kicker">Finish your launch</span>
         <h1 className="font-serif text-5xl leading-none sm:text-6xl">{name}</h1>
         <p className="text-[17px] text-ink2">{STEP_IDS.length - remaining.length} of {STEP_IDS.length} steps are done and saved. The rest takes one approval.</p>
+        {interrupted && runner.run.kind === "idle" && (
+          <p role="status" className="max-w-2xl border-l-4 border-amber bg-amber-wash px-4 py-3 text-[15px] text-ink2">
+            The network was slow, so the last steps didn’t go through in time. Nothing is lost and nothing will be repeated: approve once more to finish.
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-1 items-start gap-10 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex min-w-0 flex-col gap-6">
-          {needsTerms && <TermsStep terms={terms} setTerms={setTerms} platform={platform} preview={preview} />}
+          {needsTerms && <TermsStep terms={terms} setTerms={setTerms} platform={platform} preview={preview} yours={restored} />}
           <Progress run={runner.run} ids={remaining} />
           <RunError run={runner.run} />
         </div>
