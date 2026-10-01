@@ -13,9 +13,8 @@ import { formatUnits } from "../lib/amount";
 import { ARCHETYPE_CEILING } from "../lib/curve";
 import { entryName, summarize, type LandingSummary } from "../lib/landing";
 import { poolFeeRange } from "../lib/terms";
+import { NETWORK_NAME as NETWORK, REPO_URL as REPO } from "../lib/site";
 
-const REPO = "https://github.com/Usman-CrYpToo2/aegis-protocol";
-const NETWORK = config.cluster === "devnet" ? "devnet" : "a local test network";
 const wrap = "mx-auto w-full max-w-[1440px] px-4 sm:px-8 lg:px-20";
 const kb = "font-mono text-[11px] uppercase tracking-[0.14em] sm:text-xs";
 const h2 = "font-serif text-[44px] leading-[0.95] sm:text-[56px] lg:text-[72px]";
