@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import type { Activity } from "../chain/activity";
 import type { Holding } from "../chain/holdings";
+import { Hint } from "../components/Hint";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { useActivity, useHoldings } from "../hooks/useHoldings";
 import { useNow } from "../hooks/useNow";
@@ -94,7 +95,7 @@ function HoldingRow({ h, address }: { h: Holding; address: string }) {
       <>
         <span className="flex gap-2 font-semibold text-green"><Tick />Approved by the issuer</span>
         <span className="text-ink2">
-          {graduated ? `You can exchange in both directions, one for one, and trade ${wsym} on the pool.` : `When the sale graduates, you can exchange ${wsym} for ${sym} straight away.`}
+          {graduated ? "Redeem or deposit, 1 : 1." : `Redeem for ${sym} after the sale.`}
         </span>
       </>
     );
@@ -104,8 +105,8 @@ function HoldingRow({ h, address }: { h: Holding; address: string }) {
         <span className="flex gap-2 font-semibold text-amber"><Bang />Not approved yet</span>
         <span className="text-ink2">
           {graduated
-            ? `You can hold and trade ${wsym}. To take ${sym} itself, send the issuer your address and ask to be approved.`
-            : `You don’t need approval to hold or sell. You will need it to take the security itself when the bridge opens at graduation. Getting approved early avoids waiting then.`}
+            ? `Ask the issuer to approve your address to redeem ${sym}.`
+            : `Needed to redeem ${sym} after the sale. Not needed to trade.`}
         </span>
       </>
     );
@@ -239,7 +240,7 @@ export function HoldingsPage() {
       <div className="flex flex-col gap-4">
         <span className="kicker">{publicKey ? <>Wallet <span className="font-mono tracking-normal normal-case">{shortAddress(publicKey.toBase58())}</span></> : "Your wallet"}</span>
         <h1 className="font-serif text-6xl leading-[0.98] sm:text-7xl lg:text-[80px]">My holdings</h1>
-        <p className="max-w-2xl text-lg leading-relaxed text-ink2">What you own on the registry, whether it is still backed, and what you are allowed to do with it.</p>
+
       </div>
       {right}
     </section>
@@ -278,7 +279,7 @@ export function HoldingsPage() {
   } else {
     const worth = (
       <div className="flex flex-col gap-1 lg:items-end">
-        <span className="kicker">Worth at current prices</span>
+        <span className="flex items-center gap-1 kicker">Worth at current prices<Hint>Graduated assets at their live Meteora pool price; open offerings at the sale curve’s price.</Hint></span>
         {totals.values.length === 0 ? (
           <span className="font-serif text-5xl text-mute">—</span>
         ) : (
@@ -289,7 +290,7 @@ export function HoldingsPage() {
           ))
         )}
         <span className={`text-[13px] ${totals.short ? "text-error" : "text-mute"}`}>
-          {totals.short ? `${totals.short} of your assets ${totals.short === 1 ? "is" : "are"} short of backing` : "Every token below is backed 1 : 1"}
+          {totals.short ? `${totals.short} of your assets ${totals.short === 1 ? "is" : "are"} short of backing` : "All backed 1 : 1"}
           {totals.unpriced > 0 && ` · ${totals.unpriced} not priced yet`}
           {registry.data && ` · checked ${Math.max(0, Math.round((now - registry.data.readAt) / 1000))}s ago`}
         </span>
@@ -312,7 +313,7 @@ export function HoldingsPage() {
             <ul className="flex flex-col">
               {holdings.data.map((h) => <HoldingRow key={h.entry.launch.address.toBase58()} h={h} address={publicKey.toBase58()} />)}
             </ul>
-            <p className="mt-3 text-[13px] text-mute">Only assets this wallet holds are listed. Graduated assets are valued at their live Meteora pool price; open offerings at the sale curve’s price.</p>
+
           </section>
         )}
         {holdings.data.length > 0 && <ActivityList items={activity.data} loading={activity.isPending} failed={activity.isError} now={now} />}

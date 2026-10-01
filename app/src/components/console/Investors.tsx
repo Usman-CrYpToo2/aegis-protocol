@@ -9,6 +9,7 @@ import { TX_STEP, useTxRunner } from "../../hooks/useTxRunner";
 import { LINE_NOTE, parseWalletLines } from "../../lib/addresses";
 import { formatUnits, shortAddress } from "../../lib/amount";
 import { PlainError } from "../../lib/txErrors";
+import { Hint } from "../Hint";
 
 const LAMPORTS = 1_000_000_000;
 
@@ -42,10 +43,10 @@ function useApprove(launch: ConsoleLaunch) {
   return { approve, phase: tx.phase, progress, approved, reset: tx.reset };
 }
 
-function Section({ title, intro, children, id }: { title: string; intro?: ReactNode; children: ReactNode; id: string }) {
+function Section({ title, intro, hint, children, id }: { title: string; intro?: ReactNode; hint?: ReactNode; children: ReactNode; id: string }) {
   return (
     <section aria-labelledby={id} className="flex flex-col gap-3">
-      <h2 id={id} className="font-serif text-4xl">{title}</h2>
+      <h2 id={id} className="flex items-center gap-2 font-serif text-4xl">{title}{hint && <Hint>{hint}</Hint>}</h2>
       {intro && <p className="max-w-3xl text-sm leading-relaxed text-ink2">{intro}</p>}
       {children}
     </section>
@@ -113,7 +114,7 @@ function Waiting({ launch }: { launch: ConsoleLaunch }) {
   const copy = (k: string) => void navigator.clipboard?.writeText(k).then(() => { setCopied(k); setTimeout(() => setCopied(null), 1500); });
 
   return (
-    <Section id="waiting-h" title="Holders who can’t redeem yet" intro={<>These wallets hold {wsym} but are not approved, so they cannot exchange it for {sym}. Aegis finds them on-chain. It does not check anyone’s identity for you: <strong>approve a wallet only after your own KYC.</strong></>}>
+    <Section id="waiting-h" title="Holders who can’t redeem yet" intro={<>They hold {wsym} but can’t redeem it for {sym}. <strong>Approve only after your own KYC.</strong></>} hint="Aegis finds these wallets on-chain. It doesn’t check anyone’s identity for you.">
       {waiting.length === 0 ? (
         <p className="border border-rule bg-surface p-5 text-sm text-ink2">{flow.approved.length ? "Approved. Every holder can redeem now." : `No one is waiting. Every ${wsym} holder can redeem.`}</p>
       ) : (
@@ -165,7 +166,7 @@ function Paste({ launch, registered }: { launch: ConsoleLaunch; registered: Set<
   const perWallet = deposit.data !== undefined ? Number(deposit.data) / LAMPORTS : null;
 
   return (
-    <Section id="paste-h" title="Approve wallets you’ve already checked" intro="For investors who passed your KYC before buying. Paste one address per line; a spreadsheet column or a CSV with the address first works too.">
+    <Section id="paste-h" title="Approve wallets you’ve already checked" hint="For investors who passed your KYC before buying. A spreadsheet column, or a CSV with the address first, works too.">
       <label htmlFor={fieldId} className="text-[13px] font-semibold">Wallet addresses, one per line</label>
       <textarea
         id={fieldId}
@@ -263,22 +264,15 @@ export function Investors({ launch }: { launch: ConsoleLaunch }) {
   const sym = launch.entry.label?.symbol ?? "the security";
   const wsym = launch.entry.wrapperLabel?.symbol ?? "the wrapper";
   return (
-    <div className="grid grid-cols-1 gap-12 xl:grid-cols-[minmax(0,1fr)_24rem]">
-      <div className="flex min-w-0 flex-col gap-14">
-        <OwnWallet launch={launch} />
-        <Waiting launch={launch} />
-        <Paste launch={launch} registered={registered} />
-        <Register launch={launch} register={register} />
-      </div>
-      <aside aria-labelledby="approval-h" className="flex h-fit flex-col gap-3 border border-ink bg-surface p-6">
-        <h2 id="approval-h" className="text-[17px] font-semibold">What approval changes</h2>
-        <ul className="flex flex-col text-sm leading-relaxed text-ink2">
-          <li className="border-b border-track py-3">Approved wallets can hold {sym}, exchange {wsym} for {sym}, and exchange back.</li>
-          <li className="border-b border-track py-3">Everyone else can still buy, sell and hold {wsym}. Approval is never needed to trade the wrapper.</li>
-          <li className="border-b border-track py-3">Approvals are written to Upside’s register for {sym}, which you control. Aegis only reads it.</li>
-          <li className="py-3">The group was fixed as Investors when you funded the escrow. Redemptions only ever go to that group.</li>
-        </ul>
-      </aside>
+    <div className="flex max-w-5xl flex-col gap-14">
+      <p className="flex items-center gap-1 text-sm text-ink2">
+        Approved wallets can hold {sym} and redeem {wsym} for it.
+        <Hint label="What approval changes">Everyone else can still buy, sell and hold {wsym}; approval is never needed to trade the wrapper. Approvals are written to Upside’s register for {sym}, which you control. Aegis only reads it, and redemptions only ever go to the Investors group.</Hint>
+      </p>
+      <OwnWallet launch={launch} />
+      <Waiting launch={launch} />
+      <Paste launch={launch} registered={registered} />
+      <Register launch={launch} register={register} />
     </div>
   );
 }
