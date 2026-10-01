@@ -2,6 +2,7 @@
  * The platform's settings and approved quote tokens: the limits every launch's terms must meet.
  * Decoded at fixed offsets; platform.test.ts derives the offsets from the IDL.
  */
+import { programAccounts } from "./indexRpc";
 import { PublicKey, type Connection } from "@solana/web3.js";
 import idl from "../idl/aegis.json";
 import bs58 from "bs58";
@@ -73,7 +74,7 @@ export async function loadPlatform(connection: Connection): Promise<Platform> {
   const info = await connection.getAccountInfo(platformConfigAddress(), "confirmed");
   if (!info || !info.owner.equals(AEGIS_PROGRAM_ID)) throw new Error("Aegis isn’t set up on this network yet.");
   const config = decodePlatformConfig(info.data);
-  const accounts = await connection.getProgramAccounts(AEGIS_PROGRAM_ID, {
+  const accounts = await programAccounts(connection, AEGIS_PROGRAM_ID, {
     commitment: "confirmed",
     filters: [{ memcmp: { offset: 0, bytes: bs58.encode(disc("QuoteToken")) } }],
   });

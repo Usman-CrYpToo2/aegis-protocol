@@ -8,6 +8,7 @@
  *
  * Aegis only reads this register. The issuer signs every change, as the holder of Upside's roles.
  */
+import { programAccounts } from "./indexRpc";
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import { ComputeBudgetProgram, PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction, type Connection } from "@solana/web3.js";
 import type { LaunchAccount } from "./aegis";
@@ -138,7 +139,7 @@ const SAA = [68, 169, 137, 56, 226, 21, 69, 124];
  * whose approval record puts it in the investor group. Program accounts (the escrow) are left out.
  */
 export async function loadRegister(connection: Connection, launch: LaunchAccount): Promise<RegisteredWallet[]> {
-  const accounts = await connection.getProgramAccounts(TOKEN_2022_PROGRAM_ID, {
+  const accounts = await programAccounts(connection, TOKEN_2022_PROGRAM_ID, {
     commitment: "confirmed",
     filters: [{ memcmp: { offset: 0, bytes: launch.realRwaMint.toBase58() } }],
   });

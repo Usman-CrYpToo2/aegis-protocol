@@ -47,6 +47,11 @@ const cluster = readCluster(import.meta.env.VITE_CLUSTER);
 export const config = {
   cluster,
   rpcUrl: readRpcUrl(import.meta.env.VITE_RPC_URL, cluster),
+  /**
+   * Optional second endpoint for listing a program's accounts (getProgramAccounts). Some free RPC
+   * plans refuse that one call while serving everything else well; this lets the two be split.
+   */
+  indexRpcUrl: import.meta.env.VITE_INDEX_RPC_URL ? readRpcUrl(import.meta.env.VITE_INDEX_RPC_URL, cluster) : null,
   quoteLabels: readQuoteLabels(import.meta.env.VITE_QUOTE_LABELS, cluster),
   /** How often on-chain state is re-read while the page is open. */
   refreshMs: 15_000,

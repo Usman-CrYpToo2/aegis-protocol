@@ -1,6 +1,7 @@
 /**
  * Everything the issuer console shows, for the launches one wallet issued. Read-only.
  */
+import { programAccounts } from "./indexRpc";
 import { getAssociatedTokenAddressSync, unpackAccount } from "@solana/spl-token";
 import { PublicKey, type AccountInfo, type Connection } from "@solana/web3.js";
 import { creatorMigrationFee } from "../lib/money";
@@ -45,7 +46,7 @@ async function readMany(connection: Connection, keys: PublicKey[]) {
  */
 async function waitingHolders(connection: Connection, entry: RegistryEntry): Promise<ConsoleLaunch["waiting"]> {
   const { launch } = entry;
-  const accounts = await connection.getProgramAccounts(TOKEN_2022_PROGRAM_ID, {
+  const accounts = await programAccounts(connection, TOKEN_2022_PROGRAM_ID, {
     commitment: "confirmed",
     filters: [{ memcmp: { offset: 0, bytes: launch.crwaMint.toBase58() } }],
   });

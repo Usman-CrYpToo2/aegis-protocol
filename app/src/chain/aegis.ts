@@ -5,6 +5,7 @@
  * through a general Borsh decoder. `aegis.test.ts` recomputes every offset from the program's IDL,
  * so if the program's account ever changes shape the test fails instead of the page misreading it.
  */
+import { programAccounts } from "./indexRpc";
 import { PublicKey, type Connection } from "@solana/web3.js";
 import bs58 from "bs58";
 import idl from "../idl/aegis.json";
@@ -108,7 +109,7 @@ export type LaunchScan = { launches: LaunchAccount[]; unreadable: number };
  * account must never blank the whole registry.
  */
 export async function fetchAllLaunches(connection: Connection): Promise<LaunchScan> {
-  const accounts = await connection.getProgramAccounts(AEGIS_PROGRAM_ID, {
+  const accounts = await programAccounts(connection, AEGIS_PROGRAM_ID, {
     commitment: "confirmed",
     filters: [{ memcmp: { offset: 0, bytes: bs58.encode(LAUNCH_DISCRIMINATOR) } }],
   });

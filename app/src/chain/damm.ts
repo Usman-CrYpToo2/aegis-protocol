@@ -4,6 +4,7 @@
  * 160) and checked against a real migrated pool on a local node: token A is the wrapper, and the
  * price there equals the sale's final price.
  */
+import { programAccounts } from "./indexRpc";
 import { PublicKey, type Connection } from "@solana/web3.js";
 
 export const DAMM_V2_PROGRAM_ID = new PublicKey("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG");
@@ -20,7 +21,7 @@ const u128 = (d: Uint8Array, at: number) => {
 
 /** The pool trading this wrapper against `quoteMint`, or null if it cannot be found or is malformed. */
 export async function findDammPool(connection: Connection, wrapperMint: PublicKey, quoteMint: PublicKey): Promise<DammPool | null> {
-  const found = await connection.getProgramAccounts(DAMM_V2_PROGRAM_ID, {
+  const found = await programAccounts(connection, DAMM_V2_PROGRAM_ID, {
     commitment: "confirmed",
     filters: [{ dataSize: POOL_SIZE }, { memcmp: { offset: AT.tokenA, bytes: wrapperMint.toBase58() } }, { memcmp: { offset: AT.tokenB, bytes: quoteMint.toBase58() } }],
   });
