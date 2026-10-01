@@ -214,3 +214,88 @@ export function Lifecycle() {
     </ol>
   );
 }
+
+/** A question that opens in place, for FAQs. Native <details>, so it works with a keyboard and without script. */
+export function Faq({ items }: { items: [string, ReactNode][] }) {
+  return (
+    <div className="mt-6 max-w-[68ch] border-t border-ink">
+      {items.map(([q, a]) => (
+        <details key={q} id={`q-${q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-$/, "")}`} className="group scroll-mt-24 border-b border-rule">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-6 py-3 text-[17px] font-semibold text-ink [&::-webkit-details-marker]:hidden">
+            {q}
+            <span aria-hidden="true" className="font-mono text-xl font-normal text-mute group-open:rotate-45">+</span>
+          </summary>
+          <div className="pb-5 text-[16px] leading-[1.7] text-ink2">{a}</div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+/** A word defined in the glossary. The link carries the definition, and the hover shows it. */
+export function G({ term, children, tip }: { term: string; children: ReactNode; tip?: string }) {
+  return (
+    <Link to={`/docs/glossary#term-${term.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} title={tip} className="text-ink underline decoration-line decoration-dotted underline-offset-4 hover:decoration-ink">
+      {children}
+    </Link>
+  );
+}
+
+/** Where a launch's supply ends up, as one bar and a legend. Widths are shares of the total. */
+export function SupplyBar({ parts }: { parts: { label: string; value: string; share: number; tone: string }[] }) {
+  return (
+    <figure className="m-0 mt-6 max-w-[68ch]">
+      <div aria-hidden="true" className="flex h-8 overflow-hidden border border-ink">
+        {parts.map((p) => <span key={p.label} className={p.tone} style={{ width: `${Math.max(p.share * 100, 1.2)}%` }} />)}
+      </div>
+      <figcaption className="mt-3 grid gap-2 text-[14px] text-ink2 sm:grid-cols-3">
+        {parts.map((p) => (
+          <span key={p.label} className="flex items-start gap-2">
+            <span aria-hidden="true" className={`mt-1 size-3 shrink-0 border border-ink ${p.tone}`} />
+            <span><strong className="text-ink">{p.value}</strong> {p.label}</span>
+          </span>
+        ))}
+      </figcaption>
+    </figure>
+  );
+}
+
+/** The sale curve: price rising from the opening price to the graduation price, under the ceiling. */
+export function CurveFigure({ open, close, ceiling, quote }: { open: string; close: string; ceiling: string; quote: string }) {
+  return (
+    <figure className="m-0 mt-6 max-w-[68ch] border border-line bg-surface p-4 sm:p-6">
+      <svg viewBox="0 0 520 230" className="w-full" role="img" aria-label={`The price rises along the curve from ${open} to ${close} ${quote}, below the ceiling of ${ceiling}.`}>
+        <line x1="40" y1="30" x2="500" y2="30" stroke="#7E2A1E" strokeDasharray="5 5" />
+        <text x="500" y="22" textAnchor="end" fontFamily="IBM Plex Mono, monospace" fontSize="11" fill="#7E2A1E">ceiling · {ceiling}</text>
+        <path d="M40 190 C 170 186 300 120 470 52 L 470 200 L 40 200 Z" fill="#E4DECF" />
+        <path d="M40 190 C 170 186 300 120 470 52" fill="none" stroke="#16140F" strokeWidth="2.5" />
+        <circle cx="40" cy="190" r="5" fill="#16140F" />
+        <circle cx="470" cy="52" r="6" fill="#1D3A8A" />
+        <text x="52" y="150" fontFamily="IBM Plex Mono, monospace" fontSize="11" fill="#3B372F">opening · {open}</text>
+        <text x="462" y="160" textAnchor="end" fontFamily="IBM Plex Mono, monospace" fontSize="11" fill="#1D3A8A">graduation · {close}</text>
+        <line x1="40" y1="200" x2="500" y2="200" stroke="#A89F8A" />
+        <text x="40" y="220" fontFamily="IBM Plex Mono, monospace" fontSize="11" fill="#5C574C">wrappers sold →</text>
+        <text x="470" y="220" textAnchor="end" fontFamily="IBM Plex Mono, monospace" fontSize="11" fill="#5C574C">raise target reached</text>
+      </svg>
+      <figcaption className="mt-2 text-[13px] text-mute">Each purchase moves the price up the curve; each sale moves it down. The sale ends where the raise target is reached, always at or below the ceiling.</figcaption>
+    </figure>
+  );
+}
+
+/** Primary and secondary markets, side by side: who may take part in each. */
+export function TwoMarkets() {
+  const col = (kicker: string, title: string, who: string, items: string[], tone: string) => (
+    <div className={`flex flex-1 flex-col gap-2 border p-5 ${tone}`}>
+      <span className="font-mono text-[11px] tracking-[0.12em] text-mute uppercase">{kicker}</span>
+      <span className="font-serif text-[24px] leading-tight text-ink">{title}</span>
+      <span className="text-[14px] font-semibold text-ink">{who}</span>
+      <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-[14px] leading-relaxed text-ink2">{items.map((i) => <li key={i}>{i}</li>)}</ul>
+    </div>
+  );
+  return (
+    <figure className="m-0 mt-6 flex flex-col gap-3 md:flex-row">
+      {col("Primary market · gated", "The register and the bridge", "Approved holders only", ["Hold the security", "Redeem wrappers for the security", "Deposit the security for wrappers"], "border-ink bg-surface")}
+      {col("Secondary market · open", "The curve, then the pool", "Anyone", ["Buy and sell the wrapper during the sale", "Trade it on its Meteora pool after graduation", "Hold it in any wallet"], "border-blue bg-surface")}
+    </figure>
+  );
+}
