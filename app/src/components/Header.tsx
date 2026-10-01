@@ -34,17 +34,17 @@ export function Header() {
   const console_ = useConsole();
   const attention = console_.attention.length;
   // Asset pages are part of the registry, so its tab stays marked while one is open.
-  const inRegistry = pathname === "/" || pathname.startsWith("/asset/");
+  const inRegistry = pathname === "/registry" || pathname.startsWith("/asset/");
   return (
     <header className="border-b border-rule bg-paper">
       <div className="flex h-18 w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-10 2xl:px-14">
         <div className="flex items-center gap-6 lg:gap-12">
-          <NavLink to="/" className="flex items-center gap-3 text-ink no-underline" aria-label="Aegis — the Registry">
+          <NavLink to="/" className="flex items-center gap-3 text-ink no-underline" aria-label="Aegis home">
             <LogoMark />
             <span className="font-serif text-[26px] tracking-[0.08em]">AEGIS</span>
           </NavLink>
           <nav aria-label="Main" className="hidden gap-8 md:flex">
-            <NavLink to="/" className={() => link({ isActive: inRegistry })} aria-current={inRegistry ? "page" : undefined}>
+            <NavLink to="/registry" className={() => link({ isActive: inRegistry })} aria-current={inRegistry ? "page" : undefined}>
               Registry
             </NavLink>
             {publicKey && (

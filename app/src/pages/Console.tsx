@@ -174,7 +174,7 @@ export function ConsolePage() {
         <div className="mt-2 flex flex-wrap gap-3">
           <Link to="/launch" className="inline-flex min-h-11 items-center bg-blue px-5 text-sm font-semibold text-white hover:bg-blue-deep">Launch an asset</Link>
           <button type="button" onClick={openConnect} className="min-h-11 cursor-pointer border border-line px-5 text-sm hover:border-ink">Switch wallet</button>
-          <Link to="/" className="inline-flex min-h-11 items-center border border-line px-5 text-sm hover:border-ink">Back to the registry</Link>
+          <Link to="/registry" className="inline-flex min-h-11 items-center border border-line px-5 text-sm hover:border-ink">Back to the registry</Link>
         </div>
       </div>
     </>);

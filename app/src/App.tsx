@@ -3,11 +3,12 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import type { WalletError } from "@solana/wallet-adapter-base";
 import { useCallback, useRef, useState } from "react";
 import { ConnectModalProvider } from "./components/connect/ConnectModal";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
 import { config } from "./config";
 import { Header } from "./components/Header";
 import { Toast, type ToastMessage } from "./components/Toast";
 import { RegistryPage } from "./pages/Registry";
+import { LandingPage } from "./pages/Landing";
 import { AssetPage } from "./pages/Asset";
 import { BridgePage } from "./pages/Bridge";
 import { HoldingsPage } from "./pages/Holdings";
@@ -26,6 +27,20 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function AppShell() {
+  return (
+    <>
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-surface focus:px-4 focus:py-2">
+        Skip to content
+      </a>
+      <Header />
+      <main id="main" tabIndex={-1} className="outline-none">
+        <Outlet />
+      </main>
+    </>
+  );
+}
 
 export function App() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -51,13 +66,11 @@ export function App() {
         <WalletProvider wallets={[]} autoConnect onError={onWalletError}>
           <ConnectModalProvider errorRef={inDialog}>
             <BrowserRouter>
-              <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-surface focus:px-4 focus:py-2">
-                Skip to content
-              </a>
-              <Header />
-              <main id="main" tabIndex={-1} className="outline-none">
-                <Routes>
-                  <Route path="/" element={<RegistryPage />} />
+              <Routes>
+                {/* The landing page brings its own header and footer; every app page shares these. */}
+                <Route path="/" element={<LandingPage />} />
+                <Route element={<AppShell />}>
+                  <Route path="/registry" element={<RegistryPage />} />
                   <Route path="/asset/:mint" element={<AssetPage />} />
                   <Route path="/asset/:mint/bridge" element={<BridgePage />} />
                   <Route path="/holdings" element={<HoldingsPage />} />
@@ -66,8 +79,8 @@ export function App() {
                   <Route path="/launch" element={<IssuePage />} />
                   <Route path="/launch/:mint" element={<IssuePage />} />
                   <Route path="*" element={<NotFoundPage />} />
-                </Routes>
-              </main>
+                </Route>
+              </Routes>
               <Toast message={toast} onDismiss={() => setToast(null)} />
             </BrowserRouter>
           </ConnectModalProvider>

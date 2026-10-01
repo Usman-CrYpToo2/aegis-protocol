@@ -303,7 +303,7 @@ export function HoldingsPage() {
           <div className="flex flex-col items-start gap-3 border border-line bg-surface p-8">
             <strong className="font-serif text-3xl font-normal">You don’t hold any registered assets yet</strong>
             <p className="max-w-xl text-[15px] leading-relaxed text-ink2">Buy the wrapper of any open offering; it appears here straight away, with its backing checked.</p>
-            <Link to="/" className="mt-2 inline-flex min-h-12 items-center bg-blue px-5 font-semibold text-white hover:bg-blue-deep">Browse the registry</Link>
+            <Link to="/registry" className="mt-2 inline-flex min-h-12 items-center bg-blue px-5 font-semibold text-white hover:bg-blue-deep">Browse the registry</Link>
           </div>
         ) : (
           <section aria-label="Assets you hold" className="flex flex-col">

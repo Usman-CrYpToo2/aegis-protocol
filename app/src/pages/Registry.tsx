@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import type { Backing } from "../chain/backing";
@@ -314,6 +314,9 @@ function ago(ms: number) {
 
 export function RegistryPage() {
   const registry = useRegistry();
+  useEffect(() => {
+    document.title = "Aegis — The Registry";
+  }, []);
   const navigate = useNavigate();
   // The name is the real link (keyboard and screen readers); clicking anywhere else on the row is
   // a convenience for mouse users, ignored when the click was on a link or while selecting text.

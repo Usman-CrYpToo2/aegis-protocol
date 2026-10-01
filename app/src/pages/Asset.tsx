@@ -267,7 +267,7 @@ function Chart({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) {
 function Crumb({ name }: { name: string }) {
   return (
     <nav aria-label="Breadcrumb" className="font-mono text-[13px] text-mute">
-      <Link to="/" className="underline decoration-line underline-offset-2 hover:text-ink">Registry</Link> / <span aria-current="page">{name}</span>
+      <Link to="/registry" className="underline decoration-line underline-offset-2 hover:text-ink">Registry</Link> / <span aria-current="page">{name}</span>
     </nav>
   );
 }
@@ -278,7 +278,7 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
       <Crumb name="Not found" />
       <h1 className="font-serif text-5xl sm:text-6xl">{title}</h1>
       <div className="max-w-2xl text-lg leading-relaxed text-ink2">{children}</div>
-      <Link to="/" className="mt-2 inline-flex min-h-12 w-fit items-center bg-blue px-5 font-semibold text-white hover:bg-blue-deep">Back to the registry</Link>
+      <Link to="/registry" className="mt-2 inline-flex min-h-12 w-fit items-center bg-blue px-5 font-semibold text-white hover:bg-blue-deep">Back to the registry</Link>
     </div>
   );
 }
