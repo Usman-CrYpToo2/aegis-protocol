@@ -118,6 +118,11 @@ function Terms({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig | null
         <Row label="Security">{entry.label?.symbol ?? "—"} · <Addr value={launch.realRwaMint.toBase58()} /></Row>
         {isSet(launch.crwaMint) && <Row label="Wrapper" hint="Anyone can hold and trade it. No KYC.">{entry.wrapperLabel?.symbol ?? "—"} · <Addr value={launch.crwaMint.toBase58()} /></Row>}
         <Row label="Issuer" hint="Approves who may hold the security, as securities law requires.">{<Addr value={launch.issuer.toBase58()} />}</Row>
+        <Row label="Offering documents" hint="Published by the issuer. They describe the real-world asset and its legal terms; the chain can’t check them.">
+          {entry.label?.docs
+            ? <a href={entry.label.docs} target="_blank" rel="noopener noreferrer nofollow" className="underline decoration-line underline-offset-2 hover:text-ink">{new URL(entry.label.docs).hostname} ↗</a>
+            : <span className="text-mute">None published</span>}
+        </Row>
         {isSet(launch.escrowVault) && <Row label="Escrow vault">{<Addr value={launch.escrowVault.toBase58()} />}</Row>}
         {terms && <Row label="Pool fee after graduation">{(terms.migratedPoolFeeBps / 100).toFixed(2)}%</Row>}
       </div>

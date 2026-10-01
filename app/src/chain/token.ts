@@ -28,7 +28,12 @@ export function decodeTokenAccount(address: PublicKey, info: Info): TokenAccount
   return { mint: account.mint, owner: account.owner, amount: account.amount, isFrozen: account.isFrozen };
 }
 
-export type TokenLabel = { name: string; symbol: string };
+export type TokenLabel = {
+  name: string;
+  symbol: string;
+  /** The issuer's offering documents, from the metadata link. Only a well-formed https URL. */
+  docs: string | null;
+};
 
 /**
  * Metadata strings are written by whoever created the token, so they are untrusted: control
@@ -40,7 +45,18 @@ export function cleanText(value: string, max: number): string {
   return value.replace(/[\u0000-\u001F\u007F-\u009F​-‏‪-‮⁦-⁩]/g, "").trim().slice(0, max);
 }
 
-/** Name and symbol from a Token-2022 mint's embedded metadata, or null when it carries none. */
+/** A metadata link worth showing: https only, so a hostile issuer can't plant a script URL. */
+export function safeDocsUrl(value: string): string | null {
+  const v = cleanText(value, 200);
+  try {
+    const url = new URL(v);
+    return url.protocol === "https:" && url.hostname.includes(".") ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Name, symbol and documents link from a Token-2022 mint's embedded metadata, or null when it carries none. */
 export function mintLabel(mint: MintInfo): TokenLabel | null {
   if (!mint.program.equals(TOKEN_2022_PROGRAM_ID)) return null;
   const data = getExtensionData(ExtensionType.TokenMetadata, mint.tlvData);
@@ -49,7 +65,7 @@ export function mintLabel(mint: MintInfo): TokenLabel | null {
     const meta = unpackTokenMetadata(data);
     const name = cleanText(meta.name, 64);
     const symbol = cleanText(meta.symbol, 12);
-    return name || symbol ? { name, symbol } : null;
+    return name || symbol ? { name, symbol, docs: safeDocsUrl(meta.uri) } : null;
   } catch {
     return null;
   }
