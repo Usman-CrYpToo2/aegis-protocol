@@ -6,6 +6,7 @@ import { ConnectModalProvider } from "./components/connect/ConnectModal";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
 import { config } from "./config";
 import { Header } from "./components/Header";
+import { Footer } from "./components/Footer";
 import { Toast, type ToastMessage } from "./components/Toast";
 import { RegistryPage } from "./pages/Registry";
 import { LandingPage } from "./pages/Landing";
@@ -30,15 +31,16 @@ const queryClient = new QueryClient({
 
 function AppShell() {
   return (
-    <>
+    <div className="flex min-h-dvh flex-col">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-surface focus:px-4 focus:py-2">
         Skip to content
       </a>
       <Header />
-      <main id="main" tabIndex={-1} className="outline-none">
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">
         <Outlet />
       </main>
-    </>
+      <Footer />
+    </div>
   );
 }
 

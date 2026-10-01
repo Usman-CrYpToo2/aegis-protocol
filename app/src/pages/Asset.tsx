@@ -363,7 +363,7 @@ export function AssetPage() {
   const showProof = () => { setTab("proof"); document.getElementById("details")?.scrollIntoView({ behavior: "smooth" }); };
 
   return (
-    <div className={`shell flex flex-col gap-8 pt-6 lg:pt-8 ${launch.stage === "Live" ? "pb-32 md:pb-24" : "pb-24"}`}>
+    <div className="shell flex flex-col gap-8 pt-6 pb-24 lg:pt-8">
       {asset.isError && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border border-amber bg-amber-wash px-4 py-3 text-sm">
           <span>Couldn’t refresh from the network. The numbers may be out of date.</span>
@@ -415,7 +415,7 @@ export function AssetPage() {
       </div>
 
       {launch.stage === "Live" && !panelInView && entry.price !== null && entry.quote && entry.raise && entry.raise.raised < entry.raise.target && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink bg-paper/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+        <div data-buybar className="fixed inset-x-0 bottom-0 z-30 border-t border-ink bg-paper/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
           <a
             href="#trade"
             onClick={() => window.setTimeout(() => document.querySelector<HTMLInputElement>("#trade input")?.focus(), 350)}
