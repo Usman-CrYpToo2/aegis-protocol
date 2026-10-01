@@ -279,7 +279,6 @@ function Guarantees({ platform }: { platform: ReturnType<typeof usePlatform>["da
   const h3 = "m-0 font-serif text-[30px] leading-none font-normal sm:text-[34px]";
   const body = "m-0 text-[15px] leading-relaxed";
   const aegis = p?.aegisLpSharePct ?? 10;
-  const permanent = p?.minIssuerPermanentPct ?? 30;
   const months = p ? `${Math.max(1, p.minVestingMonths)} to ${p.maxVestingMonths} months` : "a set number of months";
   const ceilings = Object.values(ARCHETYPE_CEILING).map((c) => c.multiple.replace(/0×$/, "×"));
   return (
@@ -320,13 +319,11 @@ function Guarantees({ platform }: { platform: ReturnType<typeof usePlatform>["da
           <div className="flex flex-col gap-2">
             <div className="flex h-9 overflow-hidden rounded-lg border border-ink" aria-hidden="true">
               <span className="bg-ox" style={{ width: `${aegis}%` }} />
-              <span className="bg-ink" style={{ width: `${permanent}%` }} />
               <span className="relative flex-1 bg-[repeating-linear-gradient(90deg,var(--color-blue)_0_14px,var(--color-surface)_14px_16px)]"><span className="lp-grow absolute inset-0 bg-surface/75" /></span>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-mute">
               <span className="flex items-center gap-1.5"><span className="size-2 bg-ox" />Aegis, forever</span>
-              <span className="flex items-center gap-1.5"><span className="size-2 bg-ink" />issuer, forever</span>
-              <span className="flex items-center gap-1.5"><span className="size-2 bg-blue" />unlocks monthly</span>
+              <span className="flex items-center gap-1.5"><span className="size-2 bg-blue" />issuer, unlocks monthly or locked forever</span>
             </div>
           </div>
           <div><h3 className={`${h3} mb-2`}>No day-one exit.</h3><p className={`${body} text-ink2`}>The pool is locked. Part forever, part over {months}.</p></div>
