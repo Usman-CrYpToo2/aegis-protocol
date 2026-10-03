@@ -1,9 +1,12 @@
+import type { ReactNode } from "react";
 import { AEGIS_HOOK_PROGRAM_ID, AEGIS_PROGRAM_ID, ACCESS_CONTROL_PROGRAM_ID, METEORA_DBC_PROGRAM_ID, TRANSFER_RESTRICTIONS_PROGRAM_ID } from "../../chain/ids";
 import { DAMM_V2_PROGRAM_ID } from "../../chain/damm";
+import { FAUCET_PROGRAM_ID } from "../../chain/faucet";
 import { platformConfigAddress } from "../../chain/platform";
+import { config } from "../../config";
 import { NETWORK_NAME, REPO_URL } from "../../lib/site";
 import { Addr, gradDeposit, type DocPage } from "../shared";
-import { Callout, Code, DocLink, Ext, Faq, H2, Lede, P, Table, Terms } from "../ui";
+import { Callout, Code, DocLink, Ext, Faq, H2, Lede, P, Table, Terms, UI } from "../ui";
 
 const GROUP = "Reference";
 
@@ -20,6 +23,7 @@ export const faq: DocPage = {
         ["Why sell a real-world asset on a bonding curve?", <>Because the curve discovers the price in public: every buyer sees the same formula and every order fills at once, with no allocation behind closed doors. The issuer doesn’t need to put up money to start a market. See <DocLink to="/docs/price-discovery">Price discovery on the curve</DocLink>.</>],
         ["What happens when a sale fills?", <>It graduates: the raise and matching wrappers move into a permanent Meteora pool that opens at the sale’s final price, the unsold wrappers are burned and the bridge opens. See <DocLink to="/docs/graduation">Graduation to the pool</DocLink>.</>],
         ["Is any of this real money?", <>Not yet. Aegis runs on {NETWORK_NAME}, and every asset is a test launch.</>],
+        ...(config.cluster === "devnet" ? [["Where do I get test money?", <>On the <DocLink to="/faucet">Faucet</DocLink> page: SOL for network fees, and test USDC to buy with. Both are free and have no value.</>] as [string, ReactNode]] : []),
       ]} />
       <H2 id="investors">For investors</H2>
       <Faq items={[
@@ -27,6 +31,7 @@ export const faq: DocPage = {
         ["What do I own when I hold the wrapper?", <>A token backed one for one by the security in the escrow, which an approved holder can redeem for it. What the security entitles you to is set out in the issuer’s offering documents. See <DocLink to="/docs/legal">Legal model</DocLink>.</>],
         ["Why does the price go up as people buy?", <>That is how the curve discovers the price: each purchase moves it up the curve, each sale moves it down, up to a ceiling fixed before the sale. See <DocLink to="/docs/price-discovery#how-price-moves">How the price moves</DocLink>.</>],
         ["Can I sell before the sale ends?", "Yes. While the sale is open you can sell back to the curve at its current price, minus the fee."],
+        ["Can I pay with SOL?", <>Yes, on a sale priced in SOL. You pay from your SOL directly; the app wraps what the purchase needs and returns anything unspent as SOL. See <DocLink to="/docs/buy#sol">Paying in SOL</DocLink>.</>],
         ["What if the sale never fills?", "It stays open with no deadline. You can keep trading on the curve, and the issuer can’t take the security back once anyone holds a wrapper."],
         ["Can the issuer take or freeze my wrapper?", <>No. Nobody can freeze the wrapper, and only the Aegis program can mint it. The issuer’s powers apply to the security, including the escrow; if they ever touch the escrow, every page shows it. See <DocLink to="/docs/limits#issuer-powers">Risks and limits</DocLink>.</>],
         ["Is there a fee to redeem?", "No. Redeeming and depositing are one for one, with no fee and no price impact."],
@@ -77,7 +82,7 @@ export const addresses: DocPage = {
   group: GROUP,
   title: "Programs and addresses",
   summary: "Every program a launch touches, with links to check each one in the explorer.",
-  body: () => (
+  body: (f) => (
     <>
       <Lede>The programs a launch touches, on {NETWORK_NAME}. Each address opens in the explorer.</Lede>
       <Table
@@ -90,7 +95,15 @@ export const addresses: DocPage = {
           ["Meteora DAMM v2", <Addr id={DAMM_V2_PROGRAM_ID.toBase58()} />, "The permanent pool"],
           ["Upside Transfer Restrictions", <Addr id={TRANSFER_RESTRICTIONS_PROGRAM_ID.toBase58()} />, "The security’s register and transfer rules"],
           ["Upside Access Control", <Addr id={ACCESS_CONTROL_PROGRAM_ID.toBase58()} />, "The issuer’s roles, minting, freezing and the supply cap"],
+          ...(config.cluster === "devnet" ? [["Aegis devnet faucet", <Addr id={FAUCET_PROGRAM_ID.toBase58()} />, "Mints free test currencies on devnet. Not part of the protocol: the Aegis program never calls it."]] : []),
         ]}
+      />
+      <H2 id="currencies">Approved currencies</H2>
+      <P>The currencies a sale can be priced in, read live from the platform. The admin approves each one, and only tokens Meteora accepts can be approved.</P>
+      <Table
+        caption="Approved currencies"
+        head={["Currency", "Mint", "Minimum raise"]}
+        rows={f.quotes.length ? f.quotes.map((q) => [q.symbol, <Addr id={q.mint} />, `${q.minRaise} ${q.symbol}`]) : [["None readable right now", "", ""]]}
       />
       <H2 id="accounts">Accounts</H2>
       <Table
@@ -128,6 +141,8 @@ export const messages: DocPage = {
           ["This sale has just filled", "Someone else’s purchase completed the sale first.", "Graduate it, then trade on its pool."],
           ["This wallet can’t change the register", "The connected wallet doesn’t hold the issuer’s role for this security.", "Switch to the issuer’s wallet."],
           ["Your supply is too small for these terms", "At this opening price, the raise needs more units than you are issuing.", "Raise the price, lower the raise, or issue more."],
+          ["Not enough SOL. You can spend up to …", "On a sale priced in SOL, the amount is more than your SOL and wrapped SOL, after keeping back the network fee and deposits.", <>Enter less, or select <UI>Max</UI>. On devnet, get more from the Faucet.</>],
+          ["Keep a little more SOL for the network fee", "Your wrapped SOL covers the purchase, but your wallet doesn’t have the SOL the transaction itself needs.", "Add a little SOL to your wallet."],
         ]}
       />
     </>
@@ -168,6 +183,7 @@ export const glossary: DocPage = {
         ["Transferable but gated", "A model in which a token circulates freely while issuing and redeeming require approval. Aegis follows it."],
         ["Unsold stock", "The security behind wrappers the sale didn’t sell. It stays in the escrow, owed to the issuer."],
         ["Upside", "The compliance programs behind the security: roles, the register and transfer rules."],
+        ["Wrapped SOL", "SOL in token form, the way Meteora trades it. On a sale priced in SOL the app wraps and unwraps it for you."],
         ["Wrapper", "The token anyone can trade, backed one for one by the security in escrow. Its symbol starts with c."],
       ]} />
     </>

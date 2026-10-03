@@ -1,7 +1,7 @@
 import { config } from "../../config";
 import { NETWORK_NAME } from "../../lib/site";
 import { EXAMPLE, type DocPage } from "../shared";
-import { Callout, DocLink, Ext, G, H2, Lede, List, P, Paths, Step, Steps, Table, TokenModel, TwoMarkets, UI } from "../ui";
+import { Callout, DocLink, G, H2, Lede, List, P, Paths, Step, Steps, Table, TokenModel, TwoMarkets, UI } from "../ui";
 
 export const overview: DocPage = {
   slug: "",
@@ -100,8 +100,7 @@ export const tryIt: DocPage = {
         <li>A Solana wallet such as Phantom, Solflare or Backpack, switched to {config.cluster === "devnet" ? "devnet" : "this test network"} in its settings.</li>
         {config.cluster === "devnet" ? (
           <>
-            <li>A little devnet SOL for transaction fees, from the <Ext href="https://faucet.solana.com">Solana faucet</Ext>.</li>
-            <li>Some devnet USDC to buy with, from <Ext href="https://faucet.circle.com">Circle’s faucet</Ext>. Choose <UI>Solana Devnet</UI>.</li>
+            <li>Test money from the <DocLink to="/faucet">Faucet</DocLink> page: <UI>Get 1 SOL</UI> for network fees, then <UI>Get 1,000 USDC</UI> to buy with. It is free and takes a few seconds.</li>
           </>
         ) : (
           <li>Test SOL and a test currency on this network. A local test network funds wallets with its own scripts.</li>
@@ -115,7 +114,7 @@ export const tryIt: DocPage = {
         </Step>
         <Step title={<>Select an asset marked <UI>Offering open</UI>.</>} result="the asset page, with the price, how much has been raised, the curve, and a box to buy." />
         <Step title={<>Select <UI>Connect wallet</UI> and approve in your wallet.</>} />
-        <Step title={<>In the buy box, enter <UI>10</UI> in <UI>You pay</UI>.</>} result={<>how many wrappers you receive, under <UI>You receive about</UI>.</>} />
+        <Step title={<>In the buy box, enter a small amount in <UI>You pay</UI>, such as <UI>10</UI> on a sale priced in USDC or <UI>0.1</UI> on one priced in SOL.</>} result={<>how many wrappers you receive, under <UI>You receive about</UI>.</>} />
         <Step title={<>Select the blue <UI>Buy</UI> button and approve in your wallet.</>} result={<><UI>Purchase complete</UI>, with what you paid and received. The chart’s marker has moved up the curve.</>} />
       </Steps>
 

@@ -35,7 +35,7 @@ export function figures(platform: Platform | undefined) {
     minPermanent: `${p.minIssuerPermanentPct}%`,
     vesting: `${Math.max(1, p.minVestingMonths)} to ${p.maxVestingMonths} months`,
     poolFee: `${pct(range.min / 100)} to ${pct(range.max / 100)}`,
-    quotes: platform?.quotes.filter((q) => q.isActive).map((q) => ({ symbol: q.symbol, minRaise: formatUnits(q.minRaise, q.decimals, { maxFraction: 2 }) })) ?? [],
+    quotes: platform?.quotes.filter((q) => q.isActive).map((q) => ({ symbol: q.symbol, mint: q.mint.toBase58(), minRaise: formatUnits(q.minRaise, q.decimals, { maxFraction: 2 }) })) ?? [],
   };
 }
 

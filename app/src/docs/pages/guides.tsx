@@ -18,7 +18,7 @@ export const buy: DocPage = {
       <List>
         <li>Read the asset page: the <UI>Terms</UI> tab shows the price range and the raise target, and <UI>Offering documents</UI> links to the issuer’s description of the asset.</li>
         <li>Check the <UI>Backing</UI> figure reads <UI>1 : 1</UI>.</li>
-        <li>Have some of the sale’s currency and a little SOL for fees in your wallet.</li>
+        <li>Have some of the sale’s currency and a little SOL for fees in your wallet. On devnet, the <DocLink to="/faucet">Faucet</DocLink> gives you both.</li>
       </List>
       <H2 id="buy">Buy</H2>
       <Steps>
@@ -29,6 +29,21 @@ export const buy: DocPage = {
         </Step>
         <Step title={<>Select the <UI>Buy</UI> button and approve in your wallet.</>} result={<><UI>Purchase complete</UI>, with what you paid and received.</>} />
       </Steps>
+      <P>
+        <UI>Max</UI> fills in the most you can pay, or what is left in the sale if that is less. The quick amounts above it are sized to the
+        sale’s currency: 100, 500 and 1,000 for USDC; 0.1, 0.5 and 1 for SOL.
+      </P>
+      <H2 id="sol">Paying in SOL</H2>
+      <P>
+        A sale can be priced in SOL. Meteora trades SOL in its token form, wrapped SOL, but you don’t have to wrap anything yourself. The box
+        counts your SOL and any wrapped SOL you hold as one balance, and the purchase handles the rest in the same transaction:
+      </P>
+      <List>
+        <li>Wrapped SOL you already hold is spent first. Only the shortfall is wrapped from your SOL.</li>
+        <li>Anything the app wrapped and didn’t spend comes straight back to you as SOL. Wrapped SOL you held before is left as it was.</li>
+        <li><UI>Max</UI> keeps back what the transaction itself needs: the network fee, the small deposit Solana holds for any new account the purchase opens, and the minimum a wallet must keep. The rest is yours to spend.</li>
+      </List>
+      <P>When you sell on a sale priced in SOL, you receive plain SOL.</P>
       <H2 id="sell">Sell</H2>
       <P>To sell wrappers back to the curve while the sale is open, choose <UI>Sell</UI> in the same box and follow the same steps. You receive the curve’s current price, minus the fee.</P>
       <H2 id="cost">What it costs</H2>
@@ -38,6 +53,10 @@ export const buy: DocPage = {
         If your purchase reaches the raise target, you buy only what is left and keep the rest of your money. Your wallet asks once for the
         purchase and the graduation together, and you pay about {gradDeposit} SOL in deposits for the new pool. Your receipt says{" "}
         <UI>Your purchase completed the sale and opened the bridge.</UI>
+      </P>
+      <P>
+        Graduation only rides along if you will still have that SOL after the purchase. If you won’t, the box says so before you buy: your
+        purchase still completes the sale, and anyone can graduate it from the asset page afterwards.
       </P>
       <H2 id="after">After the sale</H2>
       <P>The wrapper trades on its permanent Meteora pool. The asset page shows <UI>Buy or sell</UI> with a link to it.</P>
@@ -109,7 +128,8 @@ export const launch: DocPage = {
         <Step title={<>Under <UI>The asset</UI>, enter the <UI>Name</UI>, <UI>Symbol</UI> and <UI>Total supply</UI>.</>}>
           The wrapper’s symbol is yours with a <Code>c</Code> in front. Under <UI>More options</UI> you can set <UI>Decimals</UI> (6 to 9) and the <UI>Offering documents</UI> link.
         </Step>
-        <Step title={<>Under <UI>Sale terms</UI>, keep the <UI>Recommended terms</UI> or select <UI>Customize</UI>.</>}>
+        <Step title={<>Under <UI>Sale terms</UI>, choose what <UI>Buyers pay in</UI>, then keep the <UI>Recommended terms</UI> or select <UI>Customize</UI>.</>}>
+          Every currency the platform approves is listed. Switching currency starts the price and the raise afresh in that currency’s terms.
           The preview shows the price at graduation, your cash, the pool and the unsold supply as you change the terms.
         </Step>
         <Step title={<>Check the <UI>Review</UI> and select <UI>Launch · approve once</UI>.</>} result="each of the eight steps ticking off, then links to your asset page and console." />
@@ -148,14 +168,25 @@ export const saleTermsGuide: DocPage = {
         head={["Term", "What it controls", "Allowed", "Recommended"]}
         rows={[
           ["Currency", "What buyers pay with, and what you raise.", f.quotes.length ? f.quotes.map((q) => q.symbol).join(", ") : "Currencies the admin approved", "USDC"],
-          ["Opening price", "What the first buyer pays for one unit.", "Above zero", "1.00"],
+          ["Opening price", "What the first buyer pays for one unit.", "Above zero", "1.00 USDC, or 0.01 SOL"],
           ["Sale type and rise", "How far the price may rise over the sale.", ceilings.map((c) => `${c.label} up to ${ceilingLabel(c.multiple)}`).join(" · "), "Book building, 1.21×"],
-          ["Raise target", "How much the sale raises. Reaching it ends the sale.", f.quotes.length ? f.quotes.map((q) => `at least ${q.minRaise} ${q.symbol}`).join(" · ") : "At least the currency’s minimum", "10,000"],
+          ["Raise target", "How much the sale raises. Reaching it ends the sale.", f.quotes.length ? f.quotes.map((q) => `at least ${q.minRaise} ${q.symbol}`).join(" · ") : "At least the currency’s minimum", "10,000 USDC, or 10 SOL"],
           ["Cash share", "How much of the raise you take as cash. The rest becomes the pool.", f.cash, "50%"],
           ["Pool lock", `How your ${f.issuerLp} of the pool is locked.`, `Forever, released over ${f.vesting}, or a mix`, "30% forever, the rest over 12 months"],
           ["Pool fee", "The trading fee in the pool after graduation.", f.poolFee, "1%"],
         ]}
       />
+
+      <H2 id="currency">Choosing a currency</H2>
+      <P>
+        The currency is what buyers pay with, what your raise is counted in and what the pool trades against after graduation. It is fixed
+        with the rest of the terms.
+      </P>
+      <List>
+        <li><strong className="text-ink">USDC</strong> suits most real-world assets. Their value is usually stated in dollars, so the price buyers see and the money you raise keep a steady value.</li>
+        <li><strong className="text-ink">SOL</strong> reaches buyers who hold SOL and nothing else. Your raise, and the pool’s price, then move with SOL’s own price.</li>
+      </List>
+      <P>Each currency has its own minimum raise, shown in the table above.</P>
 
       <H2 id="type">Choosing a sale type</H2>
       <P>Pick the narrowest band that suits the asset. A narrow band tells buyers the price will stay close to where you opened it; a wide band lets demand decide more.</P>
@@ -238,7 +269,7 @@ export const manage: DocPage = {
         caption="What an issuer can collect"
         head={["Source", "Where to collect it"]}
         rows={[
-          ["Your raise", <>Select <UI>Collect</UI> on the Money tab. This is your cash share of the raise.</>],
+          ["Your raise", <>Select <UI>Collect</UI> on the Money tab. This is your cash share of the raise, paid in the sale’s currency. A raise in SOL arrives as plain SOL.</>],
           ["Unsold stock", <>Select <UI>Collect</UI>. Your wallet must be on the register; the console tells you if it isn’t.</>],
           ["Trading fees from the pool", "On Meteora’s site, where your pool position lives."],
           ["Pool liquidity that unlocks", "On Meteora’s site, as each 30-day period is released."],
