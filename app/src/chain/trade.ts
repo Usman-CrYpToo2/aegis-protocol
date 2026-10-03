@@ -18,6 +18,7 @@ import type { LaunchAccount } from "./aegis";
 import { METEORA_DBC_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "./ids";
 import type { DbcPool } from "./meteora";
 import { prepareTransaction, SimulationError, type PreparedTx } from "./tx";
+import { isNativeMint, unwrapInstruction, wrapInstructions } from "./wsol";
 
 export type Side = "buy" | "sell";
 
@@ -77,9 +78,14 @@ export type TradeRequest = {
   amountIn: bigint;
   /** The least the user accepts to receive, after slippage. */
   minimumOut: bigint;
+  /**
+   * For a sale priced in wrapped SOL: SOL to wrap before a buy, and whether to close the wrapped
+   * SOL account afterwards (only when this trade creates it). Ignored for any other quote token.
+   */
+  sol?: { wrap: bigint; unwrap: boolean };
 };
 
-export function tradeInstructions({ launch, pool, accounts, owner, side, amountIn, minimumOut }: TradeRequest): TransactionInstruction[] {
+export function tradeInstructions({ launch, pool, accounts, owner, side, amountIn, minimumOut, sol }: TradeRequest): TransactionInstruction[] {
   const baseVault = tokenVault(launch.crwaMint, launch.virtualPool);
   const quoteVault = tokenVault(launch.quoteMint, launch.virtualPool);
   if (!pool.baseVault.equals(baseVault) || !pool.quoteVault.equals(quoteVault)) {
@@ -132,7 +138,11 @@ export function tradeInstructions({ launch, pool, accounts, owner, side, amountI
     ],
   });
 
-  return [createOutput, swap];
+  if (!sol || !isNativeMint(launch.quoteMint)) return [createOutput, swap];
+  // Buying: wrap the shortfall first. Either way, a wrapped SOL account this trade opened is
+  // closed at the end, so a sale's proceeds or a buy's unspent remainder arrive as plain SOL.
+  const wrap = side === "buy" && sol.wrap > 0n ? wrapInstructions(owner, sol.wrap) : [];
+  return [...wrap, createOutput, swap, ...(sol.unwrap ? [unwrapInstruction(owner)] : [])];
 }
 
 export type PreparedTrade = PreparedTx;

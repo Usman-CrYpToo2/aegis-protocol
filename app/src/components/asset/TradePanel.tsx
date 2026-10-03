@@ -1,6 +1,7 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { config, explorerUrl } from "../../config";
 import { useConnectModal } from "../connect/ConnectModal";
 import { confirmSignature, sendSigned } from "../../chain/send";
@@ -8,13 +9,27 @@ import { loadAsset } from "../../chain/asset";
 import { GRADUATION_DEPOSIT_LAMPORTS, graduationTransactions } from "../../chain/graduate";
 import type { RegistryEntry } from "../../chain/registry";
 import { loadTradeAccounts, prepareTrade, type Side } from "../../chain/trade";
-import { useWalletBalances } from "../../hooks/useWalletBalances";
-import { formatUnits, parseUnits, sqrtPriceToQuoteAtoms, toInputText } from "../../lib/amount";
+import { useRentRate, useWalletBalances } from "../../hooks/useWalletBalances";
+import { FEE_ALLOWANCE, isNativeMint, planSolBuy, rentFor, solReserve, spendableSol, WRAPPER_ACCOUNT_BYTES, type SolWallet } from "../../chain/wsol";
+import { formatMoney, formatUnits, parseUnits, sqrtPriceToQuoteAtoms, toInputText } from "../../lib/amount";
 import { quoteBuy, quoteSell, remainingToFill, withSlippage, type CurveState } from "../../lib/swap";
 import { explainTradeError, type Explained } from "../../lib/txErrors";
 
 /** Enough SOL for the network fee and, on a first buy, the new token account's deposit. */
 const MIN_SOL = 5_000_000n; // 0.005 SOL
+const max0 = (v: bigint) => (v > 0n ? v : 0n);
+
+/**
+ * Funds a SOL-priced buy of up to `amount`. Never wraps more than the wallet can spare: a buy that
+ * fills the sale may be asked for more than it will take, and only takes what it needs.
+ */
+function fundSolBuy(wallet: SolWallet, amount: bigint) {
+  const spendable = spendableSol(wallet);
+  return planSolBuy(amount < spendable ? amount : spendable, wallet.wrapped, wallet.hasWrappedAccount);
+}
+
+/** Until the network's deposit rate is read, assume the highest it has been. */
+const FALLBACK_RATE = { emptyAccount: 890_880n };
 const SLIPPAGES = [50, 100, 200] as const;
 
 type Phase =
@@ -66,6 +81,9 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
     staleTime: Infinity,
   });
   const balances = useWalletBalances(launch.quoteMint, accounts.data?.quoteProgram ?? null, launch.crwaMint);
+  const rate = useRentRate().data ?? FALLBACK_RATE;
+  // A sale priced in wrapped SOL is paid from SOL and wrapped SOL together; see chain/wsol.
+  const isSol = isNativeMint(launch.quoteMint);
 
   const wrapper = entry.wrapperLabel?.symbol ?? "wrapper";
   const q = quote!;
@@ -95,7 +113,18 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
   const filled = entry.raise !== null && entry.raise.raised >= entry.raise.target;
   const remaining = remainingToFill(state);
   const bal = balances.data;
-  const have = side === "buy" ? bal?.quote : bal?.wrapper;
+  const wallet: SolWallet | null = bal ? { sol: bal.sol, wrapped: bal.quote, hasWrappedAccount: bal.hasQuoteAccount, hasWrapperAccount: bal.hasWrapperAccount, rate } : null;
+  // What the balance line shows, and what a buy may spend after keeping back fees and deposits.
+  const have = side === "buy" ? (bal && isSol ? bal.sol + bal.quote : bal?.quote) : bal?.wrapper;
+  const canSpend = side === "buy" ? (wallet && isSol ? spendableSol(wallet) : bal?.quote) : bal?.wrapper;
+  const solPlan = isSol && side === "buy" && wallet && parsed.ok ? fundSolBuy(wallet, parsed.atoms) : null;
+  // SOL that actually leaves: a buy that fills the sale takes only what it needs, and when the trade
+  // opened the wrapped SOL account, closing it returns the rest.
+  const solSpent = solPlan ? (solPlan.unwrap ? max0((preview?.spend ?? 0n) - wallet!.wrapped) : solPlan.wrap) : 0n;
+  // The buy that fills the sale also opens the bridge, if the buyer has the SOL for its deposits
+  // left after the buy itself. Otherwise the sale still completes and anyone can finish it.
+  const solAfterBuy = bal ? bal.sol - solSpent - FEE_ALLOWANCE - (bal.hasWrapperAccount ? 0n : rentFor(WRAPPER_ACCOUNT_BYTES, rate)) - rentFor(0, rate) : 0n;
+  const canGraduate = solAfterBuy >= GRADUATION_DEPOSIT_LAMPORTS;
   const fmtIn = (v: bigint) => formatUnits(v, inDecimals, { maxFraction: 4 });
   const fmtOut = (v: bigint) => formatUnits(v, side === "buy" ? launch.decimals : q.decimals, { maxFraction: 4 });
   const fmtPrice = (v: bigint) => formatUnits(v, q.decimals, { maxFraction: 4, minFraction: 3 });
@@ -105,7 +134,10 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
   if (!publicKey) blocker = null;
   else if (!parsed.ok) blocker = parsed.reason;
   else if (!preview) blocker = side === "sell" ? "The sale can’t take that much back. Try less." : "That amount is too small to trade.";
-  else if (bal && have !== undefined && preview.spend > have) blocker = `Not enough ${inSymbol}. You have ${fmtIn(have)}.`;
+  else if (wallet && isSol && side === "buy") {
+    if (preview.spend > spendableSol(wallet)) blocker = `Not enough SOL. You can spend up to ${fmtIn(spendableSol(wallet))} SOL and keep enough for the network fee.`;
+    else if (wallet.sol < (solPlan?.wrap ?? 0n) + solReserve(wallet)) blocker = `Keep a little more SOL for the network fee (about ${formatUnits(solReserve(wallet), 9, { maxFraction: 4 })} SOL).`;
+  } else if (bal && canSpend !== undefined && preview.spend > canSpend) blocker = `Not enough ${inSymbol}. You have ${fmtIn(canSpend)}.`;
   else if (bal && bal.sol < MIN_SOL) blocker = "Add a little SOL for the network fee (about 0.005 SOL).";
 
   const busy = phase.kind === "busy";
@@ -140,13 +172,14 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
       if (!again || again.out < minimumOut) {
         throw Object.assign(new Error("price moved"), { logs: ["Error Code: ExceededSlippage"] });
       }
-      const prepared = await prepareTrade(connection, { launch: fresh.launch, pool: fresh.detail.pool, accounts: accounts.data, owner: publicKey, side, amountIn, minimumOut });
+      const sol = isSol && wallet ? (side === "buy" ? fundSolBuy(wallet, amountIn) : { wrap: 0n, unwrap: !wallet.hasWrappedAccount }) : undefined;
+      const prepared = await prepareTrade(connection, { launch: fresh.launch, pool: fresh.detail.pool, accounts: accounts.data, owner: publicKey, side, amountIn, minimumOut, sol });
 
       // The buy that fills the sale also graduates it: the two permissionless graduation
       // transactions ride along, approved in the same wallet prompt, so no one is ever asked to
       // "graduate" separately. If they fail, the sale still completed and the fallback panel shows.
       const completes = side === "buy" && "fillsSale" in again && (again.fillsSale || again.nextSqrt >= state!.migrationSqrtPrice);
-      const bundle = completes && signAllTransactions ? graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash) : [];
+      const bundle = completes && canGraduate && signAllTransactions ? graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash) : [];
 
       setPhase({ kind: "busy", step: "signing" });
       let signature: string;
@@ -194,7 +227,8 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
   if (filled && phase.kind !== "done") return null;
 
   const priceNow = sqrtPriceToQuoteAtoms(state.sqrtPrice, launch.decimals);
-  const quickBuy = [100n, 500n, 1_000n].map((n) => n * 10n ** BigInt(q.decimals));
+  // Sized to the currency: tenths of a SOL, hundreds of a dollar token.
+  const quickBuy = isSol ? [1n, 5n, 10n].map((n) => n * 10n ** BigInt(q.decimals - 1)) : [100n, 500n, 1_000n].map((n) => n * 10n ** BigInt(q.decimals));
 
   return (
     <section aria-label={`Buy or sell ${wrapper}`} className="flex flex-col border border-ink bg-surface">
@@ -246,7 +280,12 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
             <div className="flex flex-col gap-1.5">
               <div className="flex items-baseline justify-between">
                 <label htmlFor={inputId} className="text-sm font-semibold">You pay</label>
-                {bal && <span className="font-mono text-xs text-mute">Balance {fmtIn(have ?? 0n)} {inSymbol}</span>}
+                {bal && (
+                  <span className="font-mono text-xs text-mute" title={isSol && side === "buy" && bal.quote > 0n ? `${fmtIn(bal.sol)} SOL and ${fmtIn(bal.quote)} wrapped SOL` : undefined}>
+                    Balance {fmtIn(have ?? 0n)} {inSymbol}
+                    {isSol && side === "buy" && bal.quote > 0n && <span> · incl. {fmtIn(bal.quote)} wrapped</span>}
+                  </span>
+                )}
               </div>
               <div className={`flex h-16 items-center border bg-white px-4 ${touched && !parsed.ok && text ? "border-error" : "border-ink"}`}>
                 <input
@@ -279,15 +318,19 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
                 <button
                   type="button"
                   disabled={busy || !bal}
-                  onClick={() => setAmount(side === "buy" ? (bal!.quote < remaining ? bal!.quote : remaining) : bal!.wrapper)}
+                  onClick={() => setAmount(side === "buy" ? (canSpend! < remaining ? canSpend! : remaining) : bal!.wrapper)}
                   className="min-h-10 cursor-pointer border border-line text-sm hover:border-ink disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Max
                 </button>
               </div>
               <p id={`${inputId}-hint`} className={`min-h-5 text-[13px] ${touched && blocker ? "text-error" : "text-mute"}`} aria-live="polite">
-                {touched && blocker ? blocker : side === "buy" ? `${formatUnits(remaining, q.decimals, { maxFraction: 0 })} ${q.symbol} left before this sale fills.` : ""}
+                {touched && blocker ? blocker : side === "buy" ? `${formatMoney(remaining, q.decimals)} ${q.symbol} left before this sale fills.` : ""}
               </p>
+              {/* On devnet, running short is a click away from being fixed. */}
+              {config.cluster === "devnet" && side === "buy" && bal && (canSpend ?? 0n) < remaining && (
+                <Link to="/faucet" className="w-fit text-[13px] text-blue underline underline-offset-2">Get test {q.symbol} from the faucet</Link>
+              )}
             </div>
 
             {preview && (
@@ -302,7 +345,8 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
                 <Line label="Guaranteed minimum" strong>{fmtOut(minimumOut)} {outSymbol}</Line>
                 {preview.fillsSale && (
                   <p className="mt-2 border-l-2 border-blue pl-3 text-[13px] leading-relaxed text-ink2">
-                    This purchase completes the sale{signAllTransactions ? ` and opens the bridge in the same approval (about ${formatUnits(GRADUATION_DEPOSIT_LAMPORTS, 9, { maxFraction: 3 })} SOL in deposits)` : ""}.
+                    This purchase completes the sale{signAllTransactions && canGraduate ? ` and opens the bridge in the same approval (about ${formatUnits(GRADUATION_DEPOSIT_LAMPORTS, 9, { maxFraction: 3 })} SOL in deposits)` : ""}.
+                    {signAllTransactions && !canGraduate && ` Opening the bridge needs about ${formatUnits(GRADUATION_DEPOSIT_LAMPORTS, 9, { maxFraction: 3 })} SOL more than you’ll have left, so anyone can finish that step after.`}
                     {preview.refunds && ` Only ${formatUnits(preview.spend, q.decimals, { maxFraction: 2 })} ${q.symbol} is needed; the rest stays in your wallet.`}
                   </p>
                 )}

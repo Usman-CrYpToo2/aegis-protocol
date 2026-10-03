@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import { claimUnsoldInstruction, collectRaiseInstructions } from "../chain/collect";
+import { isNativeMint, wsolAccount } from "../chain/wsol";
 import type { ConsoleLaunch } from "../chain/console";
 import { loadHealth } from "../chain/health";
 import { useConnectModal } from "../components/connect/ConnectModal";
@@ -14,7 +15,7 @@ import { GraduatePanel } from "../components/asset/GraduatePanel";
 import { useAsset } from "../hooks/useAsset";
 import { useConsole } from "../hooks/useConsole";
 import { TX_STEP, useTxRunner, type TxPhase } from "../hooks/useTxRunner";
-import { formatUnits, shortAddress } from "../lib/amount";
+import { formatMoney, formatUnits, shortAddress } from "../lib/amount";
 import { STAGE } from "../lib/stage";
 
 const MONTH = 30 * 24 * 60 * 60;
@@ -72,9 +73,10 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
 
   const collectRaise = () =>
     raiseTx.run(async () => {
-      const info = await connection.getAccountInfo(launch.quoteMint, "confirmed");
+      const [info, wrapped] = await connection.getMultipleAccountsInfo([launch.quoteMint, wsolAccount(publicKey!)], "confirmed");
       if (!info) throw new Error("The quote token couldn’t be read.");
-      return collectRaiseInstructions(launch, publicKey!, info.owner);
+      // Paid in wrapped SOL into an account opened just for this: close it, so it arrives as SOL.
+      return collectRaiseInstructions(launch, publicKey!, info.owner, isNativeMint(launch.quoteMint) && !wrapped);
     });
   const collectUnsold = () => unsoldTx.run(() => [claimUnsoldInstruction(launch, publicKey!)]);
 
@@ -96,7 +98,7 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
         title="Your raise"
         body={
           terms && quote ? (
-            <>{terms.creatorMigrationFeePct === 100 ? "" : `${terms.creatorMigrationFeePct}% of `}{terms.migrationFeePct}% of {formatUnits(terms.migrationQuoteThreshold, quote.decimals, { maxFraction: 0 })} {quote.symbol}</>
+            <>{terms.creatorMigrationFeePct === 100 ? "" : `${terms.creatorMigrationFeePct}% of `}{terms.migrationFeePct}% of {formatMoney(terms.migrationQuoteThreshold, quote.decimals)} {quote.symbol}</>
           ) : "Set with the sale terms"
         }
         hint="Meteora holds your share of the raise for you, as the pool’s creator, until you collect it."

@@ -4,8 +4,16 @@ import type { PublicKey } from "@solana/web3.js";
 import { useQuery } from "@tanstack/react-query";
 import { config } from "../config";
 import { TOKEN_2022_PROGRAM_ID } from "../chain/ids";
+import type { RentRate } from "../chain/wsol";
 
-export type WalletBalances = { sol: bigint; quote: bigint; wrapper: bigint };
+export type WalletBalances = {
+  sol: bigint;
+  quote: bigint;
+  wrapper: bigint;
+  /** Whether the wallet already has a token account for each; a trade that needs one opens it. */
+  hasQuoteAccount: boolean;
+  hasWrapperAccount: boolean;
+};
 
 /** The connected wallet's SOL, quote and wrapper balances for one sale. Missing accounts are 0. */
 export function useWalletBalances(quoteMint: PublicKey | null, quoteProgram: PublicKey | null, wrapperMint: PublicKey | null) {
@@ -21,9 +29,25 @@ export function useWalletBalances(quoteMint: PublicKey | null, quoteProgram: Pub
       const wrapperAta = getAssociatedTokenAddressSync(wrapperMint!, owner, false, TOKEN_2022_PROGRAM_ID);
       const [solInfo, quoteInfo, wrapperInfo] = await connection.getMultipleAccountsInfo([owner, quoteAta, wrapperAta], "confirmed");
       // A token account's amount is the u64 at byte 64, the same for both token programs.
-      const amount = (info: typeof quoteInfo, program: PublicKey) =>
-        info && info.owner.equals(program) && info.data.length >= 72 ? Buffer.from(info.data).readBigUInt64LE(64) : 0n;
-      return { sol: BigInt(solInfo?.lamports ?? 0), quote: amount(quoteInfo, quoteProgram!), wrapper: amount(wrapperInfo, TOKEN_2022_PROGRAM_ID) };
+      const isAccount = (info: typeof quoteInfo, program: PublicKey) => Boolean(info && info.owner.equals(program) && info.data.length >= 72);
+      const amount = (info: typeof quoteInfo, program: PublicKey) => (isAccount(info, program) ? Buffer.from(info!.data).readBigUInt64LE(64) : 0n);
+      return {
+        sol: BigInt(solInfo?.lamports ?? 0),
+        quote: amount(quoteInfo, quoteProgram!),
+        wrapper: amount(wrapperInfo, TOKEN_2022_PROGRAM_ID),
+        hasQuoteAccount: isAccount(quoteInfo, quoteProgram!),
+        hasWrapperAccount: isAccount(wrapperInfo, TOKEN_2022_PROGRAM_ID),
+      };
     },
+  });
+}
+
+/** The network's deposit rate, read once; see chain/wsol. */
+export function useRentRate() {
+  const { connection } = useConnection();
+  return useQuery({
+    queryKey: ["rentRate", config.rpcUrl],
+    staleTime: Infinity,
+    queryFn: async (): Promise<RentRate> => ({ emptyAccount: BigInt(await connection.getMinimumBalanceForRentExemption(0)) }),
   });
 }

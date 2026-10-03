@@ -12,13 +12,15 @@ import type { LaunchAccount } from "./aegis";
 import { bridgeAddresses } from "./bridge";
 import { AEGIS_PROGRAM_ID, METEORA_DBC_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TRANSFER_RESTRICTIONS_PROGRAM_ID } from "./ids";
 import { eventAuthority, poolAuthority, tokenVault } from "./trade";
+import { unwrapInstruction } from "./wsol";
 
 /** sha256("global:withdraw_migration_fee")[..8]; collect.test.ts recomputes it. */
 export const WITHDRAW_MIGRATION_FEE = Uint8Array.from([237, 142, 45, 23, 129, 6, 222, 162]);
 /** DBC SenderFlag::Creator. */
 const CREATOR = 1;
 
-export function collectRaiseInstructions(launch: LaunchAccount, issuer: PublicKey, quoteProgram: PublicKey): TransactionInstruction[] {
+/** `unwrapSol`: the raise is in wrapped SOL and the issuer had no wrapped SOL account; close it after. */
+export function collectRaiseInstructions(launch: LaunchAccount, issuer: PublicKey, quoteProgram: PublicKey, unwrapSol = false): TransactionInstruction[] {
   const destination = getAssociatedTokenAddressSync(launch.quoteMint, issuer, false, quoteProgram);
   const r = (pubkey: PublicKey) => ({ pubkey, isSigner: false, isWritable: false });
   const w = (pubkey: PublicKey) => ({ pubkey, isSigner: false, isWritable: true });
@@ -41,6 +43,7 @@ export function collectRaiseInstructions(launch: LaunchAccount, issuer: PublicKe
         r(METEORA_DBC_PROGRAM_ID),
       ],
     }),
+    ...(unwrapSol ? [unwrapInstruction(issuer)] : []),
   ];
 }
 
