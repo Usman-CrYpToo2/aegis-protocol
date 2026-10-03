@@ -9,7 +9,7 @@ import { useConnectModal } from "../components/connect/ConnectModal";
 import { useActivity, useHoldings } from "../hooks/useHoldings";
 import { useNow } from "../hooks/useNow";
 import { useRegistry } from "../hooks/useRegistry";
-import { formatUnits, percentOf, shortAddress } from "../lib/amount";
+import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
 
 // ------------------------------------------------------------------------------------------------
 // Pieces
@@ -62,7 +62,7 @@ function Amount({ value, symbol, note, d }: { value: bigint; symbol: string; not
   return (
     <span className="flex flex-col">
       <span className="font-serif text-3xl leading-tight num">
-        {formatUnits(value, d, { maxFraction: 2 })} <span className="font-mono text-[13px]">{symbol}</span>
+        {formatMoney(value, d)} <span className="font-mono text-[13px]">{symbol}</span>
       </span>
       <span className="text-[13px] text-mute">{note}</span>
     </span>
@@ -285,7 +285,7 @@ export function HoldingsPage() {
         ) : (
           totals.values.map((v) => (
             <span key={v.symbol} className="font-serif text-5xl leading-none num lg:text-6xl">
-              {formatUnits(v.value, v.decimals, { maxFraction: 2, minFraction: 2 })} <span className="font-sans text-xl text-mute">{v.symbol}</span>
+              {formatMoney(v.value, v.decimals)} <span className="font-sans text-xl text-mute">{v.symbol}</span>
             </span>
           ))
         )}
