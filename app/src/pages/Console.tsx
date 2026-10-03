@@ -7,7 +7,7 @@ import { useConnectModal } from "../components/connect/ConnectModal";
 import { useConsole } from "../hooks/useConsole";
 import { useNow } from "../hooks/useNow";
 import { useRegistry } from "../hooks/useRegistry";
-import { formatUnits, percentOf, shortAddress } from "../lib/amount";
+import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
 import { STAGE } from "../lib/stage";
 
 // ------------------------------------------------------------------------------------------------
@@ -248,7 +248,7 @@ export function ConsolePage() {
               <span className="flex flex-col gap-0.5">
                 <span className="font-serif text-[28px] leading-tight">{name(l)}</span>
                 <span className="text-[13px] text-mute">
-                  {l.entry.raise && q(l) ? `${l.entry.launch.stage === "Graduated" ? "Raised" : "Raising"} ${formatUnits(l.entry.raise.target, q(l)!.decimals, { maxFraction: 0 })} ${q(l)!.symbol}` : `${formatUnits(l.entry.launch.totalSupply, l.entry.launch.decimals, { maxFraction: 0 })} units`} · <span className="font-mono">{l.entry.label?.symbol}</span>
+                  {l.entry.raise && q(l) ? `${l.entry.launch.stage === "Graduated" ? "Raised" : "Raising"} ${formatMoney(l.entry.raise.target, q(l)!.decimals)} ${q(l)!.symbol}` : `${formatUnits(l.entry.launch.totalSupply, l.entry.launch.decimals, { maxFraction: 0 })} units`} · <span className="font-mono">{l.entry.label?.symbol}</span>
                 </span>
               </span>
               <StageCell l={l} />

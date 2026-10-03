@@ -19,7 +19,7 @@ import { TradePanel } from "../components/asset/TradePanel";
 import { useAsset } from "../hooks/useAsset";
 import { useChangeFlash } from "../hooks/useChangeFlash";
 import { useNow } from "../hooks/useNow";
-import { formatUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms } from "../lib/amount";
+import { formatMoney, formatUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms } from "../lib/amount";
 import { ARCHETYPE_CEILING, ceilingPrice } from "../lib/curve";
 
 // ------------------------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ function Stats({ entry, readAt, onProof }: { entry: RegistryEntry; readAt: numbe
   const { launch, quote, raise, backing, detail } = entry;
   const d = launch.decimals;
   const terms = detail.terms;
-  const q = (v: bigint, f = 0) => (quote ? formatUnits(v, quote.decimals, { maxFraction: f, minFraction: f }) : "—");
+  const q = (v: bigint, f?: number) => (quote ? (f === undefined ? formatMoney(v, quote.decimals) : formatUnits(v, quote.decimals, { maxFraction: f, minFraction: f })) : "—");
   const price = entry.price ?? (terms ? (launch.stage === "Graduated" ? endPrice(terms, d) : startPrice(terms, d)) : null);
   const pct = raise ? percentOf(raise.raised, raise.target) : 0;
   const wsym = entry.wrapperLabel?.symbol ?? "the wrapper";
@@ -101,7 +101,7 @@ function Terms({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig | null
   const { launch, quote } = entry;
   const d = launch.decimals;
   const cap = ARCHETYPE_CEILING[launch.archetype];
-  const q = (v: bigint, f = 0) => (quote ? `${formatUnits(v, quote.decimals, { maxFraction: f, minFraction: f })} ${quote.symbol}` : "—");
+  const q = (v: bigint, f?: number) => (quote ? `${f === undefined ? formatMoney(v, quote.decimals) : formatUnits(v, quote.decimals, { maxFraction: f, minFraction: f })} ${quote.symbol}` : "—");
   return (
     <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
       <div>
@@ -167,7 +167,7 @@ function Money({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) {
   const quote = entry.quote;
   if (!quote) return null;
   const target = terms.migrationQuoteThreshold;
-  const q = (v: bigint) => `${formatUnits(v, quote.decimals, { maxFraction: 0 })} ${quote.symbol}`;
+  const q = (v: bigint) => `${formatMoney(v, quote.decimals)} ${quote.symbol}`;
   const payout = (target * BigInt(terms.migrationFeePct)) / 100n;
   const toIssuer = (payout * BigInt(terms.creatorMigrationFeePct)) / 100n;
   const vest = terms.creatorVesting;

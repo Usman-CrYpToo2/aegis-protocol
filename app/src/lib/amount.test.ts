@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatUnits, parseUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms, toInputText } from "./amount";
+import { formatMoney, formatUnits, parseUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms, toInputText } from "./amount";
 
 describe("formatUnits", () => {
   it("groups thousands and trims trailing zeros", () => {
@@ -68,5 +68,15 @@ describe("parseUnits", () => {
   });
   it("round-trips a max amount into the input", () => {
     expect(toInputText(12_345_670_000n, 6)).toBe("12345.67");
+  });
+});
+
+describe("formatMoney", () => {
+  it("shows as many decimals as the size of the amount calls for", () => {
+    expect(formatMoney(10_000_000_000n, 6)).toBe("10,000"); // 10,000 USDC
+    expect(formatMoney(12_345_678n, 6)).toBe("12.34");
+    expect(formatMoney(850_000_000n, 9)).toBe("0.85"); // 0.85 SOL, not "0"
+    expect(formatMoney(1_234_567n, 9)).toBe("0.0012");
+    expect(formatMoney(0n, 9)).toBe("0");
   });
 });

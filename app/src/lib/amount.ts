@@ -25,6 +25,21 @@ export function formatUnits(
 }
 
 /**
+ * Decimal places worth showing for an amount of money: none once it reaches the thousands, two for
+ * everyday sums, four below one unit. So a raise of 10,000 USDC and one of 0.85 SOL both read right.
+ */
+export function moneyFraction(atoms: bigint, decimals: number): number {
+  const base = 10n ** BigInt(decimals);
+  const abs = atoms < 0n ? -atoms : atoms;
+  if (abs >= 1_000n * base) return 0;
+  if (abs >= base) return Math.min(2, decimals);
+  return Math.min(4, decimals);
+}
+
+/** An amount of a sale's currency, with as many decimals as its size calls for. */
+export const formatMoney = (atoms: bigint, decimals: number) => formatUnits(atoms, decimals, { maxFraction: moneyFraction(atoms, decimals) });
+
+/**
  * Meteora stores price as a Q64.64 square root in atoms of quote per atom of base. Returns the
  * price of one whole base token in quote atoms, so it can be formatted with the quote's decimals.
  */

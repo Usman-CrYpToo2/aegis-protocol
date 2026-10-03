@@ -4,7 +4,7 @@ import { config, explorerUrl } from "../config";
 import type { Backing } from "../chain/backing";
 import { ProgramNotDeployedError, type Registry, type RegistryEntry } from "../chain/registry";
 import { useRegistry } from "../hooks/useRegistry";
-import { formatUnits, percentOf, shortAddress } from "../lib/amount";
+import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
 import { GROUP_ORDER, STAGE, type StageGroup } from "../lib/stage";
 
 type Filter = "all" | StageGroup;
@@ -124,7 +124,7 @@ function RaiseCell({ entry }: { entry: RegistryEntry }) {
     return <span className="text-sm text-mute">{STAGE[entry.launch.stage].detail}</span>;
   }
   const pct = percentOf(raise.raised, raise.target);
-  const fmt = (v: bigint) => formatUnits(v, quote.decimals, { maxFraction: 0 });
+  const fmt = (v: bigint) => formatMoney(v, quote.decimals);
   if (entry.launch.stage === "Graduated") {
     return <span className="text-sm text-ink2">Raised {fmt(raise.target)} {quote.symbol}</span>;
   }
@@ -232,7 +232,7 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
         ) : (
           stats.raised.map((r) => (
             <span key={r.symbol + r.decimals} className={value}>
-              {formatUnits(r.total, r.decimals, { maxFraction: 0 })} <span className="font-sans text-base text-mute">{r.symbol}</span>
+              {formatMoney(r.total, r.decimals)} <span className="font-sans text-base text-mute">{r.symbol}</span>
             </span>
           ))
         )}

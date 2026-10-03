@@ -9,7 +9,7 @@ import { Rosette } from "../components/landing/Rosette";
 import { useNow } from "../hooks/useNow";
 import { usePlatform } from "../hooks/usePlatform";
 import { useRegistry } from "../hooks/useRegistry";
-import { formatUnits } from "../lib/amount";
+import { formatMoney, formatUnits } from "../lib/amount";
 import { ARCHETYPE_CEILING } from "../lib/curve";
 import { entryName, summarize, type LandingSummary } from "../lib/landing";
 import { poolFeeRange } from "../lib/terms";
@@ -175,7 +175,7 @@ function Stats({ summary, state }: { summary: LandingSummary | null; state: "loa
     <section aria-label="Live numbers" className={wrap}>
       <div className="grid grid-cols-2 border-y border-ink sm:grid-cols-4">
         <Stat label="Units in escrow" delay={0.3}>{s ? whole(s.escrowed) : dash}</Stat>
-        <Stat label={`Raised${s?.raised ? `, ${s.raised.symbol}` : ""}`} delay={0.42}>{s ? (s.raised ? formatUnits(s.raised.total, s.raised.decimals, { maxFraction: 0 }) : "0") : dash}</Stat>
+        <Stat label={`Raised${s?.raised ? `, ${s.raised.symbol}` : ""}`} delay={0.42}>{s ? (s.raised ? formatMoney(s.raised.total, s.raised.decimals) : "0") : dash}</Stat>
         <Stat label="Assets registered" delay={0.54}>{s ? s.assets : dash}</Stat>
         <Stat label="Backed" delay={0.66} tone={backed.tone}>{backed.text}</Stat>
       </div>
