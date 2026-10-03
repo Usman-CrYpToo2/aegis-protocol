@@ -13,7 +13,7 @@ import { decodeMint, mintLabel } from "../chain/token";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { Hint } from "../components/Hint";
 import { AssetForm, EMPTY_ASSET, checkAsset, type AssetDraft } from "../components/issue/AssetForm";
-import { TermsForm, TermsPreview, defaultTerms, readTerms, type TermsDraft } from "../components/issue/TermsForm";
+import { TermsForm, TermsPreview, amountDefaults, defaultTerms, readTerms, type TermsDraft } from "../components/issue/TermsForm";
 import { TX_STEP, useTxRunner } from "../hooks/useTxRunner";
 import { formatUnits, shortAddress } from "../lib/amount";
 import { limitProblems, previewTerms, priceMultiple } from "../lib/terms";
@@ -210,6 +210,23 @@ function TermsStep({ terms, setTerms, platform, preview, yours = false }: { term
             <span className="flex items-center gap-2 font-semibold">{yours ? "Your terms" : "Recommended terms"}<Hint>{yours ? "The terms you chose when you started this launch. Customize any of it before you finish." : "A sensible start within the platform’s limits. Customize any of it; the numbers update as you go."}</Hint></span>
             <button type="button" onClick={() => setCustom(true)} className="min-h-10 cursor-pointer text-sm font-semibold text-blue underline underline-offset-4">Customize</button>
           </div>
+          {platform.quotes.length > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-5 py-3">
+              <span id="pay-in" className="text-[15px] text-ink2">Buyers pay in</span>
+              <div role="radiogroup" aria-labelledby="pay-in" className="flex">
+                {platform.quotes.map((q) => {
+                  const on = q.mint.toBase58() === terms.quote;
+                  return (
+                    <button key={q.mint.toBase58()} type="button" role="radio" aria-checked={on}
+                      onClick={() => !on && setTerms({ ...terms, quote: q.mint.toBase58(), ...amountDefaults(q) })}
+                      className={`-ml-px min-h-10 min-w-16 cursor-pointer border px-3 font-mono text-sm first:ml-0 ${on ? "relative border-ink bg-ink text-paper" : "border-line text-ink hover:border-ink"}`}>
+                      {q.symbol}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="px-5 pb-2">{rows?.map(([k, v]) => <Row key={k} k={k}>{v}</Row>)}</div>
         </div>
       ) : (

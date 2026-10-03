@@ -22,9 +22,13 @@ function readRpcUrl(value: string | undefined, cluster: Cluster): string {
 
 /** Quote mints whose symbol is known without configuration. */
 const KNOWN_QUOTES: Record<Cluster, Record<string, string>> = {
-  // Circle's devnet USDC.
-  devnet: { "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU": "USDC" },
-  localnet: {},
+  devnet: {
+    // Aegis test USDC, minted by the devnet faucet (see the Faucet page).
+    "9j4mDp5YCgZQ2rygYkecwfVcjt1NYSQgS1gXzTaSLz8b": "USDC",
+    // Wrapped SOL: the same mint on every network.
+    So11111111111111111111111111111111111111112: "SOL",
+  },
+  localnet: { So11111111111111111111111111111111111111112: "SOL" },
 };
 
 /** `mint=SYMBOL,mint=SYMBOL`, on top of the known ones. Invalid entries are dropped, not fatal. */

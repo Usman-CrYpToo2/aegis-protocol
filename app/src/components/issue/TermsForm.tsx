@@ -1,6 +1,7 @@
+import { NATIVE_MINT } from "@solana/spl-token";
 import { useId, type ReactNode } from "react";
 import type { QuoteToken } from "../../chain/platform";
-import { formatUnits, parseUnits } from "../../lib/amount";
+import { formatUnits, moneyFraction, parseUnits } from "../../lib/amount";
 import { ARCHETYPES, MAX_SQRT_BPS, limitProblems, poolFeeRange, previewTerms, priceMultiple, type Archetype, type PlanError, type PlatformLimits, type Terms } from "../../lib/terms";
 import { ISSUE_ERRORS } from "../../lib/txErrors";
 
@@ -18,17 +19,25 @@ export type TermsDraft = {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+/**
+ * A starting price and raise in the currency's own terms: a dollar token opens at 1.00 and raises
+ * 10,000; SOL is worth far more per unit, so it opens at 0.01 and raises 10.
+ */
+export function amountDefaults(quote: QuoteToken): Pick<TermsDraft, "price" | "raise"> {
+  const sol = quote.mint.equals(NATIVE_MINT);
+  const minRaise = Number(quote.minRaise) / 10 ** quote.decimals;
+  return { price: sol ? "0.01" : "1.00", raise: String(Math.max(sol ? 10 : 10_000, Math.ceil(minRaise))) };
+}
+
 export function defaultTerms(p: PlatformLimits, quote: QuoteToken): TermsDraft {
   const share = 100 - p.aegisLpSharePct;
   const permanent = clamp(30, p.minIssuerPermanentPct, share);
   const fee = poolFeeRange(p);
-  const minRaise = Number(quote.minRaise) / 10 ** quote.decimals;
   return {
     quote: quote.mint.toBase58(),
-    price: "1.00",
+    ...amountDefaults(quote),
     archetype: "BookBuilding",
     sqrtBps: 11_000,
-    raise: String(Math.max(10_000, Math.ceil(minRaise))),
     cashPct: clamp(50, p.minMigrationFeePct, p.maxMigrationFeePct),
     permanentPct: permanent,
     months: clamp(12, Math.max(1, p.minVestingMonths), p.maxVestingMonths),
@@ -105,7 +114,8 @@ export function TermsForm({ draft, onChange, quotes, platform, disabled }: { dra
       <legend className="sr-only">Sale terms</legend>
       {(quotes.length > 1 || !quote) && (
         <Q n={0} title="Which currency do buyers pay in?">
-          <select className={inputCls} value={quote ? draft.quote : ""} onChange={(e) => set("quote", e.target.value)} aria-label="Currency">
+          {/* A price typed in one currency means nothing in another, so switching starts it afresh. */}
+          <select className={inputCls} value={quote ? draft.quote : ""} onChange={(e) => { const next = quotes.find((q) => q.mint.toBase58() === e.target.value); if (next) onChange({ ...draft, quote: e.target.value, ...amountDefaults(next) }); }} aria-label="Currency">
             {!quote && <option value="" disabled>Choose a currency</option>}
             {quotes.map((q) => <option key={q.mint.toBase58()} value={q.mint.toBase58()}>{q.symbol}</option>)}
           </select>
@@ -188,7 +198,10 @@ export function TermsPreview({ result, platform, totalSupply, decimals, symbol, 
   const pv = previewTerms(terms, platform, totalSupply, decimals);
   // A preview rounds to the nearest shown digit; balances elsewhere truncate.
   const round = (v: bigint, dec: number, f: number) => (f >= dec ? v : v + (5n * 10n ** BigInt(dec - f - 1)));
-  const q = (v: bigint, f = 0) => `${formatUnits(round(v, quote.decimals, f), quote.decimals, { maxFraction: f, minFraction: f })} ${quote.symbol}`;
+  const q = (v: bigint, f?: number) => {
+    const shown = f ?? moneyFraction(v, quote.decimals);
+    return `${formatUnits(round(v, quote.decimals, shown), quote.decimals, { maxFraction: shown, minFraction: f ?? 0 })} ${quote.symbol}`;
+  };
   const t = (v: bigint) => formatUnits(round(v, decimals, 0), decimals, { maxFraction: 0 });
   const price = (v: bigint) => formatUnits(round(v, quote.decimals, 4), quote.decimals, { maxFraction: 4, minFraction: 2 });
   const rise = Math.round((priceMultiple(terms.sqrtBps) - 1) * 100);
