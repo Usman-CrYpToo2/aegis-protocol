@@ -1,3 +1,4 @@
+import { NATIVE_MINT } from "@solana/spl-token";
 import type { Registry, RegistryEntry } from "../chain/registry";
 import { formatUnits } from "./amount";
 
@@ -14,8 +15,8 @@ export type LandingSummary = {
   escrowed: bigint;
   /** Whole wrappers in existence across launches whose wrapper exists, and the escrow behind them. */
   seal: { escrowed: bigint; circulating: bigint } | null;
-  /** The currency the most was raised in, with the total. */
-  raised: { symbol: string; decimals: number; total: bigint } | null;
+  /** The total raised in each currency: dollar tokens first, then by whole units. The first is the headline. */
+  raised: RaisedTotal[];
   /** Every launch's backing, in one word. */
   backing: "all" | "short" | "unknown" | "none";
   short: number;
@@ -25,7 +26,11 @@ export type LandingSummary = {
   tape: TapeItem[];
 };
 
+export type RaisedTotal = { symbol: string; decimals: number; total: bigint; sol: boolean };
+
 export type TapeItem = { key: string; text: string; strong?: string; tone: "plain" | "good" | "bad"; mint?: string };
+
+const cmp = (a: bigint, b: bigint) => (a > b ? 1 : a < b ? -1 : 0);
 
 export const entryName = (e: RegistryEntry) => e.label?.name || "Unnamed asset";
 
@@ -47,7 +52,7 @@ export function summarize(registry: Registry | undefined): LandingSummary | null
   let sealEscrow = 0n;
   let sealCirc = 0n;
   let sealAny = false;
-  const raised = new Map<string, { symbol: string; decimals: number; total: bigint }>();
+  const raised = new Map<string, RaisedTotal>();
   for (const e of active) {
     const b = e.backing;
     if (b.kind === "backed" || b.kind === "escrowed" || b.kind === "short") escrowed += whole(b.escrowed, e.launch.decimals);
@@ -58,7 +63,7 @@ export function summarize(registry: Registry | undefined): LandingSummary | null
     }
     if (e.raise && e.quote) {
       const key = e.quote.mint.toBase58();
-      const row = raised.get(key) ?? { symbol: e.quote.symbol, decimals: e.quote.decimals, total: 0n };
+      const row = raised.get(key) ?? { symbol: e.quote.symbol, decimals: e.quote.decimals, total: 0n, sol: e.quote.mint.equals(NATIVE_MINT) };
       row.total += e.raise.raised;
       raised.set(key, row);
     }
@@ -80,7 +85,9 @@ export function summarize(registry: Registry | undefined): LandingSummary | null
     open: active.filter((e) => e.launch.stage === "Live").length,
     escrowed,
     seal: sealAny ? { escrowed: sealEscrow, circulating: sealCirc } : null,
-    raised: [...raised.values()].sort((a, b) => (b.total > a.total ? 1 : b.total < a.total ? -1 : 0))[0] ?? null,
+    // Raw totals can't be compared across currencies: a SOL atom and a USDC atom are worth different
+    // amounts and even have different decimals. Dollar tokens lead, as they do in the launch form.
+    raised: [...raised.values()].filter((r) => r.total > 0n).sort((a, b) => Number(a.sol) - Number(b.sol) || cmp(b.total / 10n ** BigInt(b.decimals), a.total / 10n ** BigInt(a.decimals))),
     backing,
     short,
     featured: live[0] ?? null,

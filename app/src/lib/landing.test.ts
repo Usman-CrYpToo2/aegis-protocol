@@ -1,3 +1,4 @@
+import { NATIVE_MINT } from "@solana/spl-token";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { describe, expect, it } from "vitest";
 import type { LaunchStage } from "../chain/aegis";
@@ -27,7 +28,7 @@ describe("summarize", () => {
   it("says nothing before the registry has loaded, and zeros for an empty one", () => {
     expect(summarize(undefined)).toBeNull();
     const s = summarize(reg([]))!;
-    expect(s).toMatchObject({ assets: 0, open: 0, escrowed: 0n, seal: null, raised: null, backing: "none", featured: null, tape: [] });
+    expect(s).toMatchObject({ assets: 0, open: 0, escrowed: 0n, seal: null, raised: [], backing: "none", featured: null, tape: [] });
   });
 
   it("adds up escrow, the seal and the raise across launches", () => {
@@ -41,10 +42,20 @@ describe("summarize", () => {
     expect(s.open).toBe(1);
     expect(s.escrowed).toBe(2500n);
     expect(s.seal).toEqual({ escrowed: 1500n, circulating: 900n });
-    expect(s.raised).toMatchObject({ symbol: "USDC", total: 2600n * M });
+    expect(s.raised).toMatchObject([{ symbol: "USDC", total: 2600n * M }]);
     expect(s.backing).toBe("all");
     expect(s.featured?.pct).toBe(60);
     expect(s.tape.map((t) => t.strong ?? t.text)).toEqual(["Tower A", "Tower B", "Tower C", "Backing verified · all 3 funded entries are 1 : 1"]);
+  });
+
+  it("leads with dollars and keeps every currency, comparing whole units rather than raw ones", () => {
+    const sol = (e: RegistryEntry, raised: bigint): RegistryEntry => ({ ...e, quote: { mint: NATIVE_MINT, symbol: "SOL", decimals: 9 }, raise: { raised, target: raised } });
+    // 2 SOL is 2,000,000,000 raw units; 999 USDC only 999,000,000. Dollars still lead.
+    const s = summarize(reg([
+      entry("Tower A", "Live", { kind: "backed", escrowed: 1000n * M, circulating: 400n * M }, [999n, 1000n]),
+      sol(entry("Tower B", "Live", { kind: "backed", escrowed: 1000n * M, circulating: 400n * M }), 2_000_000_000n),
+    ]))!;
+    expect(s.raised.map((r) => [r.symbol, r.total])).toEqual([["USDC", 999n * M], ["SOL", 2_000_000_000n]]);
   });
 
   it("never hides a shortfall", () => {

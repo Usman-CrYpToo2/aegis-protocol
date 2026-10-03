@@ -154,11 +154,13 @@ function Hero({ summary, state, readAt }: { summary: LandingSummary | null; stat
   );
 }
 
-function Stat({ label, children, delay, tone = "" }: { label: string; children: ReactNode; delay: number; tone?: string }) {
+function Stat({ label, children, delay, tone = "", note }: { label: string; children: ReactNode; delay: number; tone?: string; note?: string }) {
   return (
     <div className="flex flex-col gap-1.5 py-4 not-first:border-rule max-sm:[&:nth-child(-n+2)]:border-b sm:py-7 max-sm:even:border-l max-sm:even:pl-4 sm:not-first:border-l sm:not-first:pl-8">
       <span className={`${kb} !text-[10px] text-mute sm:!text-xs`}>{label}</span>
       <span className={`lp-roll font-serif text-[32px] leading-[1.05] num lg:text-[56px] ${tone}`}><span style={{ animationDelay: `${delay}s` }}>{children}</span></span>
+      {/* Other currencies raised, so a headline in one never hides money raised in another. */}
+      {note && <span className="font-mono text-[11px] text-mute num sm:text-xs">{note}</span>}
     </div>
   );
 }
@@ -175,7 +177,9 @@ function Stats({ summary, state }: { summary: LandingSummary | null; state: "loa
     <section aria-label="Live numbers" className={wrap}>
       <div className="grid grid-cols-2 border-y border-ink sm:grid-cols-4">
         <Stat label="Units in escrow" delay={0.3}>{s ? whole(s.escrowed) : dash}</Stat>
-        <Stat label={`Raised${s?.raised ? `, ${s.raised.symbol}` : ""}`} delay={0.42}>{s ? (s.raised ? formatMoney(s.raised.total, s.raised.decimals) : "0") : dash}</Stat>
+        <Stat label={`Raised${s?.raised[0] ? `, ${s.raised[0].symbol}` : ""}`} delay={0.42} note={s && s.raised.length > 1 ? s.raised.slice(1).map((r) => `+ ${formatMoney(r.total, r.decimals)} ${r.symbol}`).join(" ") : undefined}>
+          {s ? (s.raised[0] ? formatMoney(s.raised[0].total, s.raised[0].decimals) : "0") : dash}
+        </Stat>
         <Stat label="Assets registered" delay={0.54}>{s ? s.assets : dash}</Stat>
         <Stat label="Backed" delay={0.66} tone={backed.tone}>{backed.text}</Stat>
       </div>
