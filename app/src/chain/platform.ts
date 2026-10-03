@@ -3,6 +3,7 @@
  * Decoded at fixed offsets; platform.test.ts derives the offsets from the IDL.
  */
 import { programAccounts } from "./indexRpc";
+import { NATIVE_MINT } from "@solana/spl-token";
 import { PublicKey, type Connection } from "@solana/web3.js";
 import idl from "../idl/aegis.json";
 import bs58 from "bs58";
@@ -86,5 +87,8 @@ export async function loadPlatform(connection: Connection): Promise<Platform> {
     if (!m || !(m.owner.equals(TOKEN_PROGRAM_ID) || m.owner.equals(TOKEN_2022_PROGRAM_ID))) return [];
     return [{ ...q, symbol: quoteSymbol(q.mint, mintLabel(decodeMint(q.mint, m))), program: m.owner }];
   });
+  // A fixed order, whatever order the network lists them in: dollar-style tokens first, since a real
+  // asset is most naturally priced in one, then SOL. The first is what a new launch starts with.
+  quotes.sort((a, b) => Number(a.mint.equals(NATIVE_MINT)) - Number(b.mint.equals(NATIVE_MINT)) || a.symbol.localeCompare(b.symbol));
   return { config, quotes };
 }
