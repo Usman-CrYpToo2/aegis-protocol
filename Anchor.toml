@@ -6,8 +6,8 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-aegis = "FRR7Ff4HW8nPdutTGQmRGoEzkkoqTk57Vy7bfpnMtFy"
-aegis_hook = "794bKUmPusvBPie4MFhYnKebcSbjCN8GHrds8WRq23rw"
+aegis = "Hs2JZNwdk6QqMWPkipSe513qLQVQH8EWkU2w8N2vgLUw"
+aegis_hook = "PHoRUD1bk52nZmdkQ2qGTjMx71wKDM8bEzfeACzFXk5"
 aegis_faucet = "GYsrUAn1S12UCNG4a212HYyvvhQiUdyva1PJbyaZdcLU"
 
 [provider]

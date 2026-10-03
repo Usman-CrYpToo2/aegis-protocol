@@ -27,7 +27,9 @@ Upside Access Control      4X79YRjz9KNMhdjdxXg2ZNTS3YnMGYdwJkBHnezMJwr3
 Upside Transfer Restr.     6yEnqdEjX3zBBDkzhwTRGJwv1jRaN4QE4gywmgdcfPBZ
 Upside Tokenlock           AoodM6rkg968933giHnigMEwp9kiGi68ZEx9bPqk71Gt
 Upside Dividends           FUjkkUVKa9Pofs5mBdiYQe2cBVwzrhX8SunAZhGXRkog
-Aegis (this program)       FRR7Ff4HW8nPdutTGQmRGoEzkkoqTk57Vy7bfpnMtFy
+Aegis (this program)       Hs2JZNwdk6QqMWPkipSe513qLQVQH8EWkU2w8N2vgLUw
+Aegis hook                 PHoRUD1bk52nZmdkQ2qGTjMx71wKDM8bEzfeACzFXk5
+Aegis devnet faucet        GYsrUAn1S12UCNG4a212HYyvvhQiUdyva1PJbyaZdcLU
 ```
 
 > `programs/aegis/src/instructions/create_rwa_config.rs` currently sets

@@ -27,7 +27,7 @@ use spl_discriminator::SplDiscriminate;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
-declare_id!("794bKUmPusvBPie4MFhYnKebcSbjCN8GHrds8WRq23rw");
+declare_id!("PHoRUD1bk52nZmdkQ2qGTjMx71wKDM8bEzfeACzFXk5");
 
 /// Token-2022 resolves a hook's extra accounts through a per-mint account at this seed. Without
 /// it, every transfer of the mint fails, so it must exist before the first trade.

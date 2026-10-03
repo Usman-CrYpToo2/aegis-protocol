@@ -11,7 +11,7 @@ pub mod token_hook;
 
 use instructions::*;
 
-declare_id!("FRR7Ff4HW8nPdutTGQmRGoEzkkoqTk57Vy7bfpnMtFy");
+declare_id!("Hs2JZNwdk6QqMWPkipSe513qLQVQH8EWkU2w8N2vgLUw");
 
 // Upside RWA programs, generated from the IDLs in `idls/`.
 //
