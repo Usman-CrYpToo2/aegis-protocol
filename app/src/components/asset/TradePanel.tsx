@@ -329,7 +329,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
               </p>
               {/* On devnet, running short is a click away from being fixed. */}
               {config.cluster === "devnet" && side === "buy" && bal && (canSpend ?? 0n) < remaining && (
-                <Link to="/faucet" className="w-fit text-[13px] text-blue underline underline-offset-2">Get test {q.symbol} from the faucet</Link>
+                <Link to={`/faucet?token=${encodeURIComponent(q.symbol)}`} className="w-fit text-[13px] text-blue underline underline-offset-2">Get test {q.symbol} from the faucet</Link>
               )}
             </div>
 

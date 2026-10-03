@@ -100,7 +100,7 @@ export const tryIt: DocPage = {
         <li>A Solana wallet such as Phantom, Solflare or Backpack, switched to {config.cluster === "devnet" ? "devnet" : "this test network"} in its settings.</li>
         {config.cluster === "devnet" ? (
           <>
-            <li>Test money from the <DocLink to="/faucet">Faucet</DocLink> page: <UI>Get 1 SOL</UI> for network fees, then <UI>Get 1,000 USDC</UI> to buy with. It is free and takes a few seconds.</li>
+            <li>Test money from the <DocLink to="/faucet">Faucet</DocLink>: choose <UI>SOL</UI> and select <UI>Send 1 SOL</UI> for network fees, then choose <UI>USDC</UI> and select <UI>Send 1,000 USDC</UI> to buy with. It is free and takes a few seconds.</li>
           </>
         ) : (
           <li>Test SOL and a test currency on this network. A local test network funds wallets with its own scripts.</li>

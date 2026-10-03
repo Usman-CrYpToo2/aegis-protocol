@@ -1,233 +1,217 @@
-import { getAssociatedTokenAddressSync, unpackMint } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync, NATIVE_MINT, TOKEN_PROGRAM_ID, unpackMint } from "@solana/spl-token";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { LAMPORTS_PER_SOL, type AccountInfo } from "@solana/web3.js";
+import { PublicKey, type AccountInfo } from "@solana/web3.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useId, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
-import { dripInstructions, faucetKind, MAX_WHOLE_PER_CLAIM, type FaucetKind } from "../chain/faucet";
-import type { QuoteToken } from "../chain/platform";
+import { dripInstructions, faucetKind, MAX_WHOLE_PER_CLAIM } from "../chain/faucet";
 import { confirmSignature } from "../chain/send";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { usePlatform } from "../hooks/usePlatform";
 import { TX_STEP, useTxRunner } from "../hooks/useTxRunner";
 import { formatUnits } from "../lib/amount";
 
-const SOL_FAUCET = "https://faucet.solana.com";
-/** What one request to the network's own faucet reliably delivers. */
-const AIRDROP_LAMPORTS = LAMPORTS_PER_SOL;
-const CLAIMS = [100n, 1_000n, MAX_WHOLE_PER_CLAIM] as const;
+/** A token the faucet can send: SOL from the network's own faucet, the rest minted by the Aegis faucet. */
+type FaucetToken = { symbol: string; mint: PublicKey; decimals: number; program: PublicKey; sol: boolean; amounts: bigint[] };
 
-type Token = QuoteToken & { kind: FaucetKind; balance: bigint };
-type FaucetState = { sol: bigint; tokens: Token[] };
+const SOL: FaucetToken = { symbol: "SOL", mint: NATIVE_MINT, decimals: 9, program: TOKEN_PROGRAM_ID, sol: true, amounts: [500_000_000n, 1_000_000_000n] };
+const MINT_AMOUNTS = [100n, 1_000n, MAX_WHOLE_PER_CLAIM];
+const DEFAULT_AMOUNT = { sol: 1, mint: 1 }; // index into amounts: 1 SOL, 1,000 tokens
 
-/** The wallet's SOL, and for each approved currency: what the faucet can do for it, and the balance. */
-function useFaucetState(quotes: QuoteToken[] | undefined) {
+const inputCls = "min-h-12 w-full border border-line bg-white px-3 text-[16px] outline-none focus:border-ink aria-[invalid=true]:border-error";
+
+/** SOL, then every approved currency the Aegis faucet can mint. */
+function useFaucetTokens() {
   const { connection } = useConnection();
-  const { publicKey } = useWallet();
+  const platform = usePlatform();
+  const quotes = platform.data?.quotes;
   return useQuery({
-    queryKey: ["faucet", config.rpcUrl, publicKey?.toBase58(), quotes?.map((q) => q.mint.toBase58()).join()],
+    queryKey: ["faucetTokens", config.rpcUrl, quotes?.map((q) => q.mint.toBase58()).join()],
     enabled: Boolean(quotes),
-    refetchInterval: 10_000,
-    queryFn: async (): Promise<FaucetState> => {
-      const list = quotes!;
-      const atas = publicKey ? list.map((q) => getAssociatedTokenAddressSync(q.mint, publicKey, false, q.program)) : [];
-      const infos = await connection.getMultipleAccountsInfo([...list.map((q) => q.mint), ...(publicKey ? [publicKey, ...atas] : [])], "confirmed");
-      const mints = infos.slice(0, list.length);
-      const wallet = publicKey ? infos[list.length] : null;
-      const accounts = publicKey ? infos.slice(list.length + 1) : [];
-      const tokens = list.map((q, i) => {
+    staleTime: 60_000,
+    queryFn: async (): Promise<FaucetToken[]> => {
+      const others = quotes!.filter((q) => !q.mint.equals(NATIVE_MINT));
+      const mints = await connection.getMultipleAccountsInfo(others.map((q) => q.mint), "confirmed");
+      const mintable = others.filter((q, i) => {
         const m = mints[i];
-        const authority = m ? unpackMint(q.mint, m as AccountInfo<Buffer>, q.program).mintAuthority : null;
-        const a = accounts[i];
-        const balance = a && a.owner.equals(q.program) && a.data.length >= 72 ? Buffer.from(a.data).readBigUInt64LE(64) : 0n;
-        return { ...q, kind: faucetKind(q.mint, authority), balance };
+        return m && faucetKind(q.mint, unpackMint(q.mint, m as AccountInfo<Buffer>, q.program).mintAuthority) === "mint";
       });
-      return { sol: BigInt(wallet?.lamports ?? 0), tokens };
+      return [SOL, ...mintable.map((q) => ({ symbol: q.symbol, mint: q.mint, decimals: q.decimals, program: q.program, sol: false, amounts: MINT_AMOUNTS.map((n) => n * 10n ** BigInt(q.decimals)) }))];
     },
   });
 }
 
-function Row({ symbol, title, children, aside }: { symbol: string; title: ReactNode; children: ReactNode; aside: ReactNode }) {
-  return (
-    <section aria-label={symbol} className="grid gap-5 border-b border-rule py-7 md:grid-cols-[1fr_minmax(0,22rem)] md:gap-10">
-      <div className="flex flex-col gap-2">
-        <span className="font-mono text-sm text-mute">{symbol}</span>
-        <h2 className="font-serif text-3xl leading-tight">{title}</h2>
-        <div className="max-w-xl text-[15px] leading-relaxed text-ink2">{children}</div>
-      </div>
-      <div className="flex flex-col gap-3">{aside}</div>
-    </section>
-  );
+function useBalance(token: FaucetToken | undefined, owner: PublicKey | null) {
+  const { connection } = useConnection();
+  return useQuery({
+    queryKey: ["faucet", config.rpcUrl, token?.mint.toBase58(), owner?.toBase58()],
+    enabled: Boolean(token && owner),
+    refetchInterval: 10_000,
+    queryFn: async () => {
+      if (token!.sol) return BigInt(await connection.getBalance(owner!, "confirmed"));
+      const info = await connection.getAccountInfo(getAssociatedTokenAddressSync(token!.mint, owner!, true, token!.program), "confirmed");
+      return info && info.data.length >= 72 ? Buffer.from(info.data).readBigUInt64LE(64) : 0n;
+    },
+  });
 }
 
-function Balance({ value, decimals, symbol }: { value: bigint | undefined; decimals: number; symbol: string }) {
-  return (
-    <div className="flex items-baseline justify-between border-b border-rule pb-2 text-sm">
-      <span className="text-ink2">Your balance</span>
-      <span className="font-mono num">{value === undefined ? "—" : `${formatUnits(value, decimals, { maxFraction: 4 })} ${symbol}`}</span>
-    </div>
-  );
-}
-
-function Done({ signature, children }: { signature: string; children: ReactNode }) {
-  return (
-    <p role="status" className="text-[13px] text-green">
-      {children}{" "}
-      <a href={explorerUrl("tx", signature)} target="_blank" rel="noopener noreferrer" className="text-blue underline underline-offset-2">
-        View<span className="sr-only"> the transaction (opens Solana Explorer)</span> ↗
-      </a>
-    </p>
-  );
-}
+const parseAddress = (text: string): PublicKey | null => {
+  try {
+    return text.trim() ? new PublicKey(text.trim()) : null;
+  } catch {
+    return null;
+  }
+};
 
 type Airdrop = { kind: "idle" } | { kind: "busy" } | { kind: "done"; signature: string } | { kind: "failed" };
 
-function SolRow({ sol, solPriced }: { sol: bigint | undefined; solPriced: boolean }) {
+export function FaucetPage() {
+  const id = useId();
   const { connection } = useConnection();
   const { publicKey } = useWallet();
-  const queryClient = useQueryClient();
-  const [state, setState] = useState<Airdrop>({ kind: "idle" });
-
-  async function request() {
-    if (!publicKey || state.kind === "busy") return;
-    setState({ kind: "busy" });
-    try {
-      const { lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      const signature = await connection.requestAirdrop(publicKey, AIRDROP_LAMPORTS);
-      await confirmSignature(connection, signature, lastValidBlockHeight);
-      setState({ kind: "done", signature });
-    } catch {
-      setState({ kind: "failed" });
-    } finally {
-      void queryClient.invalidateQueries({ queryKey: ["faucet"] });
-      void queryClient.invalidateQueries({ queryKey: ["balances"] });
-    }
-  }
-
-  return (
-    <Row
-      symbol="SOL"
-      title="SOL, for network fees"
-      aside={
-        <>
-          <Balance value={sol} decimals={9} symbol="SOL" />
-          <button type="button" onClick={() => void request()} disabled={!publicKey || state.kind === "busy"} className="min-h-12 cursor-pointer bg-blue font-semibold text-white hover:bg-blue-deep disabled:cursor-not-allowed disabled:bg-blue/40">
-            {state.kind === "busy" ? "Requesting…" : "Get 1 SOL"}
-          </button>
-          {state.kind === "done" && <Done signature={state.signature}>1 SOL is in your wallet.</Done>}
-          {state.kind === "failed" && (
-            <p role="alert" className="text-[13px] leading-relaxed text-error">
-              The network’s faucet didn’t send it; it limits how often each wallet can ask. Try again later, or use the official faucet below.
-            </p>
-          )}
-          <a href={SOL_FAUCET} target="_blank" rel="noopener noreferrer" className="text-sm text-blue underline underline-offset-2">
-            More from faucet.solana.com<span className="sr-only"> (opens in a new tab)</span> ↗
-          </a>
-        </>
-      }
-    >
-      <p>Every transaction pays a small network fee in SOL, so get some first.{solPriced && " Sales priced in SOL are paid from it too: the app wraps the SOL it needs as you buy, and anything it wrapped comes back as SOL."}</p>
-    </Row>
-  );
-}
-
-function TokenRow({ token }: { token: Token }) {
-  const { publicKey } = useWallet();
-  const tx = useTxRunner();
-  const queryClient = useQueryClient();
-  const [whole, setWhole] = useState<bigint>(1_000n);
-  const amount = (n: bigint) => formatUnits(n * 10n ** BigInt(token.decimals), token.decimals);
-  const busy = tx.phase.kind === "busy";
-
-  async function claim() {
-    const atoms = whole * 10n ** BigInt(token.decimals);
-    await tx.run(() => dripInstructions(token.mint, publicKey!, atoms, token.program));
-    void queryClient.invalidateQueries({ queryKey: ["faucet"] });
-  }
-
-  if (token.kind === "none") {
-    return (
-      <Row symbol={token.symbol} title={`${token.symbol} isn’t available here`} aside={<Balance value={publicKey ? token.balance : undefined} decimals={token.decimals} symbol={token.symbol} />}>
-        <p>Sales can be priced in {token.symbol}, but this faucet can’t mint it. Get it from its issuer’s own devnet faucet.</p>
-      </Row>
-    );
-  }
-  return (
-    <Row
-      symbol={token.symbol}
-      title={`Test ${token.symbol}, for buying into sales`}
-      aside={
-        <>
-          <Balance value={publicKey ? token.balance : undefined} decimals={token.decimals} symbol={token.symbol} />
-          <div role="radiogroup" aria-label="Amount" className="grid grid-cols-3">
-            {CLAIMS.map((n) => (
-              <button key={n.toString()} type="button" role="radio" aria-checked={whole === n} disabled={busy} onClick={() => setWhole(n)}
-                className={`-ml-px min-h-10 cursor-pointer border font-mono text-sm first:ml-0 ${whole === n ? "relative border-ink bg-ink text-paper" : "border-line hover:border-ink"}`}>
-                {amount(n)}
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={() => void claim()} disabled={!publicKey || busy} className="min-h-12 cursor-pointer bg-blue font-semibold text-white hover:bg-blue-deep disabled:cursor-not-allowed disabled:bg-blue/40">
-            {busy && tx.phase.kind === "busy" ? TX_STEP[tx.phase.step] : `Get ${amount(whole)} ${token.symbol}`}
-          </button>
-          {tx.phase.kind === "done" && <Done signature={tx.phase.signature}>It’s in your wallet.</Done>}
-          {tx.phase.kind === "failed" && <p role="alert" className="text-[13px] leading-relaxed text-error">{tx.phase.error.title}. {tx.phase.error.detail}</p>}
-        </>
-      }
-    >
-      <p>
-        Test money with no value, minted to you on the spot by the Aegis faucet. Up to {amount(MAX_WHOLE_PER_CLAIM)} per claim; claim again whenever you need more. Your first claim also opens a {token.symbol} account in your wallet, which costs a small deposit in SOL.
-      </p>
-    </Row>
-  );
-}
-
-export function FaucetPage() {
-  const { publicKey } = useWallet();
   const { open: openConnect } = useConnectModal();
-  const platform = usePlatform();
-  const state = useFaucetState(platform.data?.quotes);
+  const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const tokens = useFaucetTokens();
+  const tx = useTxRunner();
+  const [airdrop, setAirdrop] = useState<Airdrop>({ kind: "idle" });
+
+  const list = tokens.data ?? [SOL];
+  const token = list.find((t) => t.symbol === params.get("token")) ?? list[0]!;
+  const [amountIndex, setAmountIndex] = useState<number>(DEFAULT_AMOUNT.sol);
+  const amount = token.amounts[Math.min(amountIndex, token.amounts.length - 1)]!;
+
+  // The address follows the connected wallet until someone types a different one.
+  const [text, setText] = useState("");
+  const [edited, setEdited] = useState(false);
+  useEffect(() => { if (!edited) setText(publicKey?.toBase58() ?? ""); }, [publicKey, edited]);
+  const to = parseAddress(text);
+  const balance = useBalance(token, to);
 
   useEffect(() => {
     document.title = "Faucet — Aegis";
     return () => { document.title = "Aegis — The Registry"; };
   }, []);
 
-  const tokens = state.data?.tokens ?? [];
-  const solPriced = tokens.some((t) => t.kind === "sol");
+  const label = `${formatUnits(amount, token.decimals)} ${token.symbol}`;
+  const busy = airdrop.kind === "busy" || tx.phase.kind === "busy";
+  const reset = () => { setAirdrop({ kind: "idle" }); tx.reset(); };
+
+  const choose = (symbol: string) => {
+    const next = list.find((t) => t.symbol === symbol)!;
+    setParams({ token: symbol }, { replace: true });
+    setAmountIndex(next.sol ? DEFAULT_AMOUNT.sol : DEFAULT_AMOUNT.mint);
+    reset();
+  };
+
+  async function send() {
+    if (!to || busy) return;
+    reset();
+    if (token.sol) {
+      setAirdrop({ kind: "busy" });
+      try {
+        const { lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+        const signature = await connection.requestAirdrop(to, Number(amount));
+        await confirmSignature(connection, signature, lastValidBlockHeight);
+        setAirdrop({ kind: "done", signature });
+      } catch {
+        setAirdrop({ kind: "failed" });
+      }
+    } else {
+      await tx.run(() => dripInstructions(token.mint, to, amount, token.program, publicKey!));
+    }
+    void queryClient.invalidateQueries({ queryKey: ["faucet"] });
+    void queryClient.invalidateQueries({ queryKey: ["balances"] });
+  }
+
+  // Minting is a transaction: a wallet has to approve it and pay its tiny fee. SOL needs nothing.
+  const needsWallet = !token.sol && !publicKey;
+  const done = airdrop.kind === "done" ? airdrop.signature : tx.phase.kind === "done" ? tx.phase.signature : null;
+  const failed = airdrop.kind === "failed"
+    ? "The network’s faucet didn’t send it. It limits how often each wallet can ask; try again later or use faucet.solana.com."
+    : tx.phase.kind === "failed" ? `${tx.phase.error.title}. ${tx.phase.error.detail}` : null;
 
   return (
-    <div className="shell flex flex-col gap-10 py-12 lg:py-16">
-      <section className="flex flex-col gap-4">
-        <span className="kicker">Devnet · test money</span>
-        <h1 className="font-serif text-6xl leading-[0.98] sm:text-7xl lg:text-[80px]">Faucet</h1>
-        <p className="max-w-2xl text-lg leading-relaxed text-ink2">
-          Aegis runs on Solana’s devnet, where nothing has real value. Get SOL for network fees, then the currency a sale is priced in, and try a whole launch for yourself in the <Link to="/registry" className="text-blue underline underline-offset-4">registry</Link>.
-        </p>
-      </section>
+    <div className="flex justify-center px-4 py-12 sm:py-20">
+      <div className="flex w-full max-w-[480px] flex-col gap-4">
+        <section aria-labelledby={`${id}-title`} className="flex flex-col gap-5 border border-ink bg-surface p-6 sm:p-7">
+          <div className="flex flex-col gap-1">
+            <h1 id={`${id}-title`} className="font-serif text-4xl">Get test tokens</h1>
+            <p className="text-[15px] text-ink2">Free on Solana devnet. They have no real value.</p>
+          </div>
 
-      {config.cluster !== "devnet" ? (
-        <p role="status" className="border border-ink bg-surface p-5 text-ink2">The faucet works on devnet. This app is connected to a local network, where every wallet can be funded directly.</p>
-      ) : (
-        <div className="flex flex-col border-t border-ink">
-          {!publicKey && (
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-rule py-5">
-              <span className="text-[15px] text-ink2">Connect a wallet to fill it with test money.</span>
-              <button type="button" onClick={openConnect} className="min-h-12 cursor-pointer bg-ink px-5 font-semibold text-paper hover:bg-ink2">Connect a wallet</button>
-            </div>
-          )}
-          <SolRow sol={publicKey ? state.data?.sol : undefined} solPriced={solPriced} />
-          {platform.isLoading || state.isLoading ? (
-            <p className="py-7 text-ink2">Reading the approved currencies…</p>
-          ) : platform.isError || state.isError ? (
-            <p role="alert" className="py-7 text-error">The approved currencies couldn’t be read. Check the network and reload.</p>
+          {config.cluster !== "devnet" ? (
+            <p role="status" className="text-[15px] text-ink2">The faucet works on devnet. A local network funds wallets with its own scripts.</p>
           ) : (
-            tokens.filter((t) => t.kind !== "sol").map((t) => <TokenRow key={t.mint.toBase58()} token={t} />)
+            <>
+              <div className="grid grid-cols-[1fr_9rem] gap-3">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-semibold">Token</span>
+                  <select className={inputCls} value={token.symbol} onChange={(e) => choose(e.target.value)} disabled={busy}>
+                    {list.map((t) => <option key={t.symbol} value={t.symbol}>{t.symbol}</option>)}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-semibold">Amount</span>
+                  <select className={`${inputCls} font-mono`} value={Math.min(amountIndex, token.amounts.length - 1)} onChange={(e) => { setAmountIndex(Number(e.target.value)); reset(); }} disabled={busy}>
+                    {token.amounts.map((a, i) => <option key={a.toString()} value={i}>{formatUnits(a, token.decimals)}</option>)}
+                  </select>
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor={`${id}-to`} className="text-sm font-semibold">Wallet address</label>
+                <input
+                  id={`${id}-to`}
+                  className={`${inputCls} font-mono text-[14px]`}
+                  placeholder="Paste a Solana address"
+                  spellCheck={false}
+                  autoComplete="off"
+                  value={text}
+                  disabled={busy}
+                  onChange={(e) => { setText(e.target.value); setEdited(true); reset(); }}
+                  aria-invalid={text.trim() !== "" && !to}
+                  aria-describedby={`${id}-to-hint`}
+                />
+                <span id={`${id}-to-hint`} className={`text-[13px] ${text.trim() && !to ? "text-error" : "text-mute"}`}>
+                  {text.trim() && !to
+                    ? "That isn’t a Solana address."
+                    : to && balance.data !== undefined
+                      ? <>Balance <span className="font-mono num">{formatUnits(balance.data, token.decimals, { maxFraction: 4 })} {token.symbol}</span></>
+                      : " "}
+                </span>
+              </div>
+
+              {needsWallet ? (
+                <button type="button" onClick={openConnect} className="min-h-12 cursor-pointer bg-ink font-semibold text-paper hover:bg-ink2">
+                  Connect a wallet to send {token.symbol}
+                </button>
+              ) : (
+                <button type="button" onClick={() => void send()} disabled={!to || busy} className="min-h-12 cursor-pointer bg-blue font-semibold text-white hover:bg-blue-deep disabled:cursor-not-allowed disabled:bg-blue/40">
+                  {airdrop.kind === "busy" ? "Sending…" : tx.phase.kind === "busy" ? TX_STEP[tx.phase.step] : `Send ${label}`}
+                </button>
+              )}
+
+              {done && (
+                <p role="status" className="text-[14px] text-green">
+                  Sent {label}.{" "}
+                  <a href={explorerUrl("tx", done)} target="_blank" rel="noopener noreferrer" className="text-blue underline underline-offset-2">
+                    View the transaction<span className="sr-only"> (opens Solana Explorer)</span> ↗
+                  </a>
+                </p>
+              )}
+              {failed && <p role="alert" className="text-[14px] leading-relaxed text-error">{failed}</p>}
+            </>
           )}
-        </div>
-      )}
+        </section>
+
+        <p className="px-1 text-[13px] leading-relaxed text-mute">
+          SOL comes from the network’s faucet, which limits requests per wallet; for more, use{" "}
+          <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" className="text-blue underline underline-offset-2">faucet.solana.com<span className="sr-only"> (opens in a new tab)</span></a>.
+          Other tokens are minted by the Aegis faucet, up to {formatUnits(MAX_WHOLE_PER_CLAIM, 0)} per request; sending them needs a connected wallet to approve.
+        </p>
+      </div>
     </div>
   );
 }
-

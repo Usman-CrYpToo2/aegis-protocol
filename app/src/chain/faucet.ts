@@ -23,14 +23,17 @@ export function faucetKind(mint: PublicKey, mintAuthority: PublicKey | null): Fa
   return mintAuthority?.equals(faucetAuthority()) ? "mint" : "none";
 }
 
-/** Creates the wallet's token account if needed, then mints `atoms` into it. */
-export function dripInstructions(mint: PublicKey, owner: PublicKey, atoms: bigint, tokenProgram: PublicKey): TransactionInstruction[] {
+/**
+ * Creates `owner`'s token account if needed, then mints `atoms` into it. `payer` signs and pays the
+ * fee and the account's deposit; it is the owner unless tokens are being sent to another wallet.
+ */
+export function dripInstructions(mint: PublicKey, owner: PublicKey, atoms: bigint, tokenProgram: PublicKey, payer: PublicKey = owner): TransactionInstruction[] {
   const destination = getAssociatedTokenAddressSync(mint, owner, false, tokenProgram);
   const data = new Uint8Array(16);
   data.set(DRIP, 0);
   new DataView(data.buffer).setBigUint64(8, atoms, true);
   return [
-    createAssociatedTokenAccountIdempotentInstruction(owner, destination, owner, mint, tokenProgram),
+    createAssociatedTokenAccountIdempotentInstruction(payer, destination, owner, mint, tokenProgram),
     new TransactionInstruction({
       programId: FAUCET_PROGRAM_ID,
       data: Buffer.from(data),
