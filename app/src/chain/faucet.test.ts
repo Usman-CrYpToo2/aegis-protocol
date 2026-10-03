@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { getAssociatedTokenAddressSync, NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { Keypair, PublicKey, type Connection } from "@solana/web3.js";
 import { describe, expect, it } from "vitest";
 import idl from "../idl/aegis_faucet.json";
-import { dripInstructions, FAUCET_PROGRAM_ID, faucetAuthority, faucetKind } from "./faucet";
+import { dripInstructions, FAUCET_PROGRAM_ID, faucetAuthority, faucetKind, requestSol } from "./faucet";
 
 const key = () => Keypair.generate().publicKey;
 
@@ -31,5 +31,27 @@ describe("faucet", () => {
 
   it("derives the authority the devnet test USDC was handed to", () => {
     expect(faucetAuthority().equals(new PublicKey("4a7bDpK4oAgE4SKvASnTvDwq5APfB9o38EkSgkSiNQBK"))).toBe(true);
+  });
+});
+
+describe("requestSol", () => {
+  const to = key();
+  const conn = (airdrop: () => Promise<string>, statuses: Record<string, string | undefined> = {}) =>
+    ({ requestAirdrop: airdrop, getSignatureStatuses: async ([s]: string[]) => ({ value: [statuses[s!] ? { confirmationStatus: statuses[s!], err: null } : null] }) }) as unknown as Connection;
+
+  it("returns the first airdrop that lands", async () => {
+    const status = conn(async () => "", { a: "confirmed" });
+    expect(await requestSol([conn(async () => "a")], status, to, 1, 50)).toBe("a");
+  });
+
+  it("moves on when an endpoint refuses, or its airdrop never lands", async () => {
+    const status = conn(async () => "", { c: "finalized" });
+    const refuses = conn(async () => { throw new Error("429"); });
+    const drops = conn(async () => "b"); // never shows up
+    expect(await requestSol([refuses, drops, conn(async () => "c")], status, to, 1, 50)).toBe("c");
+  });
+
+  it("fails when none deliver", async () => {
+    await expect(requestSol([conn(async () => "x")], conn(async () => ""), to, 1, 50)).rejects.toThrow("No faucet");
   });
 });

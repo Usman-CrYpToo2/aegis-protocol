@@ -4,7 +4,7 @@
  * faucet.test.ts checks the instruction against the faucet's IDL.
  */
 import { createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, NATIVE_MINT } from "@solana/spl-token";
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { PublicKey, TransactionInstruction, type Connection } from "@solana/web3.js";
 import idl from "../idl/aegis_faucet.json";
 
 export const FAUCET_PROGRAM_ID = new PublicKey(idl.address);
@@ -45,4 +45,27 @@ export function dripInstructions(mint: PublicKey, owner: PublicKey, atoms: bigin
       ],
     }),
   ];
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Devnet SOL from the network's own faucet, asking each endpoint in turn. A faucet sometimes refuses
+ * (it limits how often anyone may ask) and sometimes returns a signature for an airdrop that never
+ * lands; either way the next endpoint gets its chance. `status` is where landing is checked.
+ */
+export async function requestSol(endpoints: Connection[], status: Connection, to: PublicKey, lamports: number, waitMs = 30_000): Promise<string> {
+  for (const endpoint of endpoints) {
+    try {
+      const signature = await endpoint.requestAirdrop(to, lamports);
+      for (const end = Date.now() + waitMs; Date.now() < end; await sleep(1_000)) {
+        const s = (await status.getSignatureStatuses([signature])).value[0];
+        if (s?.err) break;
+        if (s?.confirmationStatus === "confirmed" || s?.confirmationStatus === "finalized") return signature;
+      }
+    } catch {
+      // Refused: try the next endpoint.
+    }
+  }
+  throw new Error("No faucet sent the SOL.");
 }
