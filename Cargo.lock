@@ -30,6 +30,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "aegis-faucet"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+]
+
+[[package]]
 name = "aegis-hook"
 version = "0.1.0"
 dependencies = [

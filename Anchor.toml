@@ -8,6 +8,7 @@ skip-lint = false
 [programs.localnet]
 aegis = "FRR7Ff4HW8nPdutTGQmRGoEzkkoqTk57Vy7bfpnMtFy"
 aegis_hook = "794bKUmPusvBPie4MFhYnKebcSbjCN8GHrds8WRq23rw"
+aegis_faucet = "GYsrUAn1S12UCNG4a212HYyvvhQiUdyva1PJbyaZdcLU"
 
 [provider]
 cluster = "localnet"

@@ -1,0 +1,27 @@
+[package]
+name = "aegis-faucet"
+version = "0.1.0"
+description = "Devnet faucet for the test tokens Aegis launches are priced in"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "aegis_faucet"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "1.0.2"
+anchor-spl = "1.0.2"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
