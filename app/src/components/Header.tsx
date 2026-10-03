@@ -71,7 +71,12 @@ export function Header() {
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          {/* Out here rather than in the main nav, so it stays visible on a phone. */}
+          {/* Out here rather than in the main nav, so they stay visible on a phone. Test money only exists on devnet. */}
+          {config.cluster === "devnet" && (
+            <NavLink to="/faucet" className={({ isActive }) => `inline-flex h-11 items-center px-1 text-[15px] ${isActive ? "font-semibold text-ink underline underline-offset-8" : "text-mute hover:text-ink"}`}>
+              Faucet
+            </NavLink>
+          )}
           <NavLink to="/docs" className={({ isActive }) => `inline-flex h-11 items-center px-1 text-[15px] ${isActive ? "font-semibold text-ink underline underline-offset-8" : "text-mute hover:text-ink"}`}>
             Docs
           </NavLink>

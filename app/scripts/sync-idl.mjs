@@ -4,6 +4,7 @@ import { copyFileSync, mkdirSync } from "node:fs";
 mkdirSync("src/idl", { recursive: true });
 for (const [from, to] of [
   ["../target/idl/aegis.json", "src/idl/aegis.json"],
+  ["../target/idl/aegis_faucet.json", "src/idl/aegis_faucet.json"],
   ["../idls/transfer_restrictions.json", "src/idl/transfer_restrictions.json"],
   ["../idls/access_control.json", "src/idl/access_control.json"],
 ]) {

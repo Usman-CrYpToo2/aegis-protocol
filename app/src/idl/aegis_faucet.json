@@ -1,0 +1,84 @@
+{
+  "address": "GYsrUAn1S12UCNG4a212HYyvvhQiUdyva1PJbyaZdcLU",
+  "metadata": {
+    "name": "aegis_faucet",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Devnet faucet for the test tokens Aegis launches are priced in"
+  },
+  "instructions": [
+    {
+      "name": "drip",
+      "docs": [
+        "Mints `amount` (in the token's smallest units) to `destination`.",
+        "",
+        "Permissionless on purpose: these are test tokens with no value. The cap only bounds a",
+        "single claim."
+      ],
+      "discriminator": [
+        215,
+        250,
+        141,
+        179,
+        116,
+        10,
+        187,
+        192
+      ],
+      "accounts": [
+        {
+          "name": "mint",
+          "writable": true
+        },
+        {
+          "name": "faucet_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  97,
+                  117,
+                  99,
+                  101,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ZeroAmount",
+      "msg": "Ask for more than zero."
+    },
+    {
+      "code": 6001,
+      "name": "AboveClaimCap",
+      "msg": "That is more than one claim allows (10,000 tokens). Claim again for more."
+    },
+    {
+      "code": 6002,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow."
+    }
+  ]
+}
