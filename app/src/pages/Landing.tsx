@@ -252,7 +252,7 @@ function BridgeDemo({ summary }: { summary: LandingSummary | null }) {
         </fieldset>
         <div className="grid grid-cols-[72px_minmax(0,1fr)_72px] items-center rounded-[20px] border border-ink bg-surface p-5 shadow-[6px_6px_0_var(--color-ink)] sm:grid-cols-[150px_minmax(0,1fr)_150px] sm:rounded-3xl sm:p-10 sm:shadow-[12px_12px_0_var(--color-ink)]">
           {side(
-            <svg viewBox="0 0 120 120" className="size-14 sm:size-[120px]" aria-hidden="true"><rect x="10" y="20" width="100" height="90" rx="10" fill="#16140F" /><circle cx="60" cy="65" r="24" fill="none" stroke="#F4F1EA" strokeWidth="2" /><circle cx="60" cy="65" r="4" fill="#F4F1EA" /><path d="M60 41v8M60 81v8M36 65h8M76 65h8" stroke="#F4F1EA" strokeWidth="2" /></svg>,
+            <svg viewBox="0 0 120 120" className="size-14 sm:size-[120px]" aria-hidden="true"><path d="M40 56V42a20 20 0 0 1 40 0v14" fill="none" stroke="#16140F" strokeWidth="10" /><rect x="20" y="52" width="80" height="60" rx="14" fill="#7E2A1E" /><path d="M40 89a20 20 0 0 1 40 0Z" fill="#F4F1EA" /></svg>,
             "Escrow", `${sec} · the security`,
           )}
           <svg viewBox="0 -10 720 100" className="h-16 w-full overflow-visible sm:h-[180px]" aria-hidden="true">
@@ -261,7 +261,7 @@ function BridgeDemo({ summary }: { summary: LandingSummary | null }) {
             <g transform="translate(360 20)"><circle r="40" fill="#7E2A1E" /><text y="12" textAnchor="middle" fontFamily="Instrument Serif, serif" fontSize="36" fill="#F4F1EA">1:1</text></g>
           </svg>
           {side(
-            <svg viewBox="0 0 120 120" className="size-14 sm:size-[120px]" aria-hidden="true"><circle cx="60" cy="62" r="46" fill="#1D3A8A" /><circle cx="60" cy="62" r="36" fill="none" stroke="#FFFFFF" strokeWidth="1.5" /><text x="60" y="72" textAnchor="middle" fontFamily="Instrument Serif, serif" fontSize="30" fill="#FFFFFF">c</text></svg>,
+            <svg viewBox="0 0 120 120" className="size-14 sm:size-[120px]" aria-hidden="true"><rect x="26" y="22" width="62" height="32" rx="6" fill="#C9D3F0" /><rect x="12" y="38" width="96" height="70" rx="14" fill="#1D3A8A" /><rect x="76" y="60" width="32" height="28" rx="8" fill="#3554B0" /><circle cx="90" cy="74" r="5" fill="#F4F1EA" /><path d="M24 66a20 20 0 0 0 40 0Z" fill="#F4F1EA" /></svg>,
             "Your wallet", `${wrp} · the wrapper`,
           )}
           <p aria-live="polite" className="col-span-full m-0 pt-5 text-center font-mono text-xs text-mute sm:pt-7 sm:text-[13px]">
