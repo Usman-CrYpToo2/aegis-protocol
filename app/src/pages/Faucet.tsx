@@ -23,7 +23,7 @@ const DEFAULT_AMOUNT = { sol: 1, mint: 1 }; // index into amounts: 1 SOL, 1,000 
 
 const inputCls = "min-h-12 w-full border border-line bg-white px-3 text-[16px] outline-none focus:border-ink aria-[invalid=true]:border-error";
 
-/** SOL, then every approved currency the Aegis faucet can mint. */
+/** Every approved currency the Aegis faucet can mint, then SOL. The first is selected by default. */
 function useFaucetTokens() {
   const { connection } = useConnection();
   const platform = usePlatform();
@@ -39,7 +39,7 @@ function useFaucetTokens() {
         const m = mints[i];
         return m && faucetKind(q.mint, unpackMint(q.mint, m as AccountInfo<Buffer>, q.program).mintAuthority) === "mint";
       });
-      return [SOL, ...mintable.map((q) => ({ symbol: q.symbol, mint: q.mint, decimals: q.decimals, program: q.program, sol: false, amounts: MINT_AMOUNTS.map((n) => n * 10n ** BigInt(q.decimals)) }))];
+      return [...mintable.map((q) => ({ symbol: q.symbol, mint: q.mint, decimals: q.decimals, program: q.program, sol: false, amounts: MINT_AMOUNTS.map((n) => n * 10n ** BigInt(q.decimals)) })), SOL];
     },
   });
 }
