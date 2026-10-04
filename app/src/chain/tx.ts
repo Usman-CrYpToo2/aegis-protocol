@@ -1,5 +1,5 @@
 import { ComputeBudgetProgram, TransactionMessage, VersionedTransaction, type Connection, type PublicKey, type TransactionInstruction } from "@solana/web3.js";
-import { advanceInstruction, NONCE_UNITS, type Nonce } from "./nonce";
+import { advanceInstruction, NONCE_UNITS, sealInstruction, type Nonce } from "./nonce";
 import { withBackup } from "./send";
 
 export type PreparedTx = { transaction: VersionedTransaction; blockhash: string; lastValidBlockHeight: number };
@@ -36,9 +36,12 @@ export async function prepareTransaction(connection: Connection, payer: PublicKe
   const used = sim.value.unitsConsumed ?? 400_000;
   const units = Math.min(1_400_000, Math.ceil(used * 1.2) + 10_000);
   if (nonce) {
+    // Only the wallet signs this one, so it is sealed against being rewritten (see chain/nonce).
+    const seal = sealInstruction();
     const transaction = new VersionedTransaction(
-      new TransactionMessage({ payerKey: payer, recentBlockhash: nonce.value, instructions: [advanceInstruction(nonce, payer), ComputeBudgetProgram.setComputeUnitLimit({ units: units + NONCE_UNITS }), ...instructions] }).compileToV0Message()
+      new TransactionMessage({ payerKey: payer, recentBlockhash: nonce.value, instructions: [advanceInstruction(nonce, payer), ComputeBudgetProgram.setComputeUnitLimit({ units: units + NONCE_UNITS }), ...instructions, seal.instruction] }).compileToV0Message()
     );
+    transaction.sign([seal.signer]);
     return { transaction, blockhash: nonce.value, lastValidBlockHeight };
   }
   return { transaction: build(units), blockhash, lastValidBlockHeight };

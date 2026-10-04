@@ -13,7 +13,7 @@ import aegisIdl from "../idl/aegis.json";
 import type { LaunchAccount } from "./aegis";
 import { idlInstruction } from "./idlix";
 import { METEORA_DBC_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "./ids";
-import { advanceInstruction, NONCE_UNITS, type Nonce } from "./nonce";
+import { advanceInstruction, NONCE_UNITS, sealInstruction, type Nonce } from "./nonce";
 import { issueAddresses } from "./issue";
 import type { DbcConfig, DbcPool } from "./meteora";
 import { eventAuthority, poolAuthority, tokenVault } from "./trade";
@@ -115,17 +115,21 @@ export const GRADUATION_DEPOSIT_LAMPORTS = 35_000_000n;
  */
 export function graduationTransactions(launch: LaunchAccount, payer: PublicKey, quoteProgram: PublicKey, blockhash: string, nonces?: [Nonce, Nonce]): VersionedTransaction[] {
   const nfts = [Keypair.generate(), Keypair.generate()];
-  const tx = (units: number, ix: TransactionInstruction, nonce?: Nonce) =>
-    new VersionedTransaction(
+  const tx = (units: number, ix: TransactionInstruction, nonce?: Nonce, seal?: ReturnType<typeof sealInstruction>) => {
+    const t = new VersionedTransaction(
       new TransactionMessage({
         payerKey: payer,
         recentBlockhash: nonce ? nonce.value : blockhash,
         instructions: nonce
-          ? [advanceInstruction(nonce, payer), ComputeBudgetProgram.setComputeUnitLimit({ units: units + NONCE_UNITS }), ix]
+          ? [advanceInstruction(nonce, payer), ComputeBudgetProgram.setComputeUnitLimit({ units: units + NONCE_UNITS }), ix, ...(seal ? [seal.instruction] : [])]
           : [ComputeBudgetProgram.setComputeUnitLimit({ units }), ix],
       }).compileToV0Message()
     );
+    if (seal) t.sign([seal.signer]);
+    return t;
+  };
   const migrate = tx(GRADUATION_UNITS.migrate, migrateInstruction(launch, payer, nfts[0]!.publicKey, nfts[1]!.publicKey, quoteProgram), nonces?.[0]);
   migrate.sign(nfts);
-  return [migrate, tx(GRADUATION_UNITS.finalize, finalizeInstruction(launch, payer), nonces?.[1])];
+  // Finalize has no other signer, so with a nonce it is sealed (see chain/nonce).
+  return [migrate, tx(GRADUATION_UNITS.finalize, finalizeInstruction(launch, payer), nonces?.[1], nonces ? sealInstruction() : undefined)];
 }

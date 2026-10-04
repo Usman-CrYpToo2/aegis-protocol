@@ -22,7 +22,7 @@ import { termsArgs } from "../lib/terms";
 import { decodeLaunch, type LaunchAccount } from "./aegis";
 import { borsh, idlInstruction } from "./idlix";
 import { ACCESS_CONTROL_PROGRAM_ID, AEGIS_HOOK_PROGRAM_ID, AEGIS_PROGRAM_ID, METEORA_DBC_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TRANSFER_RESTRICTIONS_PROGRAM_ID } from "./ids";
-import { advanceInstruction, NONCE_UNITS, type Nonce } from "./nonce";
+import { advanceInstruction, NONCE_UNITS, sealInstruction, type Nonce } from "./nonce";
 import { platformConfigAddress, quoteTokenAddress } from "./platform";
 import { eventAuthority, poolAuthority, tokenVault } from "./trade";
 
@@ -298,7 +298,10 @@ export function launchTransactions(plan: LaunchPlan, remaining: StepId[], blockh
   return remaining.map((id, i) => {
     const { ixs, signers } = build(id);
     const nonce = nonces?.[i];
-    const instructions = [ComputeBudgetProgram.setComputeUnitLimit({ units: STEP_UNITS[id] + (nonce ? NONCE_UNITS : 0) }), ...ixs];
+    // A nonce step nobody else signs would be rewritten by some wallets; a co-signed memo stops that.
+    const seal = nonce && signers.length === 0 ? sealInstruction() : null;
+    if (seal) signers.push(seal.signer);
+    const instructions = [ComputeBudgetProgram.setComputeUnitLimit({ units: STEP_UNITS[id] + (nonce ? NONCE_UNITS : 0) }), ...ixs, ...(seal ? [seal.instruction] : [])];
     const tx = new VersionedTransaction(
       new TransactionMessage({
         payerKey: issuer,

@@ -13,7 +13,7 @@
  * The accounts are derived from the wallet with fixed seeds, so they are found again for every later
  * launch with no keys to store. Only the wallet can advance or close them; each holds a small deposit.
  */
-import { NONCE_ACCOUNT_LENGTH, NonceAccount, PublicKey, SystemProgram, TransactionInstruction, TransactionMessage, VersionedTransaction, type Connection } from "@solana/web3.js";
+import { Keypair, NONCE_ACCOUNT_LENGTH, NonceAccount, PublicKey, SystemProgram, TransactionInstruction, TransactionMessage, VersionedTransaction, type Connection } from "@solana/web3.js";
 import { sendSigned, withBackup } from "./send";
 
 /** One account per transaction the largest batch sends: the eight launch steps. */
@@ -63,8 +63,24 @@ export async function setupInstructions(owner: PublicKey, indexes: number[], ren
 /** The instruction a nonce transaction must start with. */
 export const advanceInstruction = (nonce: Nonce, owner: PublicKey) => SystemProgram.nonceAdvance({ noncePubkey: nonce.address, authorizedPubkey: owner });
 
+export const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+
+/**
+ * A co-signature that keeps a wallet from rewriting a nonce transaction.
+ *
+ * Some wallets (Phantom, observed on devnet) insert their own priority-fee instruction at the front
+ * of any transaction that only they sign. A nonce transaction must start with its nonce advance, so
+ * that insertion makes the network treat it as an ordinary transaction with an unknown blockhash and
+ * drop it. A wallet never alters a transaction someone else has already signed, because that would
+ * void the signature: so a single-signer nonce transaction gets a memo signed by a throwaway key.
+ */
+export function sealInstruction(): { instruction: TransactionInstruction; signer: Keypair } {
+  const signer = Keypair.generate();
+  return { signer, instruction: new TransactionInstruction({ programId: MEMO_PROGRAM_ID, keys: [{ pubkey: signer.publicKey, isSigner: true, isWritable: false }], data: Buffer.from("aegis") }) };
+}
+
 /** What advancing a nonce adds to a transaction's compute. */
-export const NONCE_UNITS = 5_000;
+export const NONCE_UNITS = 10_000;
 
 /**
  * The wallet's nonces, creating any that are missing first. Creating them is one short approval of
