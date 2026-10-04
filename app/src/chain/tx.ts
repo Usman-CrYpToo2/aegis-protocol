@@ -18,7 +18,7 @@ export class SimulationError extends Error {
  * With `nonce`, the transaction starts by advancing it and carries its value instead of a blockhash,
  * so it stays valid however long a wallet takes (see chain/nonce). It is simulated without.
  */
-export async function prepareTransaction(connection: Connection, payer: PublicKey, instructions: TransactionInstruction[], nonce?: Nonce): Promise<PreparedTx> {
+export async function prepareTransaction(connection: Connection, payer: PublicKey, instructions: TransactionInstruction[], nonce?: Nonce, cosigned = false): Promise<PreparedTx> {
   const { blockhash, lastValidBlockHeight } = await withBackup(connection, (c) => c.getLatestBlockhash("confirmed"));
   const build = (units: number) =>
     new VersionedTransaction(
@@ -36,12 +36,13 @@ export async function prepareTransaction(connection: Connection, payer: PublicKe
   const used = sim.value.unitsConsumed ?? 400_000;
   const units = Math.min(1_400_000, Math.ceil(used * 1.2) + 10_000);
   if (nonce) {
-    // Only the wallet signs this one, so it is sealed against being rewritten (see chain/nonce).
-    const seal = sealInstruction();
+    // If only the wallet signs, the transaction is sealed against being rewritten (see chain/nonce).
+    // A transaction someone else co-signs (`cosigned`) is safe already.
+    const seal = cosigned ? null : sealInstruction();
     const transaction = new VersionedTransaction(
-      new TransactionMessage({ payerKey: payer, recentBlockhash: nonce.value, instructions: [advanceInstruction(nonce, payer), ComputeBudgetProgram.setComputeUnitLimit({ units: units + NONCE_UNITS }), ...instructions, seal.instruction] }).compileToV0Message()
+      new TransactionMessage({ payerKey: payer, recentBlockhash: nonce.value, instructions: [advanceInstruction(nonce, payer), ComputeBudgetProgram.setComputeUnitLimit({ units: units + NONCE_UNITS }), ...instructions, ...(seal ? [seal.instruction] : [])] }).compileToV0Message()
     );
-    transaction.sign([seal.signer]);
+    if (seal) transaction.sign([seal.signer]);
     return { transaction, blockhash: nonce.value, lastValidBlockHeight };
   }
   return { transaction: build(units), blockhash, lastValidBlockHeight };

@@ -1,4 +1,4 @@
-import { approveAndSend } from "../chain/send";
+import { approveAndSend } from "../chain/approve";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { Keypair, TransactionInstruction } from "@solana/web3.js";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,11 +8,11 @@ import { explainTradeError, type ErrorTable, type Explained } from "../lib/txErr
 
 export type TxPhase =
   | { kind: "idle" }
-  | { kind: "busy"; step: "checking" | "signing" | "confirming" }
+  | { kind: "busy"; step: "checking" | "signing" | "again" | "confirming" }
   | { kind: "done"; signature: string }
   | { kind: "failed"; error: Explained };
 
-export const TX_STEP = { checking: "Checking…", signing: "Approve in your wallet…", confirming: "Confirming…" } as const;
+export const TX_STEP = { checking: "Checking…", signing: "Approve in your wallet…", again: "Approve once more: the last one came back too late…", confirming: "Confirming…" } as const;
 
 /**
  * Simulate, sign, confirm, explain: the same path every transaction in the app takes. `build` is
@@ -31,13 +31,20 @@ export function useTxRunner(errors: ErrorTable = {}) {
       inFlight.current = true;
       try {
         setPhase({ kind: "busy", step: "checking" });
-        const prepared = await prepareTransaction(connection, publicKey, await build());
-        setPhase({ kind: "busy", step: "signing" });
+        let retry = false;
         // New accounts created from a fresh keypair (a mint, a config) sign alongside the wallet.
-        const signature = await approveAndSend(connection, { signTransaction, sendTransaction }, prepared.transaction, prepared.lastValidBlockHeight, {
-          signers,
-          onSigned: () => setPhase({ kind: "busy", step: "confirming" }),
-        });
+        // A slow approval is rebuilt and asked for again rather than sent stale; see chain/approve.
+        const signature = await approveAndSend(
+          connection,
+          { signTransaction, sendTransaction },
+          publicKey,
+          async (nonce) => {
+            const prepared = await prepareTransaction(connection, publicKey, await build(), nonce, signers.length > 0);
+            setPhase({ kind: "busy", step: retry ? "again" : "signing" });
+            return prepared;
+          },
+          { signers, onSigned: () => setPhase({ kind: "busy", step: "confirming" }), onRetry: () => { retry = true; } }
+        );
         setPhase({ kind: "done", signature });
         return signature;
       } catch (e) {

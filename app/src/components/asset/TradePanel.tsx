@@ -5,7 +5,8 @@ import { Link } from "react-router-dom";
 import { config, explorerUrl } from "../../config";
 import { useConnectModal } from "../connect/ConnectModal";
 import { ensureNonces, LAND_WITHIN_BLOCKS } from "../../chain/nonce";
-import { approveAndSend, sendSigned, withBackup } from "../../chain/send";
+import { approveAndSend } from "../../chain/approve";
+import { sendSigned, withBackup } from "../../chain/send";
 import { loadAsset } from "../../chain/asset";
 import { GRADUATION_DEPOSIT_LAMPORTS, graduationTransactions } from "../../chain/graduate";
 import type { RegistryEntry } from "../../chain/registry";
@@ -35,13 +36,14 @@ const SLIPPAGES = [50, 100, 200] as const;
 
 type Phase =
   | { kind: "idle" }
-  | { kind: "busy"; step: "checking" | "preparing" | "signing" | "sending" | "confirming" }
+  | { kind: "busy"; step: "checking" | "preparing" | "signing" | "again" | "sending" | "confirming" }
   | { kind: "done"; side: Side; paid: string; received: string; signature: string; graduated: boolean | null }
   | { kind: "failed"; error: Explained };
 
 const STEP_TEXT = {
   checking: "Checking the latest price…",
   preparing: "Approve a one-time wallet setup…",
+  again: "Approve once more: the last one came back too late…",
   signing: "Approve in your wallet…",
   sending: "Sending…",
   confirming: "Confirming on-chain…",
@@ -186,13 +188,12 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
       const nonces = completes && canGraduate && signAllTransactions
         ? await ensureNonces(connection, publicKey, signAllTransactions, () => setPhase({ kind: "busy", step: "preparing" }))
         : null;
-      const prepared = await prepareTrade(connection, request, nonces?.[0]);
-      const bundle = nonces ? graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash, [nonces[1]!, nonces[2]!]) : [];
-
-      setPhase({ kind: "busy", step: "signing" });
       let signature: string;
       let graduated: boolean | null = null;
-      if (bundle.length) {
+      if (nonces) {
+        const prepared = await prepareTrade(connection, request, nonces[0]);
+        const bundle = graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash, [nonces[1]!, nonces[2]!]);
+        setPhase({ kind: "busy", step: "signing" });
         const [buy, ...rest] = await signAllTransactions!([prepared.transaction, ...bundle]);
         setPhase({ kind: "busy", step: "confirming" });
         // Nonce transactions don't expire; this is how long to wait for each before giving up.
@@ -208,9 +209,19 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
           }
         }
       } else {
-        signature = await approveAndSend(connection, { signTransaction, sendTransaction }, prepared.transaction, prepared.lastValidBlockHeight, {
-          onSigned: () => setPhase({ kind: "busy", step: "confirming" }),
-        });
+        // One transaction: a nonce if the wallet has them, else a re-ask if the approval is late.
+        let retry = false;
+        signature = await approveAndSend(
+          connection,
+          { signTransaction, sendTransaction },
+          publicKey,
+          async (nonce) => {
+            const prepared = await prepareTrade(connection, request, nonce);
+            setPhase({ kind: "busy", step: retry ? "again" : "signing" });
+            return prepared;
+          },
+          { onSigned: () => setPhase({ kind: "busy", step: "confirming" }), onRetry: () => { retry = true; } }
+        );
       }
       const spent = side === "buy" && "spend" in again ? again.spend : amountIn;
       setPhase({

@@ -1,4 +1,4 @@
-import { approveAndSend } from "../../chain/send";
+import { approveAndSend } from "../../chain/approve";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
@@ -14,11 +14,11 @@ import { Hint } from "../Hint";
 
 type Phase =
   | { kind: "idle" }
-  | { kind: "busy"; step: "checking" | "signing" | "confirming" }
+  | { kind: "busy"; step: "checking" | "signing" | "again" | "confirming" }
   | { kind: "done"; direction: Direction; amount: string; signature: string }
   | { kind: "failed"; error: Explained };
 
-const STEP = { checking: "Checking…", signing: "Approve in your wallet…", confirming: "Confirming…" } as const;
+const STEP = { checking: "Checking…", signing: "Approve in your wallet…", again: "Approve once more: the last one came back too late…", confirming: "Confirming…" } as const;
 
 /** Maps a pre-check result onto the program's error name, so both paths share one explanation. */
 const CODE: Record<BridgeBlock["kind"], string> = {
@@ -82,11 +82,18 @@ export function BridgeBox({ entry }: { entry: RegistryEntry }) {
       const fresh = await loadAsset(connection, launch.realRwaMint);
       const now = await loadBridgeStatus(connection, fresh.launch, publicKey);
       if (now[direction]) throw Object.assign(new Error("blocked"), { logs: [`Error Code: ${CODE[now[direction]!.kind]}`] });
-      const prepared = await prepareBridge(connection, direction, fresh.launch, publicKey, parsed.atoms);
-      setPhase({ kind: "busy", step: "signing" });
-      const signature = await approveAndSend(connection, { signTransaction, sendTransaction }, prepared.transaction, prepared.lastValidBlockHeight, {
-        onSigned: () => setPhase({ kind: "busy", step: "confirming" }),
-      });
+      let retry = false;
+      const signature = await approveAndSend(
+        connection,
+        { signTransaction, sendTransaction },
+        publicKey,
+        async (nonce) => {
+          const prepared = await prepareBridge(connection, direction, fresh.launch, publicKey, parsed.atoms, nonce);
+          setPhase({ kind: "busy", step: retry ? "again" : "signing" });
+          return prepared;
+        },
+        { onSigned: () => setPhase({ kind: "busy", step: "confirming" }), onRetry: () => { retry = true; } }
+      );
       setPhase({ kind: "done", direction, amount: fmt(parsed.atoms), signature });
       setText("");
     } catch (e) {

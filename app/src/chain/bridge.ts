@@ -10,6 +10,7 @@ import { PublicKey, SystemProgram, TransactionInstruction, type AccountInfo, typ
 import idl from "../idl/aegis.json";
 import type { LaunchAccount } from "./aegis";
 import { ACCESS_CONTROL_PROGRAM_ID, AEGIS_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TRANSFER_RESTRICTIONS_PROGRAM_ID } from "./ids";
+import type { Nonce } from "./nonce";
 import { prepareTransaction, type PreparedTx } from "./tx";
 
 export type Direction = "redeem" | "deposit";
@@ -75,8 +76,8 @@ export function bridgeInstruction(direction: Direction, launch: LaunchAccount, u
   return new TransactionInstruction({ programId: AEGIS_PROGRAM_ID, keys, data: Buffer.from(data) });
 }
 
-export const prepareBridge = (connection: Connection, direction: Direction, launch: LaunchAccount, user: PublicKey, amount: bigint): Promise<PreparedTx> =>
-  prepareTransaction(connection, user, [bridgeInstruction(direction, launch, user, amount)]);
+export const prepareBridge = (connection: Connection, direction: Direction, launch: LaunchAccount, user: PublicKey, amount: bigint, nonce?: Nonce): Promise<PreparedTx> =>
+  prepareTransaction(connection, user, [bridgeInstruction(direction, launch, user, amount)], nonce);
 
 // ------------------------------------------------------------------------------------------------
 // Eligibility: what would stop this wallet, in the order the program checks it.

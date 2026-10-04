@@ -83,6 +83,9 @@ export function explainTradeError(error: unknown, overrides: ErrorTable = {}): E
   if (/no record of a prior credit|insufficient lamports|InsufficientFundsForFee|InsufficientFundsForRent/i.test(all)) {
     return { title: "Your wallet needs a little SOL", detail: "Solana charges a small fee (and a one-time deposit for a new token account). Add some SOL and try again.", retry: true, charged: false };
   }
+  if (error && typeof error === "object" && "approvalTooSlow" in error) {
+    return { title: "The approval took too long", detail: "The network accepts an approval for about a minute, so nothing was sent and nothing was spent. Try again and approve a little sooner.", retry: true, charged: false };
+  }
   if (/blockhash not found|block height exceeded|expired/i.test(all)) {
     return { title: "It took too long to confirm", detail: "The network dropped the request before it landed, so nothing was spent. Try again.", retry: true, charged: false };
   }

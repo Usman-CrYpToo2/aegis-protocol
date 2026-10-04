@@ -12,7 +12,7 @@
  * second endpoint (VITE_INDEX_RPC_URL) when the first can't be reached, and every signed transaction
  * is broadcast through both: the network keeps one copy, and whichever path is up delivers it.
  */
-import { Connection, type Keypair, type VersionedTransaction } from "@solana/web3.js";
+import { Connection, type VersionedTransaction } from "@solana/web3.js";
 import { config } from "../config";
 
 /** The transaction's blockhash ran out before it landed. Nothing in it happened. */
@@ -100,28 +100,4 @@ export async function sendSigned(connection: Connection, tx: VersionedTransactio
   broadcast(raw);
   await confirmSignature(connection, signature, lastValidBlockHeight, raw);
   return signature;
-}
-
-type Wallet = {
-  signTransaction?: <T extends VersionedTransaction>(tx: T) => Promise<T>;
-  sendTransaction: (tx: VersionedTransaction, connection: Connection, options?: { preflightCommitment?: "confirmed"; signers?: Keypair[] }) => Promise<string>;
-};
-
-/**
- * Has the wallet approve one transaction and lands it through the resilient path above: checked
- * first, broadcast through both endpoints, re-sent until it lands. A wallet that can only send for
- * itself sends it, and the confirmation still runs here. `onSigned` fires between the two, so a
- * page can switch from "approve in your wallet" to "confirming".
- */
-export async function approveAndSend(connection: Connection, wallet: Wallet, tx: VersionedTransaction, lastValidBlockHeight: number, { signers = [], onSigned }: { signers?: Keypair[]; onSigned?: () => void } = {}): Promise<string> {
-  if (!wallet.signTransaction) {
-    const signature = await wallet.sendTransaction(tx, connection, { preflightCommitment: "confirmed", signers });
-    onSigned?.();
-    await confirmSignature(connection, signature, lastValidBlockHeight);
-    return signature;
-  }
-  if (signers.length) tx.sign(signers);
-  const signed = await wallet.signTransaction(tx);
-  onSigned?.();
-  return sendSigned(connection, signed, lastValidBlockHeight, true);
 }
