@@ -86,9 +86,11 @@ export function WalletButton() {
         className={`${base} border border-line bg-surface pl-2 font-mono font-medium whitespace-nowrap hover:border-ink`}
       >
         {icon ? <img src={icon} alt="" width={22} height={22} className="size-5.5 rounded" /> : <span className="size-2 rounded-full bg-green" aria-hidden="true" />}
-        {shortAddress(address)}
-        {isIssuer && <span className="bg-ink px-1.5 py-0.5 font-sans text-[11px] tracking-[0.08em] text-paper uppercase">Issuer</span>}
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className={`transition-transform ${open ? "rotate-180" : ""}`}>
+        {/* A phone's header is tight: a shorter address, and the role badge and arrow only from sm up. */}
+        <span className="sm:hidden">{shortAddress(address, 3)}</span>
+        <span className="hidden sm:inline">{shortAddress(address)}</span>
+        {isIssuer && <span className="hidden bg-ink px-1.5 py-0.5 font-sans text-[11px] tracking-[0.08em] text-paper uppercase sm:inline">Issuer</span>}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className={`hidden transition-transform sm:block ${open ? "rotate-180" : ""}`}>
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>

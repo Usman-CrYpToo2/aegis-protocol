@@ -41,7 +41,8 @@ export function Header() {
         <div className="flex items-center gap-6 lg:gap-12">
           <NavLink to="/" className="flex items-center gap-3 text-ink no-underline" aria-label="Aegis home">
             <LogoMark />
-            <span className="font-serif text-[26px] tracking-[0.08em]">AEGIS</span>
+            {/* On the narrowest phones the coin alone carries the brand, so the header never scrolls sideways. */}
+            <span className="font-serif text-[26px] tracking-[0.08em] max-[379px]:hidden">AEGIS</span>
           </NavLink>
           <nav aria-label="Main" className="hidden gap-8 md:flex">
             <NavLink to="/registry" className={() => link({ isActive: inRegistry })} aria-current={inRegistry ? "page" : undefined}>
@@ -70,7 +71,7 @@ export function Header() {
             )}
           </nav>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Out here rather than in the main nav, so they stay visible on a phone. Test money only exists on devnet. */}
           {config.cluster === "devnet" && (
             <NavLink to="/faucet" className={({ isActive }) => `inline-flex h-11 items-center px-1 text-[15px] ${isActive ? "font-semibold text-ink underline underline-offset-8" : "text-mute hover:text-ink"}`}>
