@@ -1,5 +1,6 @@
-import { withBackup } from "./send";
 import { ComputeBudgetProgram, TransactionMessage, VersionedTransaction, type Connection, type PublicKey, type TransactionInstruction } from "@solana/web3.js";
+import { advanceInstruction, NONCE_UNITS, type Nonce } from "./nonce";
+import { withBackup } from "./send";
 
 export type PreparedTx = { transaction: VersionedTransaction; blockhash: string; lastValidBlockHeight: number };
 
@@ -13,7 +14,11 @@ export class SimulationError extends Error {
  * Simulates first, so a transaction that would fail is explained before the wallet is ever
  * opened, and so the compute limit can be sized to what it really uses (plus headroom).
  */
-export async function prepareTransaction(connection: Connection, payer: PublicKey, instructions: TransactionInstruction[]): Promise<PreparedTx> {
+/**
+ * With `nonce`, the transaction starts by advancing it and carries its value instead of a blockhash,
+ * so it stays valid however long a wallet takes (see chain/nonce). It is simulated without.
+ */
+export async function prepareTransaction(connection: Connection, payer: PublicKey, instructions: TransactionInstruction[], nonce?: Nonce): Promise<PreparedTx> {
   const { blockhash, lastValidBlockHeight } = await withBackup(connection, (c) => c.getLatestBlockhash("confirmed"));
   const build = (units: number) =>
     new VersionedTransaction(
@@ -29,5 +34,12 @@ export async function prepareTransaction(connection: Connection, payer: PublicKe
     throw new SimulationError(sim.value.logs ?? [], typeof sim.value.err === "string" ? sim.value.err : JSON.stringify(sim.value.err));
   }
   const used = sim.value.unitsConsumed ?? 400_000;
-  return { transaction: build(Math.min(1_400_000, Math.ceil(used * 1.2) + 10_000)), blockhash, lastValidBlockHeight };
+  const units = Math.min(1_400_000, Math.ceil(used * 1.2) + 10_000);
+  if (nonce) {
+    const transaction = new VersionedTransaction(
+      new TransactionMessage({ payerKey: payer, recentBlockhash: nonce.value, instructions: [advanceInstruction(nonce, payer), ComputeBudgetProgram.setComputeUnitLimit({ units: units + NONCE_UNITS }), ...instructions] }).compileToV0Message()
+    );
+    return { transaction, blockhash: nonce.value, lastValidBlockHeight };
+  }
+  return { transaction: build(units), blockhash, lastValidBlockHeight };
 }

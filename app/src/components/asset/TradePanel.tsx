@@ -4,7 +4,8 @@ import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { config, explorerUrl } from "../../config";
 import { useConnectModal } from "../connect/ConnectModal";
-import { approveAndSend, sendSigned } from "../../chain/send";
+import { ensureNonces, LAND_WITHIN_BLOCKS } from "../../chain/nonce";
+import { approveAndSend, sendSigned, withBackup } from "../../chain/send";
 import { loadAsset } from "../../chain/asset";
 import { GRADUATION_DEPOSIT_LAMPORTS, graduationTransactions } from "../../chain/graduate";
 import type { RegistryEntry } from "../../chain/registry";
@@ -34,12 +35,13 @@ const SLIPPAGES = [50, 100, 200] as const;
 
 type Phase =
   | { kind: "idle" }
-  | { kind: "busy"; step: "checking" | "signing" | "sending" | "confirming" }
+  | { kind: "busy"; step: "checking" | "preparing" | "signing" | "sending" | "confirming" }
   | { kind: "done"; side: Side; paid: string; received: string; signature: string; graduated: boolean | null }
   | { kind: "failed"; error: Explained };
 
 const STEP_TEXT = {
   checking: "Checking the latest price…",
+  preparing: "Approve a one-time wallet setup…",
   signing: "Approve in your wallet…",
   sending: "Sending…",
   confirming: "Confirming on-chain…",
@@ -173,13 +175,19 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
         throw Object.assign(new Error("price moved"), { logs: ["Error Code: ExceededSlippage"] });
       }
       const sol = isSol && wallet ? (side === "buy" ? fundSolBuy(wallet, amountIn) : { wrap: 0n, unwrap: !wallet.hasWrappedAccount }) : undefined;
-      const prepared = await prepareTrade(connection, { launch: fresh.launch, pool: fresh.detail.pool, accounts: accounts.data, owner: publicKey, side, amountIn, minimumOut, sol });
+      const request = { launch: fresh.launch, pool: fresh.detail.pool, accounts: accounts.data, owner: publicKey, side, amountIn, minimumOut, sol };
 
       // The buy that fills the sale also graduates it: the two permissionless graduation
       // transactions ride along, approved in the same wallet prompt, so no one is ever asked to
       // "graduate" separately. If they fail, the sale still completed and the fallback panel shows.
+      // Three transactions that depend on each other are slow for a wallet to preview, so they
+      // carry durable nonces and can't expire meanwhile; the first time, that takes a setup approval.
       const completes = side === "buy" && "fillsSale" in again && (again.fillsSale || again.nextSqrt >= state!.migrationSqrtPrice);
-      const bundle = completes && canGraduate && signAllTransactions ? graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash) : [];
+      const nonces = completes && canGraduate && signAllTransactions
+        ? await ensureNonces(connection, publicKey, signAllTransactions, () => setPhase({ kind: "busy", step: "preparing" }))
+        : null;
+      const prepared = await prepareTrade(connection, request, nonces?.[0]);
+      const bundle = nonces ? graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash, [nonces[1]!, nonces[2]!]) : [];
 
       setPhase({ kind: "busy", step: "signing" });
       let signature: string;
@@ -187,11 +195,13 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
       if (bundle.length) {
         const [buy, ...rest] = await signAllTransactions!([prepared.transaction, ...bundle]);
         setPhase({ kind: "busy", step: "confirming" });
-        signature = await sendSigned(connection, buy!, prepared.lastValidBlockHeight, true);
+        // Nonce transactions don't expire; this is how long to wait for each before giving up.
+        const patience = async () => (await withBackup(connection, (c) => c.getBlockHeight("confirmed"))) + LAND_WITHIN_BLOCKS;
+        signature = await sendSigned(connection, buy!, await patience(), true);
         graduated = true;
         for (const tx of rest) {
           try {
-            await sendSigned(connection, tx, prepared.lastValidBlockHeight, false);
+            await sendSigned(connection, tx, await patience(), false);
           } catch {
             graduated = false;
             break;
@@ -394,6 +404,11 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
               </button>
             )}
             <p id={`${inputId}-status`} className="sr-only" aria-live="assertive">{busy ? STEP_TEXT[phase.step] : ""}</p>
+            {phase.kind === "busy" && phase.step === "preparing" && (
+              <p className="text-[13px] leading-relaxed text-ink2">
+                One-time setup for this wallet: 8 small accounts, about 0.009 SOL in deposits that stay yours, so a purchase that also opens the bridge can’t expire while your wallet reviews it. The purchase approval follows straight after.
+              </p>
+            )}
             {accounts.isError && <p className="text-[13px] text-error">This sale’s trading accounts couldn’t be read. {explainTradeError(accounts.error).detail}</p>}
           </>
         )}

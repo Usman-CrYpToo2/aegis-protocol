@@ -17,6 +17,7 @@ import { PublicKey, TransactionInstruction, type AccountInfo, type Connection } 
 import type { LaunchAccount } from "./aegis";
 import { METEORA_DBC_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "./ids";
 import type { DbcPool } from "./meteora";
+import type { Nonce } from "./nonce";
 import { prepareTransaction, SimulationError, type PreparedTx } from "./tx";
 import { isNativeMint, unwrapInstruction, wrapInstructions } from "./wsol";
 
@@ -148,6 +149,7 @@ export function tradeInstructions({ launch, pool, accounts, owner, side, amountI
 export type PreparedTrade = PreparedTx;
 export { SimulationError };
 
-export async function prepareTrade(connection: Connection, request: TradeRequest): Promise<PreparedTrade> {
-  return prepareTransaction(connection, request.owner, tradeInstructions(request));
+/** With `nonce`, the trade doesn't expire while a wallet previews it alongside others (chain/nonce). */
+export async function prepareTrade(connection: Connection, request: TradeRequest, nonce?: Nonce): Promise<PreparedTrade> {
+  return prepareTransaction(connection, request.owner, tradeInstructions(request), nonce);
 }

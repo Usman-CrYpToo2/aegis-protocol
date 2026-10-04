@@ -13,6 +13,7 @@ import aegisIdl from "../idl/aegis.json";
 import type { LaunchAccount } from "./aegis";
 import { idlInstruction } from "./idlix";
 import { METEORA_DBC_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "./ids";
+import { advanceInstruction, NONCE_UNITS, type Nonce } from "./nonce";
 import { issueAddresses } from "./issue";
 import type { DbcConfig, DbcPool } from "./meteora";
 import { eventAuthority, poolAuthority, tokenVault } from "./trade";
@@ -109,13 +110,22 @@ export const GRADUATION_DEPOSIT_LAMPORTS = 35_000_000n;
 
 /**
  * The two graduation transactions, unsigned by the payer, sharing `blockhash` with the buy they
- * follow so a wallet can approve all three at once.
+ * follow so a wallet can approve all three at once. With `nonces` (one each, see chain/nonce) they
+ * carry those instead, and don't expire while the wallet previews them.
  */
-export function graduationTransactions(launch: LaunchAccount, payer: PublicKey, quoteProgram: PublicKey, blockhash: string): VersionedTransaction[] {
+export function graduationTransactions(launch: LaunchAccount, payer: PublicKey, quoteProgram: PublicKey, blockhash: string, nonces?: [Nonce, Nonce]): VersionedTransaction[] {
   const nfts = [Keypair.generate(), Keypair.generate()];
-  const tx = (units: number, ix: TransactionInstruction) =>
-    new VersionedTransaction(new TransactionMessage({ payerKey: payer, recentBlockhash: blockhash, instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units }), ix] }).compileToV0Message());
-  const migrate = tx(GRADUATION_UNITS.migrate, migrateInstruction(launch, payer, nfts[0]!.publicKey, nfts[1]!.publicKey, quoteProgram));
+  const tx = (units: number, ix: TransactionInstruction, nonce?: Nonce) =>
+    new VersionedTransaction(
+      new TransactionMessage({
+        payerKey: payer,
+        recentBlockhash: nonce ? nonce.value : blockhash,
+        instructions: nonce
+          ? [advanceInstruction(nonce, payer), ComputeBudgetProgram.setComputeUnitLimit({ units: units + NONCE_UNITS }), ix]
+          : [ComputeBudgetProgram.setComputeUnitLimit({ units }), ix],
+      }).compileToV0Message()
+    );
+  const migrate = tx(GRADUATION_UNITS.migrate, migrateInstruction(launch, payer, nfts[0]!.publicKey, nfts[1]!.publicKey, quoteProgram), nonces?.[0]);
   migrate.sign(nfts);
-  return [migrate, tx(GRADUATION_UNITS.finalize, finalizeInstruction(launch, payer))];
+  return [migrate, tx(GRADUATION_UNITS.finalize, finalizeInstruction(launch, payer), nonces?.[1])];
 }
