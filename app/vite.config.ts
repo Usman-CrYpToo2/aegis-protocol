@@ -7,12 +7,23 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
  * Production builds get a Content-Security-Policy. It is left out of dev because Vite's hot
  * reload injects inline scripts that a strict policy would block.
  *
- * The page talks to exactly one RPC endpoint (and its websocket), so `connect-src` names it and
- * nothing else: a compromised dependency cannot quietly send data anywhere.
+ * `connect-src` names every server the page talks to and nothing else, so a compromised dependency
+ * cannot quietly send data anywhere: the RPC endpoint (and its websocket), the listing endpoint,
+ * Solana's public devnet endpoint (the fallback for listing and for devnet SOL), and the two public
+ * price sources (chain/prices). Anything added to the app that talks to a new server must be added
+ * here too, or the browser will refuse it in production only.
  */
-function contentSecurityPolicy(rpcUrl: string): Plugin {
-  const rpc = new URL(rpcUrl);
+function contentSecurityPolicy(env: Record<string, string>): Plugin {
+  const rpc = new URL(env.VITE_RPC_URL || "http://127.0.0.1:8899");
   const ws = `${rpc.protocol === "https:" ? "wss:" : "ws:"}//${rpc.hostname}${rpc.port ? `:${Number(rpc.port) + 1}` : ""}`;
+  const origins = [
+    rpc.origin,
+    ws,
+    env.VITE_INDEX_RPC_URL ? new URL(env.VITE_INDEX_RPC_URL).origin : null,
+    env.VITE_CLUSTER === "devnet" ? "https://api.devnet.solana.com" : null,
+    "https://lite-api.jup.ag",
+    "https://api.coinbase.com",
+  ].filter(Boolean);
   const policy = [
     "default-src 'self'",
     "script-src 'self'",
@@ -20,8 +31,9 @@ function contentSecurityPolicy(rpcUrl: string): Plugin {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src https://fonts.gstatic.com",
     "img-src 'self' data: https:",
-    `connect-src 'self' ${rpc.origin} ${ws}`,
-    "frame-ancestors 'none'",
+    `connect-src 'self' ${[...new Set(origins)].join(" ")}`,
+    // frame-ancestors only works as an HTTP header (the host sets it); in a <meta> tag browsers
+    // ignore it and log an error, so it isn't here.
     "base-uri 'self'",
     "form-action 'none'",
   ].join("; ");
@@ -42,7 +54,7 @@ export default defineConfig(({ mode }) => {
       // web3.js and Anchor expect Node's Buffer in the browser. Tests run in Node, which has the
       // real one; polyfilling there would mix two Buffer types between our code and libraries.
       !process.env.VITEST && nodePolyfills({ include: ["buffer"], globals: { Buffer: true, global: false, process: false } }),
-      contentSecurityPolicy(env.VITE_RPC_URL || "http://127.0.0.1:8899"),
+      contentSecurityPolicy(env),
     ],
     server: { port: 5173, strictPort: true },
   };
