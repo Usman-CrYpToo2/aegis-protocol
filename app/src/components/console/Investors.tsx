@@ -1,16 +1,17 @@
-import { sendSigned } from "../../chain/send";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import type { PublicKey } from "@solana/web3.js";
+import type { PublicKey, VersionedTransaction } from "@solana/web3.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { config, explorerUrl } from "../../config";
 import type { ConsoleLaunch } from "../../chain/console";
-import { alreadyApproved, approvalDeposit, approvalTransactions, loadRegister } from "../../chain/investors";
+import { alreadyApproved, approvalChunks, approvalDeposit, approvalTransactions, loadRegister } from "../../chain/investors";
 import { TX_STEP, useTxRunner, type TxPhase } from "../../hooks/useTxRunner";
 import { LINE_NOTE, parseWalletLines } from "../../lib/addresses";
 import { formatUnits, shortAddress } from "../../lib/amount";
 import { PlainError, explainTradeError } from "../../lib/txErrors";
 import { removeInstruction } from "../../chain/powers";
+import { ensureNonces, LAND_WITHIN_BLOCKS, NONCE_COUNT } from "../../chain/nonce";
+import { sendSigned, withBackup } from "../../chain/send";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { Hint } from "../Hint";
 
@@ -36,17 +37,28 @@ function useApprove(launch: ConsoleLaunch) {
       const done = await alreadyApproved(connection, l, wallets);
       const todo = wallets.filter((_, i) => !done[i]);
       if (!todo.length) throw new PlainError("Already approved", "These wallets are already on the register.");
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-      const txs = await approvalTransactions(connection, l, publicKey, todo, blockhash);
-      const sim = await connection.simulateTransaction(txs[0]!, { sigVerify: false, commitment: "confirmed" });
-      if (sim.value.err) throw Object.assign(new Error(JSON.stringify(sim.value.err)), { logs: sim.value.logs ?? [] });
-      setPhase({ kind: "busy", step: "signing" });
-      const signed = signAllTransactions ? await signAllTransactions(txs) : await Promise.all(txs.map((x) => signTransaction!(x)));
-      setPhase({ kind: "busy", step: "confirming" });
+      // Several transactions in one approval can take a wallet longer to preview than a blockhash
+      // lasts, so they carry durable nonces (chain/nonce), at most eight per approval. Issuers
+      // already have their nonce accounts from launching, so this asks for nothing extra.
+      const signAll = (txs: VersionedTransaction[]) => (signAllTransactions ? signAllTransactions(txs) : Promise.all(txs.map((x) => signTransaction!(x))));
+      const chunks = approvalChunks(l, publicKey, todo);
+      const total = chunks.length;
       let signature = "";
-      for (const [i, x] of signed.entries()) {
-        setProgress({ at: i + 1, of: signed.length });
-        signature = await sendSigned(connection, x, lastValidBlockHeight, i === 0);
+      let sent = 0;
+      for (let at = 0; at < chunks.length; at += NONCE_COUNT) {
+        const wallets_ = chunks.slice(at, at + NONCE_COUNT).flat();
+        const nonces = await ensureNonces(connection, publicKey, signAll);
+        const txs = await approvalTransactions(connection, l, publicKey, wallets_, nonces[0]!.value, nonces);
+        const sim = await withBackup(connection, (c) => c.simulateTransaction(txs[0]!, { sigVerify: false, commitment: "confirmed" }));
+        if (sim.value.err) throw Object.assign(new Error(JSON.stringify(sim.value.err)), { logs: sim.value.logs ?? [] });
+        setPhase({ kind: "busy", step: "signing" });
+        const signed = await signAll(txs);
+        setPhase({ kind: "busy", step: "confirming" });
+        for (const [i, x] of signed.entries()) {
+          setProgress({ at: ++sent, of: total });
+          const patience = (await withBackup(connection, (c) => c.getBlockHeight("confirmed"))) + LAND_WITHIN_BLOCKS;
+          signature = await sendSigned(connection, x, patience, i === 0);
+        }
       }
       setApproved((prev) => [...prev, ...wallets.map(String)]);
       setPhase({ kind: "done", signature });

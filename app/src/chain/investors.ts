@@ -15,6 +15,7 @@ import type { LaunchAccount } from "./aegis";
 import { bridgeAddresses } from "./bridge";
 import { holderInstructions } from "./issue";
 import { ACCESS_CONTROL_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TRANSFER_RESTRICTIONS_PROGRAM_ID } from "./ids";
+import { advanceInstruction, NONCE_UNITS, sealInstruction, type Nonce } from "./nonce";
 
 const text = (s: string) => new TextEncoder().encode(s);
 const u64 = (v: bigint) => {
@@ -63,8 +64,9 @@ export function approvalChunks(launch: LaunchAccount, issuer: PublicKey, wallets
     try {
       const ixs = ws.flatMap((w, i) => approveInstructions(launch, issuer, w, BigInt(i)));
       const msg = new TransactionMessage({ payerKey: issuer, recentBlockhash: PublicKey.default.toBase58(), instructions: ixs }).compileToLegacyMessage();
-      // + one signature, + room for the two compute-budget instructions added when sending.
-      return new VersionedTransaction(msg).serialize().length + 80 <= 1232;
+      // + one signature, + room for what sending adds: the compute limit, the nonce advance and the
+      // co-signed seal (chain/nonce), about 260 bytes in all.
+      return new VersionedTransaction(msg).serialize().length + 260 <= 1232;
     } catch {
       return false;
     }
@@ -97,14 +99,27 @@ const UNITS_PER_WALLET = 110_000;
  * it landing), so each carries a fixed compute limit. Holder numbers are consecutive from the
  * register's next one.
  */
-export async function approvalTransactions(connection: Connection, launch: LaunchAccount, issuer: PublicKey, wallets: PublicKey[], blockhash: string): Promise<VersionedTransaction[]> {
+/**
+ * The approval transactions for `wallets`. With `nonces` (one per transaction, see chain/nonce) they
+ * don't expire while a wallet previews them, and each is sealed so a wallet can't rewrite it.
+ */
+export async function approvalTransactions(connection: Connection, launch: LaunchAccount, issuer: PublicKey, wallets: PublicKey[], blockhash: string, nonces?: Nonce[]): Promise<VersionedTransaction[]> {
   let next = await nextHolderId(connection, launch);
-  return approvalChunks(launch, issuer, wallets).map((chunk) => {
+  return approvalChunks(launch, issuer, wallets).map((chunk, i) => {
     const ixs = chunk.flatMap((w) => approveInstructions(launch, issuer, w, next++));
-    return new VersionedTransaction(new TransactionMessage({
-      payerKey: issuer, recentBlockhash: blockhash,
-      instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: UNITS_PER_WALLET * chunk.length }), ...ixs],
+    const nonce = nonces?.[i];
+    const seal = nonce ? sealInstruction() : null;
+    const tx = new VersionedTransaction(new TransactionMessage({
+      payerKey: issuer, recentBlockhash: nonce ? nonce.value : blockhash,
+      instructions: [
+        ...(nonce ? [advanceInstruction(nonce, issuer)] : []),
+        ComputeBudgetProgram.setComputeUnitLimit({ units: UNITS_PER_WALLET * chunk.length + (nonce ? NONCE_UNITS : 0) }),
+        ...ixs,
+        ...(seal ? [seal.instruction] : []),
+      ],
     }).compileToV0Message());
+    if (seal) tx.sign([seal.signer]);
+    return tx;
   });
 }
 
