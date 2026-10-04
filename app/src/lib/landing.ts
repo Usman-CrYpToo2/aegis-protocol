@@ -26,7 +26,7 @@ export type LandingSummary = {
   tape: TapeItem[];
 };
 
-export type RaisedTotal = { symbol: string; decimals: number; total: bigint; sol: boolean };
+export type RaisedTotal = { mint: string; symbol: string; decimals: number; total: bigint; sol: boolean };
 
 export type TapeItem = { key: string; text: string; strong?: string; tone: "plain" | "good" | "bad"; mint?: string };
 
@@ -63,7 +63,7 @@ export function summarize(registry: Registry | undefined): LandingSummary | null
     }
     if (e.raise && e.quote) {
       const key = e.quote.mint.toBase58();
-      const row = raised.get(key) ?? { symbol: e.quote.symbol, decimals: e.quote.decimals, total: 0n, sol: e.quote.mint.equals(NATIVE_MINT) };
+      const row = raised.get(key) ?? { mint: key, symbol: e.quote.symbol, decimals: e.quote.decimals, total: 0n, sol: e.quote.mint.equals(NATIVE_MINT) };
       row.total += e.raise.raised;
       raised.set(key, row);
     }

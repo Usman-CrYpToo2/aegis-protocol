@@ -9,7 +9,8 @@ import { Rosette } from "../components/landing/Rosette";
 import { useNow } from "../hooks/useNow";
 import { usePlatform } from "../hooks/usePlatform";
 import { useRegistry } from "../hooks/useRegistry";
-import { formatMoney, formatUnits } from "../lib/amount";
+import { formatUnits } from "../lib/amount";
+import { useUsdTotal } from "../hooks/useUsdPrices";
 import { ARCHETYPE_CEILING } from "../lib/curve";
 import { entryName, summarize, type LandingSummary } from "../lib/landing";
 import { poolFeeRange } from "../lib/terms";
@@ -159,7 +160,7 @@ function Stat({ label, children, delay, tone = "", note }: { label: string; chil
     <div className="flex flex-col gap-1.5 py-4 not-first:border-rule max-sm:[&:nth-child(-n+2)]:border-b sm:py-7 max-sm:even:border-l max-sm:even:pl-4 sm:not-first:border-l sm:not-first:pl-8">
       <span className={`${kb} !text-[10px] text-mute sm:!text-xs`}>{label}</span>
       <span className={`lp-roll font-serif text-[32px] leading-[1.05] num lg:text-[56px] ${tone}`}><span style={{ animationDelay: `${delay}s` }}>{children}</span></span>
-      {/* Other currencies raised, so a headline in one never hides money raised in another. */}
+      {/* Anything the total couldn't price, so it never hides money raised in another currency. */}
       {note && <span className="font-mono text-[11px] text-mute num sm:text-xs">{note}</span>}
     </div>
   );
@@ -173,12 +174,14 @@ function Stats({ summary, state }: { summary: LandingSummary | null; state: "loa
     : s.backing === "unknown" ? { text: "unverified", tone: "text-amber" }
     : s.backing === "none" ? { text: "—", tone: "text-mute" }
     : { text: "100%", tone: "text-green" };
+  // Sales raise in different currencies; the headline is one figure in US dollars at today's prices.
+  const raisedUsd = useUsdTotal(s ? s.raised.map((r) => ({ mint: r.mint, symbol: r.symbol, decimals: r.decimals, atoms: r.total })) : null);
   return (
     <section aria-label="Live numbers" className={wrap}>
       <div className="grid grid-cols-2 border-y border-ink sm:grid-cols-4">
         <Stat label="Units in escrow" delay={0.3}>{s ? whole(s.escrowed) : dash}</Stat>
-        <Stat label={`Raised${s?.raised[0] ? `, ${s.raised[0].symbol}` : ""}`} delay={0.42} note={s && s.raised.length > 1 ? s.raised.slice(1).map((r) => `+ ${formatMoney(r.total, r.decimals)} ${r.symbol}`).join(" ") : undefined}>
-          {s ? (s.raised[0] ? formatMoney(s.raised[0].total, s.raised[0].decimals) : "0") : dash}
+        <Stat label="Raised, USD" delay={0.42} note={raisedUsd.loading ? undefined : raisedUsd.note ?? undefined}>
+          {s && !raisedUsd.loading ? raisedUsd.text : dash}
         </Stat>
         <Stat label="Assets registered" delay={0.54}>{s ? s.assets : dash}</Stat>
         <Stat label="Backed" delay={0.66} tone={backed.tone}>{backed.text}</Stat>

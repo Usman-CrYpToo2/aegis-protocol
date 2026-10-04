@@ -3,7 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import type { Backing } from "../chain/backing";
 import { ProgramNotDeployedError, type Registry, type RegistryEntry } from "../chain/registry";
+import { Hint } from "../components/Hint";
 import { useRegistry } from "../hooks/useRegistry";
+import { useUsdTotal } from "../hooks/useUsdPrices";
+import type { CurrencyAmount } from "../lib/usd";
 import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
 import { GROUP_ORDER, STAGE, type StageGroup } from "../lib/stage";
 
@@ -191,12 +194,12 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
   const stats = useMemo(() => {
     if (!registry) return null;
     const active = registry.entries.filter((e) => e.launch.stage !== "Aborted");
-    const raised = new Map<string, { symbol: string; decimals: number; total: bigint }>();
+    const raised = new Map<string, CurrencyAmount>();
     for (const e of active) {
       if (!e.raise || !e.quote) continue;
       const key = e.quote.mint.toBase58();
-      const row = raised.get(key) ?? { symbol: e.quote.symbol, decimals: e.quote.decimals, total: 0n };
-      row.total += e.raise.raised;
+      const row = raised.get(key) ?? { mint: key, symbol: e.quote.symbol, decimals: e.quote.decimals, atoms: 0n };
+      row.atoms += e.raise.raised;
       raised.set(key, row);
     }
     const short = active.filter((e) => e.backing.kind === "short").length;
@@ -204,6 +207,8 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
     return { assets: active.length, open: active.filter((e) => e.launch.stage === "Live").length, raised: [...raised.values()], short, unknown };
   }, [registry]);
 
+  // Sales raise in different currencies; the total is one figure in US dollars at today's prices.
+  const raisedUsd = useUsdTotal(stats?.raised ?? null);
   const cell = "flex flex-col gap-1 py-5";
   const value = "font-serif text-[40px] leading-none num";
   // Once a read has failed, stop pretending to load: show a dash instead of a pulsing block.
@@ -224,17 +229,14 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
         {stats ? <span className={value}>{stats.open}</span> : skeleton}
       </div>
       <div className={`${cell} border-t border-rule`}>
-        <span className="kicker">Raised through Aegis</span>
-        {!stats ? (
+        <span className="flex items-center gap-1 kicker">Raised through Aegis<Hint>Every sale’s raise, added up in US dollars at today’s prices. Each sale shows its own currency on its page.</Hint></span>
+        {!stats || raisedUsd.loading ? (
           skeleton
-        ) : stats.raised.length === 0 ? (
-          <span className={value}>0</span>
         ) : (
-          stats.raised.map((r) => (
-            <span key={r.symbol + r.decimals} className={value}>
-              {formatMoney(r.total, r.decimals)} <span className="font-sans text-base text-mute">{r.symbol}</span>
-            </span>
-          ))
+          <>
+            <span className={value}>{raisedUsd.text}</span>
+            {raisedUsd.note && <span className="text-[12px] text-mute">{raisedUsd.note}</span>}
+          </>
         )}
       </div>
       <div className={`${cell} border-t border-l border-rule pl-6`}>

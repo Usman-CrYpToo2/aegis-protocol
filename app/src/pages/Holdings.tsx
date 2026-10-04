@@ -8,6 +8,8 @@ import { Hint } from "../components/Hint";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { useActivity, useHoldings } from "../hooks/useHoldings";
 import { useNow } from "../hooks/useNow";
+import { useUsdTotal } from "../hooks/useUsdPrices";
+import type { CurrencyAmount } from "../lib/usd";
 import { useRegistry } from "../hooks/useRegistry";
 import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
 
@@ -222,18 +224,21 @@ export function HoldingsPage() {
 
   const totals = useMemo(() => {
     const list = holdings.data ?? [];
-    const byQuote = new Map<string, { symbol: string; decimals: number; value: bigint }>();
+    const byQuote = new Map<string, CurrencyAmount>();
     let unpriced = 0;
     for (const h of list) {
       const q = h.entry.quote;
       if (h.value === null || !q) { unpriced += 1; continue; }
-      const row = byQuote.get(q.mint.toBase58()) ?? { symbol: q.symbol, decimals: q.decimals, value: 0n };
-      row.value += h.value;
+      const row = byQuote.get(q.mint.toBase58()) ?? { mint: q.mint.toBase58(), symbol: q.symbol, decimals: q.decimals, atoms: 0n };
+      row.atoms += h.value;
       byQuote.set(q.mint.toBase58(), row);
     }
     const short = list.filter((h) => h.entry.backing.kind === "short").length;
     return { values: [...byQuote.values()], unpriced, short };
   }, [holdings.data]);
+
+  // Holdings are priced in each sale's own currency; the total is one figure in US dollars.
+  const worthUsd = useUsdTotal(totals.values);
 
   const head = (right?: ReactNode) => (
     <section className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
@@ -279,16 +284,15 @@ export function HoldingsPage() {
   } else {
     const worth = (
       <div className="flex flex-col gap-1 lg:items-end">
-        <span className="flex items-center gap-1 kicker">Worth at current prices<Hint>Graduated assets at their live Meteora pool price; open offerings at the sale curve’s price.</Hint></span>
+        <span className="flex items-center gap-1 kicker">Worth at current prices<Hint>Graduated assets at their live Meteora pool price; open offerings at the sale curve’s price. Added up in US dollars at today’s prices.</Hint></span>
         {totals.values.length === 0 ? (
           <span className="font-serif text-5xl text-mute">—</span>
+        ) : worthUsd.loading ? (
+          <span className="mt-1 block h-12 w-40 animate-pulse bg-track" aria-label="Loading" />
         ) : (
-          totals.values.map((v) => (
-            <span key={v.symbol} className="font-serif text-5xl leading-none num lg:text-6xl">
-              {formatMoney(v.value, v.decimals)} <span className="font-sans text-xl text-mute">{v.symbol}</span>
-            </span>
-          ))
+          <span className="font-serif text-5xl leading-none num lg:text-6xl">{worthUsd.text}</span>
         )}
+        {!worthUsd.loading && worthUsd.note && <span className="text-[12px] text-mute">{worthUsd.note}</span>}
         <span className={`text-[13px] ${totals.short ? "text-error" : "text-mute"}`}>
           {totals.short ? `${totals.short} of your assets ${totals.short === 1 ? "is" : "are"} short of backing` : "All backed 1 : 1"}
           {totals.unpriced > 0 && ` · ${totals.unpriced} not priced yet`}
