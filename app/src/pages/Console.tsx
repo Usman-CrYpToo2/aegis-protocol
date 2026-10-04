@@ -6,6 +6,9 @@ import type { Attention, ConsoleLaunch } from "../chain/console";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { useConsole } from "../hooks/useConsole";
 import { useNow } from "../hooks/useNow";
+import { useUsdTotal } from "../hooks/useUsdPrices";
+import type { CurrencyAmount } from "../lib/usd";
+import { Hint } from "../components/Hint";
 import { useRegistry } from "../hooks/useRegistry";
 import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
 import { STAGE } from "../lib/stage";
@@ -120,15 +123,17 @@ export function ConsolePage() {
 
   const totals = useMemo(() => {
     const list = console_.data ?? [];
-    const sum = (pick: (l: ConsoleLaunch) => bigint) => {
-      const by = new Map<string, { symbol: string; decimals: number; total: bigint }>();
+    // Launches raise in different currencies, so totals are added up in dollars (useUsdTotal).
+    const sum = (pick: (l: ConsoleLaunch) => bigint): CurrencyAmount[] => {
+      const by = new Map<string, CurrencyAmount>();
       for (const l of list) {
         const quote = q(l);
         const v = pick(l);
         if (!quote || v === 0n) continue;
-        const row = by.get(quote.mint.toBase58()) ?? { symbol: quote.symbol, decimals: quote.decimals, total: 0n };
-        row.total += v;
-        by.set(quote.mint.toBase58(), row);
+        const key = quote.mint.toBase58();
+        const row = by.get(key) ?? { mint: key, symbol: quote.symbol, decimals: quote.decimals, atoms: 0n };
+        row.atoms += v;
+        by.set(key, row);
       }
       return [...by.values()];
     };
@@ -140,6 +145,9 @@ export function ConsolePage() {
       short: list.filter((l) => l.entry.backing.kind === "short").length,
     };
   }, [console_.data]);
+
+  const readyUsd = useUsdTotal(console_.data ? totals.ready : null);
+  const atGraduationUsd = useUsdTotal(console_.data ? totals.atGraduation : null);
 
   const shell = (children: ReactNode) => <div className="shell flex flex-col gap-10 pt-10 pb-24 lg:gap-12 lg:pt-14">{children}</div>;
   const title = (kicker: ReactNode, text: string, right?: ReactNode) => (
@@ -198,8 +206,21 @@ export function ConsolePage() {
 
   const cell = "flex flex-col gap-1.5 py-5";
   const big = "font-serif text-[40px] leading-none num";
-  const money2 = (rows: { symbol: string; decimals: number; total: bigint }[]) =>
-    rows.length === 0 ? <span className={`${big} text-mute`}>0</span> : rows.map((r) => <span key={r.symbol} className={big}>{formatUnits(r.total, r.decimals, { maxFraction: 2 })} <span className="font-sans text-base text-mute">{r.symbol}</span></span>);
+  // One dollar figure, whatever mix of currencies the launches raised in.
+  const usd = (total: ReturnType<typeof useUsdTotal>) =>
+    total.loading ? (
+      <span className="mt-1 block h-9 w-28 animate-pulse bg-track" aria-label="Loading" />
+    ) : (
+      <>
+        <span className={`${big} ${total.text === "$0" ? "text-mute" : ""}`}>{total.text}</span>
+        {total.note && <span className="text-[12px] text-mute">{total.note}</span>}
+      </>
+    );
+  // Unsold stock is a different security in each launch, so it is counted by launch, not added up.
+  const unsold =
+    totals.unsold.length === 1
+      ? `plus ${formatUnits(totals.unsold[0]!.unsold, totals.unsold[0]!.entry.launch.decimals, { maxFraction: 2 })} ${totals.unsold[0]!.entry.label?.symbol ?? ""} of unsold stock`
+      : `plus unsold stock in ${totals.unsold.length} launches`;
   const count = data.length === 1 ? "One entry" : data.length === 2 ? "Two entries" : data.length === 3 ? "Three entries" : `${data.length} entries`;
 
   return shell(<>
@@ -210,15 +231,13 @@ export function ConsolePage() {
 
     <section aria-label="Totals" className="grid grid-cols-1 border-y border-ink sm:grid-cols-2 xl:grid-cols-4">
       <div className={cell}>
-        <span className="kicker">Ready to collect now</span>
-        {money2(totals.ready)}
-        {totals.unsold.length > 0 && (
-          <span className="text-sm text-ink2">plus {totals.unsold.map((l) => `${formatUnits(l.unsold, l.entry.launch.decimals, { maxFraction: 2 })} ${l.entry.label?.symbol ?? ""}`).join(", ")} of unsold stock</span>
-        )}
+        <span className="flex items-center gap-1 kicker">Ready to collect now<Hint>Your share of every graduated raise, added up in US dollars at today’s prices. Each launch below shows its own currency.</Hint></span>
+        {usd(readyUsd)}
+        {totals.unsold.length > 0 && <span className="text-sm text-ink2">{unsold}</span>}
       </div>
       <div className={`${cell} border-t border-rule sm:border-t-0 sm:border-l sm:pl-6`}>
-        <span className="kicker">Unlocks at graduation</span>
-        {money2(totals.atGraduation)}
+        <span className="flex items-center gap-1 kicker">Unlocks at graduation<Hint>Your share of the raises still open, added up in US dollars at today’s prices.</Hint></span>
+        {usd(atGraduationUsd)}
         <span className="text-[13px] text-mute">Your share of raises still open</span>
       </div>
       <div className={`${cell} border-t border-rule xl:border-t-0 xl:border-l xl:pl-6`}>

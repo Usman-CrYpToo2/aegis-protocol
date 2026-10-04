@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fetchUsdPrices } from "../chain/prices";
-import { formatUsd, totalUsd } from "./usd";
+import { formatUsd, totalUsd, unpricedNote } from "./usd";
 
 const SOL = "So11111111111111111111111111111111111111112";
 
@@ -58,5 +58,13 @@ describe("formatUsd", () => {
     expect(formatUsd(123.456)).toBe("$123.46");
     expect(formatUsd(0.0123)).toBe("$0.0123");
     expect(formatUsd(0)).toBe("$0");
+  });
+});
+
+describe("unpricedNote", () => {
+  it("names one or two, and counts more, so the line never grows with the currency list", () => {
+    expect(unpricedNote([])).toBeNull();
+    expect(unpricedNote(["XYZ", "ABC"])).toBe("Not counted: XYZ and ABC (no price right now)");
+    expect(unpricedNote(["A", "B", "C", "D"])).toBe("Not counted: 4 currencies with no price right now");
   });
 });

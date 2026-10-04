@@ -28,5 +28,6 @@ export function formatUsd(usd: number): string {
   return `$${usd.toLocaleString("en-US", { minimumFractionDigits: digits === 4 ? 2 : digits, maximumFractionDigits: digits })}`;
 }
 
-/** The line under a dollar total that names anything it couldn't price. */
-export const unpricedNote = (unpriced: string[]) => (unpriced.length ? `Not counted: ${unpriced.join(", ")} (no price right now)` : null);
+/** The line under a dollar total about anything it couldn't price: named if one or two, counted if more. */
+export const unpricedNote = (unpriced: string[]) =>
+  unpriced.length === 0 ? null : unpriced.length <= 2 ? `Not counted: ${unpriced.join(" and ")} (no price right now)` : `Not counted: ${unpriced.length} currencies with no price right now`;
