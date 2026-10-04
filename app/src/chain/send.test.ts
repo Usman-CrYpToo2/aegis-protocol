@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { approveAndSend, confirmSignature, isExpired, isNetworkError } from "./send";
+import { approveAndSend, confirmSignature, isExpired, isNetworkError, sendSigned } from "./send";
 
 type Status = { err: unknown; confirmationStatus: string } | null;
 
@@ -84,5 +84,31 @@ describe("approveAndSend", () => {
     const p = approveAndSend(conn, wallet as never, tx, 1_000);
     await vi.runAllTimersAsync();
     expect(await p).toBe("walletsig");
+  });
+});
+
+describe("sendSigned", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+  const tx = { serialize: () => new Uint8Array([1]) } as never;
+
+  it("still sends a transaction a lagging server's pre-check didn't recognise", async () => {
+    const { conn } = fakeConnection([{ err: null, confirmationStatus: "confirmed" }]);
+    const calls: boolean[] = [];
+    (conn as { sendRawTransaction: unknown }).sendRawTransaction = vi.fn(async (_raw: Uint8Array, o: { skipPreflight: boolean }) => {
+      calls.push(o.skipPreflight);
+      if (!o.skipPreflight) throw new Error("failed to send transaction: Transaction simulation failed: Blockhash not found");
+      return "sig";
+    });
+    const p = sendSigned(conn, tx, 1_000, true);
+    await vi.runAllTimersAsync();
+    expect(await p).toBe("sig");
+    expect(calls).toEqual([false, true]);
+  });
+
+  it("never hides a real rejection", async () => {
+    const { conn } = fakeConnection([null]);
+    (conn as { sendRawTransaction: unknown }).sendRawTransaction = vi.fn(async () => { throw new Error("Transaction simulation failed: custom program error: 0x1771"); });
+    await expect(sendSigned(conn, tx, 1_000, true)).rejects.toThrow("0x1771");
   });
 });

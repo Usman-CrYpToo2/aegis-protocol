@@ -86,7 +86,17 @@ export async function confirmSignature(connection: Connection, signature: string
  */
 export async function sendSigned(connection: Connection, tx: VersionedTransaction, lastValidBlockHeight: number, check: boolean): Promise<string> {
   const raw = tx.serialize();
-  const signature = await withBackup(connection, (c) => c.sendRawTransaction(raw, { skipPreflight: !check, preflightCommitment: "confirmed", maxRetries: 0 }));
+  const send = (skipPreflight: boolean) => withBackup(connection, (c) => c.sendRawTransaction(raw, { skipPreflight, preflightCommitment: "confirmed", maxRetries: 0 }));
+  let signature: string;
+  try {
+    signature = await send(!check);
+  } catch (e) {
+    // A server a few slots behind the one that issued the blockhash doesn't know it yet, and its
+    // pre-check rejects a perfectly good transaction. Send it anyway and let the network decide:
+    // if it really is stale, the wait below ends in ExpiredError.
+    if (!check || !/blockhash not found/i.test(e instanceof Error ? e.message : String(e))) throw e;
+    signature = await send(true);
+  }
   broadcast(raw);
   await confirmSignature(connection, signature, lastValidBlockHeight, raw);
   return signature;
