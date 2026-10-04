@@ -1,5 +1,6 @@
 import type { AccountInfo, Connection, PublicKey } from "@solana/web3.js";
 import { config } from "../config";
+import { mapLimit } from "../lib/limit";
 import { sqrtPriceToQuoteAtoms } from "../lib/amount";
 import { fetchAllLaunches, isSet, type LaunchAccount } from "./aegis";
 import { assessBacking, type Backing } from "./backing";
@@ -43,15 +44,17 @@ export class ProgramNotDeployedError extends Error {
 
 type Info = AccountInfo<Uint8Array>;
 
-/** getMultipleAccountsInfo accepts at most 100 keys per call. */
+/**
+ * getMultipleAccountsInfo accepts at most 100 keys per call. A thousand assets are some seventy
+ * calls, so they go four at a time: quick, without bursting past a free plan's rate limit.
+ */
 export async function readMany(connection: Connection, keys: PublicKey[]): Promise<Map<string, Info | null>> {
   const unique = [...new Map(keys.map((k) => [k.toBase58(), k])).values()];
+  const chunks: PublicKey[][] = [];
+  for (let i = 0; i < unique.length; i += 100) chunks.push(unique.slice(i, i + 100));
+  const results = await mapLimit(chunks, 4, (chunk) => connection.getMultipleAccountsInfo(chunk, "confirmed"));
   const out = new Map<string, Info | null>();
-  for (let i = 0; i < unique.length; i += 100) {
-    const chunk = unique.slice(i, i + 100);
-    const infos = await connection.getMultipleAccountsInfo(chunk, "confirmed");
-    chunk.forEach((k, j) => out.set(k.toBase58(), infos[j] ?? null));
-  }
+  chunks.forEach((chunk, c) => chunk.forEach((k, j) => out.set(k.toBase58(), results[c]![j] ?? null)));
   return out;
 }
 

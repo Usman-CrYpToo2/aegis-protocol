@@ -7,6 +7,7 @@ import type { Connection, ParsedTransactionWithMeta, PublicKey, TokenBalance } f
 import { DAMM_V2_PROGRAM_ID } from "./damm";
 import { AEGIS_PROGRAM_ID, METEORA_DBC_PROGRAM_ID } from "./ids";
 import { holderAccounts, type Holding } from "./holdings";
+import { mapLimit } from "../lib/limit";
 
 export type ActivityKind = "bought" | "sold" | "redeemed" | "deposited" | "pool-trade" | "received" | "sent" | "approved";
 
@@ -22,6 +23,10 @@ export type Activity = {
 };
 
 const PER_ACCOUNT = 12;
+/** How many holdings the recent-activity list draws on: the largest ones. */
+const HISTORY_HOLDINGS = 15;
+/** A holding's size in whole units of its currency, to pick the largest; unpriced ones last. */
+const worth = (h: Holding) => (h.value === null || !h.entry.quote ? -1 : Number(h.value) / 10 ** h.entry.quote.decimals);
 const SHOWN = 20;
 
 /** The owner's change in `mint` across the transaction, from the runtime's own balance records. */
@@ -48,8 +53,15 @@ export async function loadActivity(connection: Connection, owner: PublicKey, hol
   const me = owner.toBase58();
   const seen = new Map<string, { time: number | null; holding: Holding; approval: boolean }>();
 
-  await Promise.all(
-    holdings.map(async (h) => {
+  // History comes from the largest holdings, a few requests at a time: three lookups per holding,
+  // all at once, would trip a free plan's rate limit for anyone holding more than a handful.
+  const largest = [...holdings]
+    .sort((a, b) => worth(b) - worth(a))
+    .slice(0, HISTORY_HOLDINGS);
+  await mapLimit(
+    largest,
+    4,
+    async (h) => {
       const a = holderAccounts(h.entry, owner);
       const lists = await Promise.all([
         connection.getSignaturesForAddress(a.security, { limit: PER_ACCOUNT }, "confirmed"),
@@ -62,7 +74,7 @@ export async function loadActivity(connection: Connection, owner: PublicKey, hol
       }
       const approval = lists[2]!.filter((x) => !x.err).at(-1);
       if (approval) seen.set(approval.signature, { time: approval.blockTime ?? null, holding: h, approval: true });
-    })
+    }
   );
 
   const recent = [...seen.entries()].sort((x, y) => (y[1].time ?? 0) - (x[1].time ?? 0)).slice(0, SHOWN);
