@@ -4,13 +4,24 @@ import { config, explorerUrl } from "../config";
 import type { Backing } from "../chain/backing";
 import { ProgramNotDeployedError, type Registry, type RegistryEntry } from "../chain/registry";
 import { Hint } from "../components/Hint";
+import { ShowMore, usePaged } from "../components/ShowMore";
 import { useRegistry } from "../hooks/useRegistry";
 import { useUsdTotal } from "../hooks/useUsdPrices";
 import type { CurrencyAmount } from "../lib/usd";
-import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
+import { formatMoney, formatPrice, formatUnits, percentOf, shortAddress } from "../lib/amount";
 import { GROUP_ORDER, STAGE, type StageGroup } from "../lib/stage";
 
 type Filter = "all" | StageGroup;
+
+/** How the list is ordered. Stage keeps open offerings on top; the others answer a buyer's question. */
+type Sort = "stage" | "filling" | "name";
+const SORTS: { id: Sort; label: string }[] = [
+  { id: "stage", label: "Stage" },
+  { id: "filling", label: "Closest to filling" },
+  { id: "name", label: "Name, A to Z" },
+];
+/** Rows per page: enough to scan, few enough that a thousand assets stay quick on a phone. */
+const PAGE = 25;
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
@@ -112,7 +123,7 @@ function PriceCell({ entry }: { entry: RegistryEntry }) {
   if (entry.price !== null && entry.quote) {
     return (
       <span className="font-mono text-base num">
-        {formatUnits(entry.price, entry.quote.decimals, { maxFraction: 4, minFraction: 3 })}{" "}
+        {formatPrice(entry.price, entry.quote.decimals)}{" "}
         <span className="text-xs text-mute">{entry.quote.symbol}</span>
       </span>
     );
@@ -328,14 +339,18 @@ export function RegistryPage() {
   };
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<Sort>("stage");
 
   const sorted = useMemo(() => {
     const entries = registry.data?.entries ?? [];
-    return [...entries].sort((a, b) => {
-      const g = GROUP_ORDER[STAGE[a.launch.stage].group] - GROUP_ORDER[STAGE[b.launch.stage].group];
-      return g !== 0 ? g : assetName(a).localeCompare(assetName(b));
-    });
-  }, [registry.data]);
+    const byName = (a: RegistryEntry, b: RegistryEntry) => assetName(a).localeCompare(assetName(b));
+    const byStage = (a: RegistryEntry, b: RegistryEntry) => GROUP_ORDER[STAGE[a.launch.stage].group] - GROUP_ORDER[STAGE[b.launch.stage].group];
+    // Progress is comparable across currencies; amounts aren't. Sales without a raise sort last.
+    const progress = (e: RegistryEntry) => (e.launch.stage === "Live" && e.raise ? percentOf(e.raise.raised, e.raise.target) : -1);
+    return [...entries].sort((a, b) =>
+      sort === "name" ? byName(a, b) : sort === "filling" ? progress(b) - progress(a) || byStage(a, b) || byName(a, b) : byStage(a, b) || byName(a, b)
+    );
+  }, [registry.data, sort]);
 
   const counts = useMemo(() => {
     const c: Record<Filter, number> = { all: 0, open: 0, graduated: 0, preparing: 0, withdrawn: 0 };
@@ -357,6 +372,7 @@ export function RegistryPage() {
     });
   }, [sorted, filter, query]);
 
+  const page = usePaged(visible, PAGE, `${filter}|${query}|${sort}`);
   const data = registry.data;
   const notDeployed = registry.error instanceof ProgramNotDeployedError;
   const refreshing = registry.isFetching;
@@ -426,7 +442,7 @@ export function RegistryPage() {
             </tr>
           </thead>
           <tbody>
-            {visible.map((e) => (
+            {page.shown.map((e) => (
               <tr key={e.launch.address.toBase58()} onClick={(ev) => openRow(ev, e.launch.realRwaMint.toBase58())} className={`cursor-pointer border-b border-rule align-middle hover:bg-surface ${e.launch.stage === "Aborted" ? "opacity-60" : ""}`}>
                 <td className="max-w-[26rem] py-5 pr-6"><AssetCell entry={e} /></td>
                 <td className="py-5 pr-6"><StageCell entry={e} /></td>
@@ -440,7 +456,7 @@ export function RegistryPage() {
 
         {/* Narrow screens: one card per asset, no sideways scrolling. */}
         <ul className="flex flex-col md:hidden">
-          {visible.map((e) => (
+          {page.shown.map((e) => (
             <li key={e.launch.address.toBase58()} className={`flex flex-col gap-3 border-b border-rule py-5 ${e.launch.stage === "Aborted" ? "opacity-60" : ""}`}>
               <AssetCell entry={e} />
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -502,8 +518,14 @@ export function RegistryPage() {
               </button>
             ))}
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <label className="flex h-10 items-center gap-2 border border-line bg-surface px-3 focus-within:border-ink sm:w-80">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <label className="flex h-10 items-center gap-2 text-sm text-ink2">
+              <span className="shrink-0">Sort by</span>
+              <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="h-10 w-full min-w-0 border border-line bg-surface px-2 text-sm text-ink outline-none focus:border-ink sm:w-auto">
+                {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            </label>
+            <label className="flex h-10 items-center gap-2 border border-line bg-surface px-3 focus-within:border-ink sm:w-72">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C574C" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" />
                 <path d="M20 20l-4-4" />
@@ -524,6 +546,7 @@ export function RegistryPage() {
         )}
 
         {body}
+        <ShowMore shown={page.shown.length} total={page.total} pageSize={PAGE} more={page.more} noun="assets" />
 
         {data && (
           <p className="mt-3 flex items-center gap-3 font-mono text-xs text-mute">

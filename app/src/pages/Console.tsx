@@ -8,6 +8,11 @@ import { useConsole } from "../hooks/useConsole";
 import { useNow } from "../hooks/useNow";
 import { useUsdTotal } from "../hooks/useUsdPrices";
 import type { CurrencyAmount } from "../lib/usd";
+import { ShowMore, usePaged } from "../components/ShowMore";
+
+/** Launches per page, and to-do items shown before "show more": the console stays a working list. */
+const LAUNCH_PAGE = 10;
+const ATTENTION_PAGE = 8;
 import { Hint } from "../components/Hint";
 import { useRegistry } from "../hooks/useRegistry";
 import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
@@ -146,6 +151,16 @@ export function ConsolePage() {
     };
   }, [console_.data]);
 
+  // Launches that need the issuer come first, then live sales, graduated ones, and the rest.
+  const ordered = useMemo(() => {
+    const list = console_.data ?? [];
+    const needs = new Set(console_.attention.map((a) => a.launch.entry.launch.address.toBase58()));
+    const rank = (l: ConsoleLaunch) => (needs.has(l.entry.launch.address.toBase58()) ? 0 : l.entry.launch.stage === "Live" ? 1 : l.entry.launch.stage === "Graduated" ? 2 : 3);
+    return [...list].sort((a, b) => rank(a) - rank(b) || name(a).localeCompare(name(b)));
+  }, [console_.data, console_.attention]);
+  const launchesPage = usePaged(ordered, LAUNCH_PAGE);
+  const attentionPage = usePaged(console_.attention, ATTENTION_PAGE);
+
   const readyUsd = useUsdTotal(console_.data ? totals.ready : null);
   const atGraduationUsd = useUsdTotal(console_.data ? totals.atGraduation : null);
 
@@ -262,7 +277,7 @@ export function ConsolePage() {
           <span>ASSET</span><span>STAGE</span><span>WAITING FOR YOU</span><span />
         </div>
         <ul className="flex flex-col">
-          {data.map((l) => (
+          {launchesPage.shown.map((l) => (
             <li key={l.entry.launch.address.toBase58()} className="grid grid-cols-1 gap-3 border-b border-rule py-5 md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,2fr)_7rem] md:items-center md:gap-6">
               <span className="flex flex-col gap-0.5">
                 <span className="font-serif text-[28px] leading-tight">{name(l)}</span>
@@ -281,10 +296,11 @@ export function ConsolePage() {
             </li>
           ))}
         </ul>
-
+        <ShowMore shown={launchesPage.shown.length} total={launchesPage.total} pageSize={LAUNCH_PAGE} more={launchesPage.more} noun="launches" />
       </section>
 
-      <aside aria-label="Needs your attention" className="flex flex-col border border-ink bg-surface">
+      {/* On a phone the to-do comes before the list of launches: it's what the issuer came to act on. */}
+      <aside aria-label="Needs your attention" className="order-first flex flex-col border border-ink bg-surface xl:order-none">
         <div className="flex items-baseline justify-between border-b border-ink px-5 py-4">
           <h2 className="text-[17px] font-semibold">Needs your attention</h2>
           <span className="font-mono text-xs text-mute">{console_.attention.length} {console_.attention.length === 1 ? "item" : "items"}</span>
@@ -292,7 +308,10 @@ export function ConsolePage() {
         {console_.attention.length === 0 ? (
           <p className="px-5 py-6 text-sm text-ink2">Nothing needs you right now.</p>
         ) : (
-          <ul>{console_.attention.map((a) => <AttentionItem key={`${a.kind}-${a.launch.entry.launch.address.toBase58()}`} a={a} />)}</ul>
+          <>
+            <ul>{attentionPage.shown.map((a) => <AttentionItem key={`${a.kind}-${a.launch.entry.launch.address.toBase58()}`} a={a} />)}</ul>
+            <div className="px-5"><ShowMore shown={attentionPage.shown.length} total={attentionPage.total} pageSize={ATTENTION_PAGE} more={attentionPage.more} noun="items" /></div>
+          </>
         )}
 
       </aside>

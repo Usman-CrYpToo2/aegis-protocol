@@ -8,10 +8,14 @@ import { Hint } from "../components/Hint";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { useActivity, useHoldings } from "../hooks/useHoldings";
 import { useNow } from "../hooks/useNow";
-import { useUsdTotal } from "../hooks/useUsdPrices";
+import { useUsdPrices, useUsdTotal } from "../hooks/useUsdPrices";
+import { ShowMore, usePaged } from "../components/ShowMore";
+
+/** Holdings per page: a portfolio stays scannable however many assets it holds. */
+const HOLDINGS_PAGE = 20;
 import type { CurrencyAmount } from "../lib/usd";
 import { useRegistry } from "../hooks/useRegistry";
-import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
+import { formatMoney, formatPrice, formatUnits, percentOf, shortAddress } from "../lib/amount";
 
 // ------------------------------------------------------------------------------------------------
 // Pieces
@@ -82,7 +86,7 @@ function HoldingRow({ h, address }: { h: Holding; address: string }) {
   const q = entry.quote;
   const graduated = launch.stage === "Graduated";
   const short = entry.backing.kind === "short";
-  const priceText = h.price !== null && q ? `${h.priceSource === "pool" ? "pool" : "sale"} price ${formatUnits(h.price, q.decimals, { maxFraction: 4, minFraction: 3 })}` : "";
+  const priceText = h.price !== null && q ? `${h.priceSource === "pool" ? "pool" : "sale"} price ${formatPrice(h.price, q.decimals)}` : "";
 
   let status: ReactNode;
   if (short) {
@@ -240,6 +244,18 @@ export function HoldingsPage() {
   // Holdings are priced in each sale's own currency; the total is one figure in US dollars.
   const worthUsd = useUsdTotal(totals.values);
 
+  // Largest first, in dollars so holdings in different currencies compare; unpriced ones last.
+  const prices = useUsdPrices(totals.values.map((v) => ({ mint: v.mint, symbol: v.symbol })));
+  const ordered = useMemo(() => {
+    const usd = (h: Holding) => {
+      const q = h.entry.quote;
+      const p = q && h.value !== null ? prices.data?.get(q.mint.toBase58()) : undefined;
+      return p === undefined || !q || h.value === null ? -1 : (Number(h.value) / 10 ** q.decimals) * p;
+    };
+    return [...(holdings.data ?? [])].sort((a, b) => usd(b) - usd(a));
+  }, [holdings.data, prices.data]);
+  const page = usePaged(ordered, HOLDINGS_PAGE);
+
   const head = (right?: ReactNode) => (
     <section className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
       <div className="flex flex-col gap-4">
@@ -315,8 +331,9 @@ export function HoldingsPage() {
               <span>ASSET</span><span>YOU HOLD</span><span>WHAT YOU CAN DO</span><span />
             </div>
             <ul className="flex flex-col">
-              {holdings.data.map((h) => <HoldingRow key={h.entry.launch.address.toBase58()} h={h} address={publicKey.toBase58()} />)}
+              {page.shown.map((h) => <HoldingRow key={h.entry.launch.address.toBase58()} h={h} address={publicKey.toBase58()} />)}
             </ul>
+            <ShowMore shown={page.shown.length} total={page.total} pageSize={HOLDINGS_PAGE} more={page.more} noun="holdings" />
 
           </section>
         )}
