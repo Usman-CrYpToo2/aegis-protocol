@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import { dripInstructions, faucetKind, MAX_WHOLE_PER_CLAIM, requestSol } from "../chain/faucet";
+import { rpcConfig } from "../chain/rpc";
 import { useConnectModal } from "../components/connect/ConnectModal";
 import { usePlatform } from "../hooks/usePlatform";
 import { TX_STEP, useTxRunner } from "../hooks/useTxRunner";
@@ -117,7 +118,7 @@ export function FaucetPage() {
       setAirdrop({ kind: "busy" });
       try {
         // Our endpoint first, then Solana's public one, which limits each visitor separately.
-        const signature = await requestSol([connection, new Connection(PUBLIC_DEVNET, "confirmed")], connection, to, Number(amount));
+        const signature = await requestSol([connection, new Connection(PUBLIC_DEVNET, rpcConfig())], connection, to, Number(amount));
         setAirdrop({ kind: "done", signature });
       } catch {
         setAirdrop({ kind: "failed" });

@@ -1,5 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { rpcConfig } from "./chain/rpc";
+import { WalletWaitNotice } from "./components/WalletWaitNotice";
+
+/** Every request to the RPC endpoint has a time limit; see chain/rpc. */
+const RPC_CONFIG = rpcConfig();
 import type { WalletError } from "@solana/wallet-adapter-base";
 import { useCallback, useRef, useState } from "react";
 import { ConnectModalProvider } from "./components/connect/ConnectModal";
@@ -42,6 +47,7 @@ function AppShell() {
         <Outlet />
       </main>
       <Footer />
+      <WalletWaitNotice />
     </div>
   );
 }
@@ -64,7 +70,7 @@ export function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ConnectionProvider endpoint={config.rpcUrl} config={{ commitment: "confirmed" }}>
+      <ConnectionProvider endpoint={config.rpcUrl} config={RPC_CONFIG}>
         {/* An empty list means "every wallet that implements the Wallet Standard", which is
             how Phantom, Solflare and Backpack register themselves today. */}
         <WalletProvider wallets={[]} autoConnect onError={onWalletError}>

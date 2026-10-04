@@ -14,6 +14,7 @@
  */
 import { Connection, type VersionedTransaction } from "@solana/web3.js";
 import { config } from "../config";
+import { rpcConfig } from "./rpc";
 
 /** The transaction's blockhash ran out before it landed. Nothing in it happened. */
 export class ExpiredError extends Error {
@@ -27,11 +28,11 @@ export const isExpired = (e: unknown): e is ExpiredError => Boolean(e && typeof 
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const backup = config.indexRpcUrl && config.indexRpcUrl !== config.rpcUrl ? new Connection(config.indexRpcUrl, "confirmed") : null;
+const backup = config.indexRpcUrl && config.indexRpcUrl !== config.rpcUrl ? new Connection(config.indexRpcUrl, rpcConfig()) : null;
 
 /** The endpoint couldn't be reached or refused for load; not an answer about the transaction. */
 export const isNetworkError = (e: unknown) =>
-  /fetch|network|socket|ECONN|ETIMEDOUT|timed? ?out|\b50[0234]\b|\b429\b/i.test(e instanceof Error ? e.message : String(e));
+  /fetch|network|socket|abort|ECONN|ETIMEDOUT|timed? ?out|\b50[0234]\b|\b429\b/i.test(e instanceof Error ? e.message : String(e));
 
 /** Runs `call` on the main endpoint, and once more on the backup if the main one couldn't be reached. */
 export async function withBackup<T>(connection: Connection, call: (c: Connection) => Promise<T>): Promise<T> {

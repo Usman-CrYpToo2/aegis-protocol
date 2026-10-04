@@ -1,5 +1,6 @@
 import { Connection, type GetProgramAccountsConfig, type PublicKey } from "@solana/web3.js";
 import { config } from "../config";
+import { LISTING_TIMEOUT_MS, rpcConfig } from "./rpc";
 import { withBackup } from "./send";
 
 let index: Connection | null = null;
@@ -15,9 +16,9 @@ let publicDevnet: Connection | null = null;
  */
 export async function programAccounts(connection: Connection, programId: PublicKey, options: GetProgramAccountsConfig) {
   const routes: Connection[] = [];
-  if (config.indexRpcUrl) routes.push((index ??= new Connection(config.indexRpcUrl, "confirmed")));
+  if (config.indexRpcUrl) routes.push((index ??= new Connection(config.indexRpcUrl, rpcConfig(LISTING_TIMEOUT_MS))));
   routes.push(connection);
-  if (config.cluster === "devnet") routes.push((publicDevnet ??= new Connection("https://api.devnet.solana.com", "confirmed")));
+  if (config.cluster === "devnet") routes.push((publicDevnet ??= new Connection("https://api.devnet.solana.com", rpcConfig(LISTING_TIMEOUT_MS))));
   let last: unknown;
   for (const via of routes) {
     try {
