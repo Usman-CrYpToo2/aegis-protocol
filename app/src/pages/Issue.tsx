@@ -252,18 +252,27 @@ function TermsStep({ terms, setTerms, platform, preview, yours = false }: { term
           {platform.quotes.length > 1 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-5 py-3">
               <span id="pay-in" className="text-[15px] text-ink2">Buyers pay in</span>
-              <div role="radiogroup" aria-labelledby="pay-in" className="flex">
-                {platform.quotes.map((q) => {
-                  const on = q.mint.toBase58() === terms.quote;
-                  return (
-                    <button key={q.mint.toBase58()} type="button" role="radio" aria-checked={on}
-                      onClick={() => !on && setTerms({ ...terms, quote: q.mint.toBase58(), ...amountDefaults(q) })}
-                      className={`-ml-px min-h-10 min-w-16 cursor-pointer border px-3 font-mono text-sm first:ml-0 ${on ? "relative border-ink bg-ink text-paper" : "border-line text-ink hover:border-ink"}`}>
-                      {q.symbol}
-                    </button>
-                  );
-                })}
-              </div>
+              {platform.quotes.length <= 3 ? (
+                <div role="radiogroup" aria-labelledby="pay-in" className="flex">
+                  {platform.quotes.map((q) => {
+                    const on = q.mint.toBase58() === terms.quote;
+                    return (
+                      <button key={q.mint.toBase58()} type="button" role="radio" aria-checked={on}
+                        onClick={() => !on && setTerms({ ...terms, quote: q.mint.toBase58(), ...amountDefaults(q) })}
+                        className={`-ml-px min-h-10 min-w-16 cursor-pointer border px-3 font-mono text-sm first:ml-0 ${on ? "relative border-ink bg-ink text-paper" : "border-line text-ink hover:border-ink"}`}>
+                        {q.symbol}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Many currencies don't fit as buttons; the same choice as a list.
+                <select aria-labelledby="pay-in" value={terms.quote}
+                  onChange={(e) => { const q = platform.quotes.find((x) => x.mint.toBase58() === e.target.value); if (q) setTerms({ ...terms, quote: e.target.value, ...amountDefaults(q) }); }}
+                  className="min-h-10 min-w-32 border border-line bg-white px-3 font-mono text-sm outline-none focus:border-ink">
+                  {platform.quotes.map((q) => <option key={q.mint.toBase58()} value={q.mint.toBase58()}>{q.symbol}</option>)}
+                </select>
+              )}
             </div>
           )}
           <div className="px-5 pb-2">{rows?.map(([k, v]) => <Row key={k} k={k}>{v}</Row>)}</div>

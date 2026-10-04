@@ -173,10 +173,10 @@ export const saleTermsGuide: DocPage = {
         caption="Sale terms"
         head={["Term", "What it controls", "Allowed", "Recommended"]}
         rows={[
-          ["Currency", "What buyers pay with, and what you raise.", f.quotes.length ? f.quotes.map((q) => q.symbol).join(", ") : "Currencies the admin approved", "USDC"],
+          ["Currency", "What buyers pay with, and what you raise.", <>Any <DocLink to="/docs/addresses#currencies">approved currency</DocLink></>, "USDC"],
           ["Opening price", "What the first buyer pays for one unit.", "Above zero", "1.00 USDC, or 0.01 SOL"],
           ["Sale type and rise", "How far the price may rise over the sale.", ceilings.map((c) => `${c.label} up to ${ceilingLabel(c.multiple)}`).join(" · "), "Book building, 1.21×"],
-          ["Raise target", "How much the sale raises. Reaching it ends the sale.", f.quotes.length ? f.quotes.map((q) => `at least ${q.minRaise} ${q.symbol}`).join(" · ") : "At least the currency’s minimum", "10,000 USDC, or 10 SOL"],
+          ["Raise target", "How much the sale raises. Reaching it ends the sale.", <>At least the currency’s <DocLink to="/docs/addresses#currencies">minimum raise</DocLink></>, "10,000 USDC, or 10 SOL"],
           ["Cash share", "How much of the raise you take as cash. The rest becomes the pool.", f.cash, "50%"],
           ["Pool lock", `How your ${f.issuerLp} of the pool is locked.`, `Forever, released over ${f.vesting}, or a mix`, "30% forever, the rest over 12 months"],
           ["Pool fee", "The trading fee in the pool after graduation.", f.poolFee, "1%"],
@@ -192,7 +192,7 @@ export const saleTermsGuide: DocPage = {
         <li><strong className="text-ink">USDC</strong> suits most real-world assets. Their value is usually stated in dollars, so the price buyers see and the money you raise keep a steady value.</li>
         <li><strong className="text-ink">SOL</strong> reaches buyers who hold SOL and nothing else. Your raise, and the pool’s price, then move with SOL’s own price.</li>
       </List>
-      <P>Each currency has its own minimum raise, shown in the table above.</P>
+      <P>Each currency has its own minimum raise, listed with the <DocLink to="/docs/addresses#currencies">approved currencies</DocLink>.</P>
 
       <H2 id="type">Choosing a sale type</H2>
       <P>Pick the narrowest band that suits the asset. A narrow band tells buyers the price will stay close to where you opened it; a wide band lets demand decide more.</P>
