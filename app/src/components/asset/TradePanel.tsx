@@ -12,7 +12,7 @@ import type { RegistryEntry } from "../../chain/registry";
 import { loadTradeAccounts, prepareTrade, type Side } from "../../chain/trade";
 import { useRentRate, useWalletBalances } from "../../hooks/useWalletBalances";
 import { FEE_ALLOWANCE, isNativeMint, planSolBuy, rentFor, solReserve, spendableSol, WRAPPER_ACCOUNT_BYTES, type SolWallet } from "../../chain/wsol";
-import { formatMoney, formatUnits, parseUnits, sqrtPriceToQuoteAtoms, toInputText } from "../../lib/amount";
+import { formatMoney, formatPrice, formatUnits, parseUnits, sqrtPriceToQuoteAtoms, toInputText } from "../../lib/amount";
 import { quoteBuy, quoteSell, remainingToFill, withSlippage, type CurveState } from "../../lib/swap";
 import { explainTradeError, type Explained } from "../../lib/txErrors";
 
@@ -129,7 +129,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
   const canGraduate = solAfterBuy >= GRADUATION_DEPOSIT_LAMPORTS;
   const fmtIn = (v: bigint) => formatUnits(v, inDecimals, { maxFraction: 4 });
   const fmtOut = (v: bigint) => formatUnits(v, side === "buy" ? launch.decimals : q.decimals, { maxFraction: 4 });
-  const fmtPrice = (v: bigint) => formatUnits(v, q.decimals, { maxFraction: 4, minFraction: 3 });
+  const fmtPrice = (v: bigint) => formatPrice(v, q.decimals);
 
   // What stops the button, in the order a person would want to hear it.
   let blocker: string | null = null;

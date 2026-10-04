@@ -19,7 +19,7 @@ import { TradePanel } from "../components/asset/TradePanel";
 import { useAsset } from "../hooks/useAsset";
 import { useChangeFlash } from "../hooks/useChangeFlash";
 import { useNow } from "../hooks/useNow";
-import { formatMoney, formatUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms } from "../lib/amount";
+import { formatMoney, formatPrice, formatUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms } from "../lib/amount";
 import { ARCHETYPE_CEILING, ceilingPrice } from "../lib/curve";
 
 // ------------------------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ function Stats({ entry, readAt, onProof }: { entry: RegistryEntry; readAt: numbe
   return (
     <section aria-label="Key numbers" className="grid grid-cols-2 border-y border-ink sm:grid-cols-4 sm:divide-x sm:divide-rule">
       <Stat label={launch.stage === "Live" ? "Price" : launch.stage === "Graduated" ? "Final sale price" : "Opening price"} hint={`Price of one ${wsym} in ${quote?.symbol ?? "the quote token"}, on Meteora’s bonding curve.`}>
-        <span key={flash} className={`-mx-1 px-1 ${flash}`}>{price !== null ? q(price, 4) : "—"}</span> <span className="font-sans text-sm text-mute">{quote?.symbol}</span>
+        <span key={flash} className={`-mx-1 px-1 ${flash}`}>{price !== null && quote ? formatPrice(price, quote.decimals) : "—"}</span> <span className="font-sans text-sm text-mute">{quote?.symbol}</span>
       </Stat>
       <Stat label="Raised" sub={raise ? <span className="flex items-center gap-2"><span className="block h-1 w-20 bg-track"><span className="bar-fill block h-1 bg-ink" style={{ width: `${pct}%` }} /></span>{pct}% of {q(raise.target)}</span> : "Opens with the sale"}>
         {raise ? q(raise.raised) : "—"} <span className="font-sans text-sm text-mute">{quote?.symbol}</span>
@@ -102,13 +102,14 @@ function Terms({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig | null
   const d = launch.decimals;
   const cap = ARCHETYPE_CEILING[launch.archetype];
   const q = (v: bigint, f?: number) => (quote ? `${f === undefined ? formatMoney(v, quote.decimals) : formatUnits(v, quote.decimals, { maxFraction: f, minFraction: f })} ${quote.symbol}` : "—");
+  const qp = (v: bigint) => (quote ? `${formatPrice(v, quote.decimals)} ${quote.symbol}` : "—");
   return (
     <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
       <div>
         {terms ? (
           <>
-            <Row label="Opening price">{q(startPrice(terms, d), 4)}</Row>
-            <Row label="Price at graduation" hint="The sale closes here and the permanent pool opens at the same price, so it doesn’t jump.">{q(endPrice(terms, d), 4)}</Row>
+            <Row label="Opening price">{qp(startPrice(terms, d))}</Row>
+            <Row label="Price at graduation" hint="The sale closes here and the permanent pool opens at the same price, so it doesn’t jump.">{qp(endPrice(terms, d))}</Row>
             <Row label="Price ceiling" hint="Set by the sale type. The curve can never pass it.">{cap.multiple} · {cap.label}</Row>
             <Row label="Raise target">{q(terms.migrationQuoteThreshold)}</Row>
             <Row label="Fee per sale trade">{(terms.curveFeeBps / 100).toFixed(2)}%</Row>
@@ -446,7 +447,7 @@ export function AssetPage() {
           >
             <span>Buy {entry.wrapperLabel?.symbol ?? ""}</span>
             <span className="font-mono text-sm num">
-              {formatUnits(entry.price, entry.quote.decimals, { maxFraction: 4, minFraction: 3 })} {entry.quote.symbol}
+              {formatPrice(entry.price, entry.quote.decimals)} {entry.quote.symbol}
             </span>
           </a>
         </div>

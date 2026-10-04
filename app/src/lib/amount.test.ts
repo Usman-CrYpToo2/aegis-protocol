@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMoney, formatUnits, parseUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms, toInputText } from "./amount";
+import { formatMoney, formatPrice, formatUnits, parseUnits, percentOf, shortAddress, sqrtPriceToQuoteAtoms, toInputText } from "./amount";
 
 describe("formatUnits", () => {
   it("groups thousands and trims trailing zeros", () => {
@@ -78,5 +78,17 @@ describe("formatMoney", () => {
     expect(formatMoney(850_000_000n, 9)).toBe("0.85"); // 0.85 SOL, not "0"
     expect(formatMoney(1_234_567n, 9)).toBe("0.0012");
     expect(formatMoney(0n, 9)).toBe("0");
+  });
+});
+
+describe("formatPrice", () => {
+  it("rounds a square-root price back to what the issuer set", () => {
+    expect(formatPrice(4_999_999n, 6)).toBe("5.00"); // a 5.00 opening price, read back from the curve
+    expect(formatPrice(49_999_900n, 6)).toBe("50.00");
+    expect(formatPrice(49_999_999n, 9)).toBe("0.05"); // 0.05 SOL
+    expect(formatPrice(5_270_500n, 6)).toBe("5.271");
+    expect(formatPrice(7_499_400n, 6)).toBe("7.499");
+    expect(formatPrice(1_234_567_000n, 6)).toBe("1,235");
+    expect(formatPrice(0n, 6)).toBe("0");
   });
 });

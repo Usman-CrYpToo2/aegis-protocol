@@ -40,6 +40,23 @@ export function moneyFraction(atoms: bigint, decimals: number): number {
 export const formatMoney = (atoms: bigint, decimals: number) => formatUnits(atoms, decimals, { maxFraction: moneyFraction(atoms, decimals) });
 
 /**
+ * A price, rounded to four significant figures: 5.00, 50.00, 0.05, 5.271, 1,235.
+ *
+ * Prices come from Meteora's square-root prices, which can't hold every decimal exactly, so a sale
+ * opened at 5.00 reads back as 4.99999… Cutting digits off would show 4.9999; rounding shows what
+ * the issuer set. Four figures is the precision a price is read at.
+ */
+export function formatPrice(atoms: bigint, decimals: number): string {
+  if (atoms <= 0n) return "0";
+  const value = Number(atoms) / 10 ** decimals;
+  const whole = Math.floor(Math.log10(value)) + 1;
+  const fraction = Math.max(0, Math.min(decimals, 4 - whole));
+  const step = 10n ** BigInt(decimals - fraction);
+  const rounded = ((atoms + step / 2n) / step) * step;
+  return formatUnits(rounded, decimals, { maxFraction: fraction, minFraction: Math.min(2, fraction) });
+}
+
+/**
  * Meteora stores price as a Q64.64 square root in atoms of quote per atom of base. Returns the
  * price of one whole base token in quote atoms, so it can be formatted with the quote's decimals.
  */

@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { DbcConfig } from "../../chain/meteora";
-import { formatUnits, sqrtPriceToQuoteAtoms } from "../../lib/amount";
+import { formatPrice, formatUnits, sqrtPriceToQuoteAtoms } from "../../lib/amount";
 import { sampleCurve, sqrtAtSold, walkCurve } from "../../lib/curve";
 
 type Props = {
@@ -76,7 +76,7 @@ export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingL
   }, [terms, sqrtNow, ceiling, baseDecimals, W]);
 
   const { first, last, soldNow, priceNow, x, y } = model;
-  const fmtPrice = (v: bigint) => formatUnits(v, quote.decimals, { maxFraction: 4, minFraction: 3 });
+  const fmtPrice = (v: bigint) => formatPrice(v, quote.decimals);
   const fmtSold = (v: bigint) => formatUnits(v, baseDecimals, { maxFraction: 0 });
   const fmtQuote = (v: bigint) => formatUnits(v, quote.decimals, { maxFraction: 2 });
 
@@ -138,6 +138,8 @@ export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingL
   // Keep the tooltip inside the chart: flip to the left of the cursor near the right edge.
   const tipLeft = readout ? Math.min(Math.max(cx, 8), W - 8) : 0;
   const tipFlip = readout ? cx > W * 0.6 : false;
+  /** The graduation point is within a label's height of the ceiling line. */
+  const atCeiling = Math.abs(y(ceiling) - y(last.price)) < 24;
 
   return (
     <figure className="m-0 flex flex-col gap-3">
@@ -157,8 +159,12 @@ export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingL
         <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-auto max-w-full" aria-hidden="true">
           {/* ceiling */}
           <line x1={PAD.left} x2={W - PAD.right} y1={y(ceiling)} y2={y(ceiling)} stroke="#7E2A1E" strokeWidth="1.5" strokeDasharray="6 5" />
+          {/* When the sale graduates at (or right under) the ceiling, the two labels would sit on top of
+              each other, so one label says both. */}
           <text x={W - PAD.right} y={y(ceiling) - 8} textAnchor="end" fill="#7E2A1E" style={LABEL}>
-            {narrow ? `ceiling · ${fmtPrice(ceiling)}` : `Ceiling for ${ceilingLabel} · ${fmtPrice(ceiling)} — the curve can never pass this`}
+            {atCeiling
+              ? narrow ? `ceiling · graduates at ${fmtPrice(last.price)}` : `Ceiling for ${ceilingLabel} · ${fmtPrice(ceiling)} · the sale graduates here${fmtPrice(last.price) === fmtPrice(ceiling) ? "" : `, at ${fmtPrice(last.price)}`}`
+              : narrow ? `ceiling · ${fmtPrice(ceiling)}` : `Ceiling for ${ceilingLabel} · ${fmtPrice(ceiling)} — the curve can never pass this`}
           </text>
           {/* axes */}
           <line x1={PAD.left} x2={W - PAD.right} y1={model.baseline} y2={model.baseline} stroke="#16140F" />
@@ -188,7 +194,7 @@ export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingL
 
           {/* graduation */}
           <circle cx={x(last.sold)} cy={y(last.price)} r="5" fill="#16140F" />
-          <text x={x(last.sold) - 12} y={y(last.price) - 12} textAnchor="end" fill="#16140F" style={LABEL}>graduation · {fmtPrice(last.price)}</text>
+          {!atCeiling && <text x={x(last.sold) - 12} y={y(last.price) - 12} textAnchor="end" fill="#16140F" style={LABEL}>graduation · {fmtPrice(last.price)}</text>}
 
           {/* now, with a slow ring that says "this is live" */}
           {!finished && soldNow !== null && priceNow !== null && (
