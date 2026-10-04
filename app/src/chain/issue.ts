@@ -22,6 +22,7 @@ import { termsArgs } from "../lib/terms";
 import { decodeLaunch, type LaunchAccount } from "./aegis";
 import { borsh, idlInstruction } from "./idlix";
 import { ACCESS_CONTROL_PROGRAM_ID, AEGIS_HOOK_PROGRAM_ID, AEGIS_PROGRAM_ID, METEORA_DBC_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, TRANSFER_RESTRICTIONS_PROGRAM_ID } from "./ids";
+import { advanceInstruction, NONCE_UNITS, type Nonce } from "./nonce";
 import { platformConfigAddress, quoteTokenAddress } from "./platform";
 import { eventAuthority, poolAuthority, tokenVault } from "./trade";
 
@@ -263,7 +264,12 @@ export type LaunchPlan = {
  * Every step still to do, as signed-by-keypairs transactions sharing one blockhash, in order.
  * The wallet signs them all at once; they are then sent one after another.
  */
-export function launchTransactions(plan: LaunchPlan, remaining: StepId[], blockhash: string): { id: StepId; tx: VersionedTransaction }[] {
+/**
+ * The launch's transactions, in order. With `nonces`, step i starts by advancing nonces[i] and uses
+ * its value in place of a blockhash, so the batch doesn't expire while a wallet previews it; see
+ * chain/nonce. Without them it uses `blockhash`, which lasts about a minute.
+ */
+export function launchTransactions(plan: LaunchPlan, remaining: StepId[], blockhash: string, nonces?: Nonce[]): { id: StepId; tx: VersionedTransaction }[] {
   const { mint, issuer } = plan;
   const a = issueAddresses(mint, issuer);
   const config = plan.terms ? Keypair.generate() : null;
@@ -289,9 +295,18 @@ export function launchTransactions(plan: LaunchPlan, remaining: StepId[], blockh
       case "open": return { ixs: openInstructions(target, issuer, crwa.publicKey, plan.quoteProgram, plan.wrapper), signers: [crwa] };
     }
   };
-  return remaining.map((id) => {
+  return remaining.map((id, i) => {
     const { ixs, signers } = build(id);
-    const tx = new VersionedTransaction(new TransactionMessage({ payerKey: issuer, recentBlockhash: blockhash, instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: STEP_UNITS[id] }), ...ixs] }).compileToV0Message());
+    const nonce = nonces?.[i];
+    const instructions = [ComputeBudgetProgram.setComputeUnitLimit({ units: STEP_UNITS[id] + (nonce ? NONCE_UNITS : 0) }), ...ixs];
+    const tx = new VersionedTransaction(
+      new TransactionMessage({
+        payerKey: issuer,
+        recentBlockhash: nonce ? nonce.value : blockhash,
+        // The nonce advance has to be the very first instruction.
+        instructions: nonce ? [advanceInstruction(nonce, issuer), ...instructions] : instructions,
+      }).compileToV0Message()
+    );
     if (signers.length) tx.sign(signers);
     return { id, tx };
   });

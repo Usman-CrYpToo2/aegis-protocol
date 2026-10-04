@@ -7,7 +7,8 @@ import { config, explorerUrl } from "../config";
 import type { LaunchAccount } from "../chain/aegis";
 import { STEP_IDS, abortInstructions, launchTransactions, loadIssueProgress, nextHolderIdFor, type AssetDetails, type StepId } from "../chain/issue";
 import type { Platform } from "../chain/platform";
-import { ExpiredError, isExpired, sendSigned, withBackup } from "../chain/send";
+import { ensureNonces, LAND_WITHIN_BLOCKS, type Nonce } from "../chain/nonce";
+import { isExpired, sendSigned, withBackup } from "../chain/send";
 import { usePlatform } from "../hooks/usePlatform";
 import { decodeMint, mintLabel } from "../chain/token";
 import { useConnectModal } from "../components/connect/ConnectModal";
@@ -49,68 +50,61 @@ function useSol() {
 
 type Run =
   | { kind: "idle" }
-  /** `again`: the last approval came back after its blockhash ran out, so the wallet is asked once more. */
-  | { kind: "signing"; again?: boolean }
+  /** A one-time setup approval: the wallet's nonce accounts (see chain/nonce). */
+  | { kind: "preparing" }
+  | { kind: "signing" }
   | { kind: "sending"; at: number; of: number; ids: StepId[]; done: Partial<Record<StepId, string>> }
   | { kind: "failed"; at: StepId | null; error: Explained; done: Partial<Record<StepId, string>> };
-
-/** Blocks a signed batch must still have left to be worth sending: time for its first steps to land. */
-const SEND_MARGIN_BLOCKS = 30;
-/** How many times the wallet is asked before giving up on a slow approval. */
-const MAX_APPROVALS = 2;
 
 /**
  * The wallet approves every remaining step at once; they are then sent in order, each waiting for
  * the last. If one fails, everything before it is already on-chain, and the page resumes from there.
+ *
+ * The steps carry durable nonces instead of a recent blockhash. A blockhash lasts about a minute,
+ * and a wallet previewing eight transactions that each depend on the last can take longer than that
+ * just to show the approval, so a blockhash batch could be dead before anyone saw it. A nonce
+ * transaction stays valid until it lands. The nonce accounts are made once per wallet, in a short
+ * setup approval the first time.
  */
 function useLaunchRunner() {
   const { connection } = useConnection();
-  const { signAllTransactions, signTransaction } = useWallet();
+  const { publicKey, signAllTransactions, signTransaction } = useWallet();
   const queryClient = useQueryClient();
   const [run, setRun] = useState<Run>({ kind: "idle" });
 
-  const start = async (build: (blockhash: string) => Promise<{ id: StepId; tx: VersionedTransaction }[]>): Promise<"done" | "partial" | "none"> => {
+  const signAll = (txs: VersionedTransaction[]) => (signAllTransactions ? signAllTransactions(txs) : Promise.all(txs.map((tx) => signTransaction!(tx))));
+
+  const start = async (build: (nonces: Nonce[]) => Promise<{ id: StepId; tx: VersionedTransaction }[]>): Promise<"done" | "partial" | "none"> => {
     const done: Partial<Record<StepId, string>> = {};
     let at: StepId | null = null;
     try {
-      // A transaction carries a recent blockhash that the network honours for about 150 blocks, a
-      // minute or so. Reviewing many transactions in a wallet can take longer than that, and a batch
-      // signed too late is silently dropped. So the time left is checked before anything is sent,
-      // and a late approval is rebuilt with a fresh blockhash and asked for once more.
-      let signed: VersionedTransaction[] = [];
-      let ids: StepId[] = [];
-      let lastValidBlockHeight = 0;
-      for (let attempt = 1; ; attempt++) {
-        setRun({ kind: "signing", again: attempt > 1 });
-        const latest = await withBackup(connection, (c) => c.getLatestBlockhash("confirmed"));
-        const batch = await build(latest.blockhash);
-        // The first step can be checked against the chain before anyone signs.
-        const sim = await withBackup(connection, (c) => c.simulateTransaction(batch[0]!.tx, { sigVerify: false, commitment: "confirmed" }));
-        if (sim.value.err) throw Object.assign(new Error(JSON.stringify(sim.value.err)), { logs: sim.value.logs ?? [] });
-        signed = signAllTransactions ? await signAllTransactions(batch.map((b) => b.tx)) : await Promise.all(batch.map((b) => signTransaction!(b.tx)));
-        ids = batch.map((b) => b.id);
-        lastValidBlockHeight = latest.lastValidBlockHeight;
-        const height = await withBackup(connection, (c) => c.getBlockHeight("confirmed"));
-        if (height + SEND_MARGIN_BLOCKS <= lastValidBlockHeight) break;
-        if (attempt >= MAX_APPROVALS) throw new ExpiredError("approval");
-      }
+      if (!publicKey) throw new Error("Connect your wallet first.");
+      const nonces = await ensureNonces(connection, publicKey, signAll, () => setRun({ kind: "preparing" }));
+      setRun({ kind: "signing" });
+      const batch = await build(nonces);
+      // The first step can be checked against the chain before anyone signs.
+      const sim = await withBackup(connection, (c) => c.simulateTransaction(batch[0]!.tx, { sigVerify: false, commitment: "confirmed" }));
+      if (sim.value.err) throw Object.assign(new Error(JSON.stringify(sim.value.err)), { logs: sim.value.logs ?? [] });
+      const signed = await signAll(batch.map((b) => b.tx));
+      const ids = batch.map((b) => b.id);
       for (const [i, tx] of signed.entries()) {
         at = ids[i]!;
         setRun({ kind: "sending", at: i + 1, of: signed.length, ids, done: { ...done } });
         // Each step waits for the one before: it uses the accounts that step creates.
-        done[at] = await sendSigned(connection, tx, lastValidBlockHeight, i === 0);
+        const patience = (await withBackup(connection, (c) => c.getBlockHeight("confirmed"))) + LAND_WITHIN_BLOCKS;
+        done[at] = await sendSigned(connection, tx, patience, i === 0);
       }
       setRun({ kind: "idle" });
       return "done";
     } catch (e) {
-      // A blockhash that ran out part-way is the network being slow, not the launch being wrong:
-      // everything sent so far is on-chain and saved, and the rest goes out with a fresh one.
+      // A step that didn't land in time is the network being slow, not the launch being wrong:
+      // everything sent so far is on-chain and saved, and approving again sends the rest.
       const landed = Object.keys(done).length;
-      const error = isExpired(e) && landed
-        ? { title: "The network was slow", detail: `${landed} ${landed === 1 ? "step" : "steps"} went through and ${landed === 1 ? "is" : "are"} saved. Approve once more to finish the rest; nothing is repeated.`, retry: true, charged: true }
-        : isExpired(e)
-          ? { title: "The approval took too long", detail: "The network only accepts an approval for about a minute, so nothing was sent and nothing was spent. Launch again and approve a little sooner.", retry: true, charged: false }
-          : explainTradeError(e, ISSUE_ERRORS);
+      const error = isExpired(e)
+        ? landed
+          ? { title: "The network was slow", detail: `${landed} ${landed === 1 ? "step" : "steps"} went through and ${landed === 1 ? "is" : "are"} saved. Approve once more to finish the rest; nothing is repeated.`, retry: true, charged: true }
+          : { title: "The network didn’t take it", detail: "Nothing landed and nothing was spent. Try again in a moment.", retry: true, charged: false }
+        : explainTradeError(e, ISSUE_ERRORS);
       setRun({ kind: "failed", at, error, done });
       return Object.keys(done).length ? "partial" : "none";
     } finally {
@@ -120,16 +114,19 @@ function useLaunchRunner() {
   return { run, start };
 }
 
-/** While the wallet is open: how long an approval lasts, and why it is being asked for again. */
+/** While the wallet is open: what it is being asked for. */
 function SigningNote({ run }: { run: Run }) {
-  if (run.kind !== "signing") return null;
-  return (
-    <p role="status" className={`text-[13px] leading-relaxed ${run.again ? "text-amber" : "text-ink2"}`}>
-      {run.again
-        ? "Your approval took longer than the network allows, so nothing was sent. Approve once more; it’s the same launch."
-        : "Approve within about a minute. The network only accepts an approval for that long."}
-    </p>
-  );
+  if (run.kind === "preparing") {
+    return (
+      <p role="status" className="text-[13px] leading-relaxed text-ink2">
+        One-time setup for this wallet: approve creating 8 small accounts that keep a launch’s approval from expiring while you review it. They hold about 0.009 SOL in deposits that stay yours. Your launch approval follows straight after.
+      </p>
+    );
+  }
+  if (run.kind === "signing") {
+    return <p role="status" className="text-[13px] leading-relaxed text-ink2">Approve in your wallet. Take your time: this approval doesn’t expire.</p>;
+  }
+  return null;
 }
 
 function Progress({ run, ids }: { run: Run; ids: StepId[] }) {
@@ -323,7 +320,7 @@ function NewLaunch({ platform }: { platform: Platform }) {
   const need = platform.config.creationFeeLamports + DEPOSITS_LAMPORTS;
   const short = balance.data !== undefined && balance.data < need;
   const blocker = details ? termsBlocker(terms, platform, totalSupply, asset.decimals) : "Fill in the asset first.";
-  const busy = runner.run.kind === "signing" || runner.run.kind === "sending";
+  const busy = runner.run.kind === "preparing" || runner.run.kind === "signing" || runner.run.kind === "sending";
   const result = readTerms(terms, platform.quotes, platform.config);
   const preview = <TermsPreview result={result} platform={platform.config} totalSupply={totalSupply} decimals={asset.decimals} symbol={details?.symbol ?? ""} curveFeeBps={platform.config.curveFeeBps} issuerCurveFeeSharePct={platform.config.issuerCurveFeeSharePct} />;
 
@@ -332,12 +329,12 @@ function NewLaunch({ platform }: { platform: Platform }) {
     const rwa = Keypair.generate();
     saveTerms(rwa.publicKey.toBase58(), terms);
     const wrapperName = bytes(`Wrapped ${details.name}`) <= 32 ? `Wrapped ${details.name}` : details.name;
-    const outcome = await runner.start(async (blockhash) => launchTransactions({
+    const outcome = await runner.start(async (nonces) => launchTransactions({
       mint: rwa.publicKey, issuer: me, feeRecipient: platform.config.feeRecipient,
       create: { keypair: rwa, details }, terms: { quoteMint: result.quote.mint, terms: result.terms },
       quoteProgram: result.quote.program, decimals: details.decimals, wrapper: { name: wrapperName, symbol: `c${details.symbol}`, uri: "" },
       firstHolderId: 0n, existing: null,
-    }, [...STEP_IDS], blockhash));
+    }, [...STEP_IDS], nonces[0]!.value, nonces));
     // Anything that landed is on-chain now: the launch's own page shows it, and finishes it if needed.
     if (outcome !== "none") {
       writeDraft(me.toBase58(), null);
@@ -375,7 +372,7 @@ function NewLaunch({ platform }: { platform: Platform }) {
         {short && <p role="alert" className="text-[13px] text-error">You need about {sol(need)} SOL.</p>}
         {platform.config.isPaused && <p role="alert" className="text-[13px] text-error">Aegis isn’t accepting launches right now.</p>}
         <button type="button" className={`${btn} mt-1`} disabled={busy || short || platform.config.isPaused || Boolean(blocker)} onClick={() => void launch()}>
-          {runner.run.kind === "signing" ? "Approve in your wallet…" : runner.run.kind === "sending" ? `Launching… ${runner.run.at} of ${runner.run.of}` : "Launch · approve once"}
+          {runner.run.kind === "preparing" ? "Preparing your wallet…" : runner.run.kind === "signing" ? "Approve in your wallet…" : runner.run.kind === "sending" ? `Launching… ${runner.run.at} of ${runner.run.of}` : "Launch · approve once"}
         </button>
         <SigningNote run={runner.run} />
         <p className="text-[13px] leading-relaxed text-mute">One wallet approval covers all {STEP_IDS.length} transactions. The terms are final once launched.</p>
@@ -456,7 +453,7 @@ function Continue({ mint, platform }: { mint: PublicKey; platform: Platform }) {
   const needsTerms = !p.done.terms;
   const blocker = needsTerms ? termsBlocker(terms, platform, launch.totalSupply, launch.decimals) : null;
   const result = readTerms(terms, platform.quotes, platform.config);
-  const busy = runner.run.kind === "signing" || runner.run.kind === "sending";
+  const busy = runner.run.kind === "preparing" || runner.run.kind === "signing" || runner.run.kind === "sending";
   const preview = <TermsPreview result={result} platform={platform.config} totalSupply={launch.totalSupply} decimals={launch.decimals} symbol={symbol} curveFeeBps={platform.config.curveFeeBps} issuerCurveFeeSharePct={platform.config.issuerCurveFeeSharePct} />;
 
   const finish = async () => {
@@ -466,12 +463,12 @@ function Continue({ mint, platform }: { mint: PublicKey; platform: Platform }) {
     if (!quote || (needsTerms && !result.ok)) return;
     const wrapperName = bytes(`Wrapped ${name}`) <= 32 ? `Wrapped ${name}` : name;
     const first = p.done.register ? await nextHolderIdFor(connection, mint) : 0n;
-    await runner.start(async (blockhash) => launchTransactions({
+    await runner.start(async (nonces) => launchTransactions({
       mint, issuer: me, feeRecipient: platform.config.feeRecipient,
       terms: needsTerms && result.ok ? { quoteMint: result.quote.mint, terms: result.terms } : undefined,
       quoteProgram: quote.program, decimals: launch.decimals, wrapper: { name: wrapperName, symbol: `c${symbol}`, uri: "" },
       firstHolderId: first, existing: needsTerms ? null : { meteoraConfig: fresh.meteoraConfig, quoteMint: fresh.quoteMint },
-    }, remaining, blockhash));
+    }, remaining, nonces[0]!.value, nonces));
   };
 
   return (
@@ -496,7 +493,7 @@ function Continue({ mint, platform }: { mint: PublicKey; platform: Platform }) {
           {needsTerms && previewBox(preview)}
           {blocker && <p role="alert" className="text-sm text-error">{blocker}</p>}
           <button type="button" className={btn} disabled={busy || Boolean(blocker)} onClick={() => void finish()}>
-            {runner.run.kind === "signing" ? "Approve in your wallet…" : runner.run.kind === "sending" ? `Launching… ${runner.run.at} of ${runner.run.of}` : "Finish launch · approve once"}
+            {runner.run.kind === "preparing" ? "Preparing your wallet…" : runner.run.kind === "signing" ? "Approve in your wallet…" : runner.run.kind === "sending" ? `Launching… ${runner.run.at} of ${runner.run.of}` : "Finish launch · approve once"}
           </button>
           <SigningNote run={runner.run} />
           {(launch.stage === "Funded" || launch.stage === "Configured") && p.done.yourself && <Cancel launch={launch} supply={supply} symbol={symbol} />}
