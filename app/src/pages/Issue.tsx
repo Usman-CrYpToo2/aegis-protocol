@@ -54,7 +54,8 @@ type Run =
   | { kind: "preparing" }
   | { kind: "signing" }
   | { kind: "sending"; at: number; of: number; ids: StepId[]; done: Partial<Record<StepId, string>> }
-  | { kind: "failed"; at: StepId | null; error: Explained; done: Partial<Record<StepId, string>> };
+  /** `raw`: the underlying message and the program's last log lines, for when the plain words aren't enough. */
+  | { kind: "failed"; at: StepId | null; error: Explained; done: Partial<Record<StepId, string>>; raw: string };
 
 /**
  * The wallet approves every remaining step at once; they are then sent in order, each waiting for
@@ -105,7 +106,9 @@ function useLaunchRunner() {
           ? { title: "The network was slow", detail: `${landed} ${landed === 1 ? "step" : "steps"} went through and ${landed === 1 ? "is" : "are"} saved. Approve once more to finish the rest; nothing is repeated.`, retry: true, charged: true }
           : { title: "The network didn’t take it", detail: "Nothing landed and nothing was spent. Try again in a moment.", retry: true, charged: false }
         : explainTradeError(e, ISSUE_ERRORS);
-      setRun({ kind: "failed", at, error, done });
+      const logs = (e as { logs?: string[] } | null)?.logs ?? [];
+      const raw = [e instanceof Error ? e.message : String(e), ...logs.slice(-4)].join("\n");
+      setRun({ kind: "failed", at, error, done, raw });
       return Object.keys(done).length ? "partial" : "none";
     } finally {
       for (const key of ["issue", "registry", "console", "sol", "asset"]) void queryClient.invalidateQueries({ queryKey: [key] });
@@ -153,6 +156,8 @@ function Progress({ run, ids }: { run: Run; ids: StepId[] }) {
   );
 }
 
+const at = (run: Extract<Run, { kind: "failed" }>) => (run.at ? `At step: ${run.at}\n` : "");
+
 function RunError({ run }: { run: Run }) {
   if (run.kind !== "failed") return null;
   const landed = Object.keys(run.done).length;
@@ -161,6 +166,10 @@ function RunError({ run }: { run: Run }) {
       <strong className="text-error">{run.error.title}</strong>
       <span className="leading-relaxed text-ink2">{run.error.detail}</span>
       {landed > 0 && <span className="text-mute">{landed} steps already landed and are saved. Finishing continues from the next one.</span>}
+      <details className="mt-1 text-[12px] text-mute">
+        <summary className="cursor-pointer">Technical details</summary>
+        <pre className="mt-1 whitespace-pre-wrap break-all font-mono">{at(run)}{run.raw}</pre>
+      </details>
     </div>
   );
 }
