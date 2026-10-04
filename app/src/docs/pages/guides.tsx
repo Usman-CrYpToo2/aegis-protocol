@@ -55,7 +55,8 @@ export const buy: DocPage = {
         <UI>Your purchase completed the sale and opened the bridge.</UI>
       </P>
       <P>
-        Graduation only rides along if you will still have that SOL after the purchase. If you won’t, the box says so before you buy: your
+        The first time your wallet does this, it is asked for a short one-time setup approval first, so the three transactions can't
+        expire while your wallet reviews them. Graduation only rides along if you will still have that SOL after the purchase. If you won’t, the box says so before you buy: your
         purchase still completes the sale, and anyone can graduate it from the asset page afterwards.
       </P>
       <H2 id="after">After the sale</H2>
@@ -134,6 +135,11 @@ export const launch: DocPage = {
         </Step>
         <Step title={<>Check the <UI>Review</UI> and select <UI>Launch · approve once</UI>.</>} result="each of the eight steps ticking off, then links to your asset page and console." />
       </Steps>
+      <Callout>
+        The first time a wallet launches, it is asked for one extra, short approval first: a one-time setup that creates 8 small accounts
+        linked to your wallet, holding about 0.009 SOL in deposits that stay yours. They let the eight launch transactions wait for your
+        approval as long as you need, instead of expiring after about a minute. Every later launch needs a single approval.
+      </Callout>
       <Callout>If the launch stops half way, nothing is lost. Open the <UI>Issuer console</UI> and select <UI>Continue</UI>. Until the sale opens you can also select <UI>Cancel launch</UI> to take the security back.</Callout>
       <H2 id="what-happens">What the eight transactions do</H2>
       <Table
