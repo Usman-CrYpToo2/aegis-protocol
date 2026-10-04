@@ -1,3 +1,4 @@
+import { withBackup } from "./send";
 import { ComputeBudgetProgram, TransactionMessage, VersionedTransaction, type Connection, type PublicKey, type TransactionInstruction } from "@solana/web3.js";
 
 export type PreparedTx = { transaction: VersionedTransaction; blockhash: string; lastValidBlockHeight: number };
@@ -13,7 +14,7 @@ export class SimulationError extends Error {
  * opened, and so the compute limit can be sized to what it really uses (plus headroom).
  */
 export async function prepareTransaction(connection: Connection, payer: PublicKey, instructions: TransactionInstruction[]): Promise<PreparedTx> {
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+  const { blockhash, lastValidBlockHeight } = await withBackup(connection, (c) => c.getLatestBlockhash("confirmed"));
   const build = (units: number) =>
     new VersionedTransaction(
       new TransactionMessage({
@@ -23,7 +24,7 @@ export async function prepareTransaction(connection: Connection, payer: PublicKe
       }).compileToV0Message()
     );
 
-  const sim = await connection.simulateTransaction(build(1_400_000), { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
+  const sim = await withBackup(connection, (c) => c.simulateTransaction(build(1_400_000), { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" }));
   if (sim.value.err) {
     throw new SimulationError(sim.value.logs ?? [], typeof sim.value.err === "string" ? sim.value.err : JSON.stringify(sim.value.err));
   }

@@ -1,4 +1,4 @@
-import { confirmSignature } from "../chain/send";
+import { approveAndSend } from "../chain/send";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { Keypair, TransactionInstruction } from "@solana/web3.js";
 import { useQueryClient } from "@tanstack/react-query";
@@ -20,7 +20,7 @@ export const TX_STEP = { checking: "Checking…", signing: "Approve in your wall
  */
 export function useTxRunner(errors: ErrorTable = {}) {
   const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, sendTransaction, signTransaction } = useWallet();
   const queryClient = useQueryClient();
   const [phase, setPhase] = useState<TxPhase>({ kind: "idle" });
   const inFlight = useRef(false);
@@ -34,9 +34,10 @@ export function useTxRunner(errors: ErrorTable = {}) {
         const prepared = await prepareTransaction(connection, publicKey, await build());
         setPhase({ kind: "busy", step: "signing" });
         // New accounts created from a fresh keypair (a mint, a config) sign alongside the wallet.
-        const signature = await sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed", signers });
-        setPhase({ kind: "busy", step: "confirming" });
-        await confirmSignature(connection, signature, prepared.lastValidBlockHeight);
+        const signature = await approveAndSend(connection, { signTransaction, sendTransaction }, prepared.transaction, prepared.lastValidBlockHeight, {
+          signers,
+          onSigned: () => setPhase({ kind: "busy", step: "confirming" }),
+        });
         setPhase({ kind: "done", signature });
         return signature;
       } catch (e) {
@@ -47,7 +48,7 @@ export function useTxRunner(errors: ErrorTable = {}) {
         for (const key of ["asset", "registry", "console", "health", "holdings", "balances", "register", "issue", "sol"]) void queryClient.invalidateQueries({ queryKey: [key] });
       }
     },
-    [connection, publicKey, queryClient, sendTransaction]
+    [connection, publicKey, queryClient, sendTransaction, signTransaction]
   );
 
   return { phase, run, reset: () => setPhase({ kind: "idle" }) };

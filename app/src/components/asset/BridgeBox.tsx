@@ -1,4 +1,4 @@
-import { confirmSignature } from "../../chain/send";
+import { approveAndSend } from "../../chain/send";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
@@ -42,7 +42,7 @@ function blockLine(block: BridgeBlock, sym: string, wsym: string): string {
 export function BridgeBox({ entry }: { entry: RegistryEntry }) {
   const { launch } = entry;
   const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, sendTransaction, signTransaction } = useWallet();
   const { open: openConnect } = useConnectModal();
   const queryClient = useQueryClient();
   const status = useBridgeStatus(launch);
@@ -84,9 +84,9 @@ export function BridgeBox({ entry }: { entry: RegistryEntry }) {
       if (now[direction]) throw Object.assign(new Error("blocked"), { logs: [`Error Code: ${CODE[now[direction]!.kind]}`] });
       const prepared = await prepareBridge(connection, direction, fresh.launch, publicKey, parsed.atoms);
       setPhase({ kind: "busy", step: "signing" });
-      const signature = await sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed" });
-      setPhase({ kind: "busy", step: "confirming" });
-      await confirmSignature(connection, signature, prepared.lastValidBlockHeight);
+      const signature = await approveAndSend(connection, { signTransaction, sendTransaction }, prepared.transaction, prepared.lastValidBlockHeight, {
+        onSigned: () => setPhase({ kind: "busy", step: "confirming" }),
+      });
       setPhase({ kind: "done", direction, amount: fmt(parsed.atoms), signature });
       setText("");
     } catch (e) {

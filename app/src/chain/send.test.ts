@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { confirmSignature, isExpired } from "./send";
+import { approveAndSend, confirmSignature, isExpired, isNetworkError } from "./send";
 
 type Status = { err: unknown; confirmationStatus: string } | null;
 
@@ -45,5 +45,44 @@ describe("confirmSignature", () => {
     const { conn, sent } = fakeConnection([null, null, null, null, { err: null, confirmationStatus: "confirmed" }], { startHeight: 0 });
     expect(await run(confirmSignature(conn, "sig", 10_000, new Uint8Array([1])))).toBe("ok");
     expect(sent.length).toBeGreaterThan(0);
+  });
+});
+
+describe("isNetworkError", () => {
+  it("treats an unreachable or overloaded endpoint as a network problem", () => {
+    for (const m of ["TypeError: fetch failed", "failed to get recent blockhash: TypeError: Failed to fetch", "503 Service Unavailable", "429 Too Many Requests", "NetworkError when attempting to fetch resource."]) {
+      expect(isNetworkError(new Error(m))).toBe(true);
+    }
+  });
+  it("never mistakes the program's own answer for one", () => {
+    for (const m of ["custom program error: 0x1771", "Blockhash not found", "Transaction simulation failed: Error processing Instruction 2"]) {
+      expect(isNetworkError(new Error(m))).toBe(false);
+    }
+  });
+});
+
+describe("approveAndSend", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+  const tx = { serialize: () => new Uint8Array([1, 2, 3]), sign: vi.fn() } as never;
+
+  it("has the wallet sign, says so, then sends and confirms it here", async () => {
+    const { conn } = fakeConnection([{ err: null, confirmationStatus: "confirmed" }]);
+    const wallet = { signTransaction: vi.fn(async (t: never) => t), sendTransaction: vi.fn() };
+    const onSigned = vi.fn();
+    const p = approveAndSend(conn, wallet as never, tx, 1_000, { onSigned });
+    await vi.runAllTimersAsync();
+    expect(await p).toBe("sig");
+    expect(wallet.signTransaction).toHaveBeenCalledOnce();
+    expect(wallet.sendTransaction).not.toHaveBeenCalled();
+    expect(onSigned).toHaveBeenCalledOnce();
+  });
+
+  it("lets a wallet that can only send for itself send, and still confirms it", async () => {
+    const { conn } = fakeConnection([{ err: null, confirmationStatus: "confirmed" }]);
+    const wallet = { sendTransaction: vi.fn(async () => "walletsig") };
+    const p = approveAndSend(conn, wallet as never, tx, 1_000);
+    await vi.runAllTimersAsync();
+    expect(await p).toBe("walletsig");
   });
 });

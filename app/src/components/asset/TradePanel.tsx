@@ -4,7 +4,7 @@ import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { config, explorerUrl } from "../../config";
 import { useConnectModal } from "../connect/ConnectModal";
-import { confirmSignature, sendSigned } from "../../chain/send";
+import { approveAndSend, sendSigned } from "../../chain/send";
 import { loadAsset } from "../../chain/asset";
 import { GRADUATION_DEPOSIT_LAMPORTS, graduationTransactions } from "../../chain/graduate";
 import type { RegistryEntry } from "../../chain/registry";
@@ -63,7 +63,7 @@ function Line({ label, children, strong }: { label: ReactNode; children: ReactNo
 export function TradePanel({ entry }: { entry: RegistryEntry }) {
   const { launch, quote, detail } = entry;
   const { connection } = useConnection();
-  const { publicKey, sendTransaction, signAllTransactions } = useWallet();
+  const { publicKey, sendTransaction, signAllTransactions, signTransaction } = useWallet();
   const { open: openConnect } = useConnectModal();
   const queryClient = useQueryClient();
   const inputId = useId();
@@ -198,9 +198,9 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
           }
         }
       } else {
-        signature = await sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed" });
-        setPhase({ kind: "busy", step: "confirming" });
-        await confirmSignature(connection, signature, prepared.lastValidBlockHeight);
+        signature = await approveAndSend(connection, { signTransaction, sendTransaction }, prepared.transaction, prepared.lastValidBlockHeight, {
+          onSigned: () => setPhase({ kind: "busy", step: "confirming" }),
+        });
       }
       const spent = side === "buy" && "spend" in again ? again.spend : amountIn;
       setPhase({
