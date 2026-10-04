@@ -1,6 +1,6 @@
 import { NATIVE_MINT } from "@solana/spl-token";
 import type { Registry, RegistryEntry } from "../chain/registry";
-import { formatUnits } from "./amount";
+import { formatPrice, formatUnits } from "./amount";
 
 /**
  * What the landing page says about the registry, read from the chain like every other page. It
@@ -95,32 +95,45 @@ export function summarize(registry: Registry | undefined): LandingSummary | null
   };
 }
 
+/** Most lines the ticker shows. It is a glance at what's happening, not a list of everything. */
+export const TAPE_MAX = 12;
+
+/**
+ * The ticker's lines, most important first and never more than TAPE_MAX: any shortfall (never
+ * hidden), the live sales closest to filling, graduations, sales about to open, then the backing
+ * check and how many assets the registry holds in all.
+ */
 function tapeItems(active: RegistryEntry[], backing: LandingSummary["backing"], checked: number): TapeItem[] {
-  const items: TapeItem[] = [];
-  for (const e of active) {
+  const line = (e: RegistryEntry): TapeItem | null => {
     const name = entryName(e);
     const mint = e.launch.realRwaMint.toBase58();
     const wrapper = e.wrapperLabel?.symbol;
     switch (e.launch.stage) {
       case "Live": {
         const pct = raisePct(e);
-        const price = e.price !== null && e.quote ? ` · ${wrapper ?? "wrapper"} at ${formatUnits(e.price, e.quote.decimals, { maxFraction: 4 })} ${e.quote.symbol}` : "";
-        items.push({ key: `${mint}-live`, strong: name, text: `${pct ?? 0}% of its raise${price}`, tone: "plain", mint });
-        break;
+        const price = e.price !== null && e.quote ? ` · ${wrapper ?? "wrapper"} at ${formatPrice(e.price, e.quote.decimals)} ${e.quote.symbol}` : "";
+        return { key: `${mint}-live`, strong: name, text: `${pct ?? 0}% of its raise${price}`, tone: "plain", mint };
       }
       case "Graduated":
-        items.push({ key: `${mint}-grad`, strong: name, text: "graduated · the bridge is open", tone: "plain", mint });
-        break;
+        return { key: `${mint}-grad`, strong: name, text: "graduated · the bridge is open", tone: "plain", mint };
       case "Funded":
       case "Configured":
-        items.push({ key: `${mint}-esc`, strong: name, text: `${formatUnits(whole(e.launch.totalSupply, e.launch.decimals), 0)} units in escrow · sale opening soon`, tone: "plain", mint });
-        break;
-      case "TokenCreated":
-        items.push({ key: `${mint}-filed`, strong: name, text: "filed", tone: "plain", mint });
-        break;
+        return { key: `${mint}-esc`, strong: name, text: `${formatUnits(whole(e.launch.totalSupply, e.launch.decimals), 0)} units in escrow · sale opening soon`, tone: "plain", mint };
+      default:
+        return null;
     }
-    if (e.backing.kind === "short") items.push({ key: `${mint}-short`, strong: name, text: "backing short · its bridge has stopped", tone: "bad", mint });
-  }
-  if (backing === "all") items.push({ key: "backing", text: `Backing verified · ${checked === 1 ? "the funded entry is" : `all ${checked} funded entries are`} 1 : 1`, tone: "good" });
+  };
+  const short: TapeItem[] = active
+    .filter((e) => e.backing.kind === "short")
+    .map((e) => ({ key: `${e.launch.realRwaMint.toBase58()}-short`, strong: entryName(e), text: "backing short · its bridge has stopped", tone: "bad", mint: e.launch.realRwaMint.toBase58() }));
+  const live = active.filter((e) => e.launch.stage === "Live").sort((a, b) => (raisePct(b) ?? 0) - (raisePct(a) ?? 0));
+  const graduated = active.filter((e) => e.launch.stage === "Graduated");
+  const opening = active.filter((e) => e.launch.stage === "Funded" || e.launch.stage === "Configured");
+  const footer: TapeItem[] = [];
+  if (backing === "all") footer.push({ key: "backing", text: `Backing verified · ${checked === 1 ? "the funded entry is" : `all ${checked.toLocaleString("en-US")} funded entries are`} 1 : 1`, tone: "good" });
+  const room = TAPE_MAX - footer.length - 1;
+  const picked = [...short, ...[...live, ...graduated, ...opening].map(line).filter((l): l is TapeItem => l !== null)].slice(0, room);
+  const items = [...picked, ...footer];
+  if (active.length > picked.length) items.push({ key: "count", text: `${active.length.toLocaleString("en-US")} assets in the registry`, tone: "plain" });
   return items;
 }

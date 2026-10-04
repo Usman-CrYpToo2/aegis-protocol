@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { LaunchStage } from "../chain/aegis";
 import type { Backing } from "../chain/backing";
 import type { Registry, RegistryEntry } from "../chain/registry";
-import { raisePct, summarize } from "./landing";
+import { raisePct, summarize, TAPE_MAX } from "./landing";
 
 const USDC = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 const M = 1_000_000n;
@@ -75,5 +75,18 @@ describe("raisePct", () => {
     expect(raisePct(entry("x", "Live", { kind: "unknown", reason: "" }, [999n, 1000n]))).toBe(99);
     expect(raisePct(entry("x", "Graduated", { kind: "unknown", reason: "" }, [1000n, 1000n]))).toBe(100);
     expect(raisePct(entry("x", "Live", { kind: "unknown", reason: "" }))).toBeNull();
+  });
+});
+
+describe("the ticker at scale", () => {
+  it("shows a dozen lines out of a thousand assets, shortfalls first, then the count", () => {
+    const many = Array.from({ length: 1000 }, (_, i) => entry(`Asset ${i}`, "Live", { kind: "backed", escrowed: 10n * M, circulating: 5n * M }, [BigInt(i % 100), 100n]));
+    many[700] = entry("Short One", "Graduated", { kind: "short", escrowed: 1n * M, required: 2n * M });
+    const s = summarize(reg(many))!;
+    expect(s.tape.length).toBeLessThanOrEqual(TAPE_MAX);
+    expect(s.tape[0]).toMatchObject({ strong: "Short One", tone: "bad" });
+    expect(s.tape.at(-1)!.text).toBe("1,000 assets in the registry");
+    // The live sales shown are the ones closest to filling.
+    expect(s.tape[1]!.text.startsWith("99% of its raise")).toBe(true);
   });
 });

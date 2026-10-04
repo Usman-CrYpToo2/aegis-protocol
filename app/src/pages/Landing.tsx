@@ -20,7 +20,6 @@ const wrap = "mx-auto w-full max-w-[1440px] px-4 sm:px-8 lg:px-20";
 const kb = "font-mono text-[11px] uppercase tracking-[0.14em] sm:text-xs";
 const h2 = "font-serif text-[44px] leading-[0.95] sm:text-[56px] lg:text-[72px]";
 const pill = "inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 text-[15px] font-semibold sm:min-h-14 sm:px-7 sm:text-base";
-const whole = (v: bigint) => formatUnits(v, 0);
 const pct = (v: number) => `${v.toFixed(2).replace(/\.?0+$/, "")}%`;
 
 const SECTIONS: [string, string][] = [["how", "How it works"], ["guarantees", "Guarantees"], ["proof", "Proof"], ["fees", "Fees"], ["questions", "Questions"]];
@@ -108,11 +107,12 @@ function SealFigure({ summary, state, readAt }: { summary: LandingSummary | null
     state === "loading" ? ["reading the chain…"]
     : state === "error" ? ["can’t reach the network"]
     : state === "absent" ? [`not deployed on ${config.cluster} yet`]
-    : seal ? [`${whole(seal.escrowed)} in escrow`, `${whole(seal.circulating)} circulating`]
+    // Units of different assets can't be added up, so the seal counts assets, not units.
+    : seal ? [`${summary!.assets.toLocaleString("en-US")} ${summary!.assets === 1 ? "asset" : "assets"} in escrow`, "each wrapper backed 1 : 1"]
     : ["no wrapper issued yet"];
   const label = short
     ? `Backing short on ${summary!.short} ${summary!.short === 1 ? "entry" : "entries"}`
-    : seal ? `Live backing seal: ${whole(seal.escrowed)} held in escrow, ${whole(seal.circulating)} in circulation` : "The backing seal: every wrapper is matched one for one in escrow";
+    : seal ? `Live backing seal: ${summary!.assets} assets held in escrow, each wrapper backed one for one` : "The backing seal: every wrapper is matched one for one in escrow";
   return (
     <figure aria-label={label} className="relative m-0 aspect-square w-[min(100%,358px)] justify-self-center sm:w-[520px] lg:w-full lg:max-w-[640px] lg:justify-self-end">
       <Rosette className="absolute inset-0 size-full opacity-55" />
@@ -179,7 +179,7 @@ function Stats({ summary, state }: { summary: LandingSummary | null; state: "loa
   return (
     <section aria-label="Live numbers" className={wrap}>
       <div className="grid grid-cols-2 border-y border-ink sm:grid-cols-4">
-        <Stat label="Units in escrow" delay={0.3}>{s ? whole(s.escrowed) : dash}</Stat>
+        <Stat label="Offerings open" delay={0.3}>{s ? s.open.toLocaleString("en-US") : dash}</Stat>
         <Stat label="Raised, USD" delay={0.42} note={raisedUsd.loading ? undefined : raisedUsd.note ?? undefined}>
           {s && !raisedUsd.loading ? raisedUsd.text : dash}
         </Stat>
