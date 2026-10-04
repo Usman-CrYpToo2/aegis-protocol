@@ -9,6 +9,7 @@ import { STEP_IDS, abortInstructions, launchTransactions, loadIssueProgress, nex
 import type { Platform } from "../chain/platform";
 import { ensureNonces, LAND_WITHIN_BLOCKS, type Nonce } from "../chain/nonce";
 import { isExpired, sendSigned, withBackup } from "../chain/send";
+import { trackWallet } from "../lib/walletWait";
 import { usePlatform } from "../hooks/usePlatform";
 import { decodeMint, mintLabel } from "../chain/token";
 import { useConnectModal } from "../components/connect/ConnectModal";
@@ -73,7 +74,8 @@ function useLaunchRunner() {
   const queryClient = useQueryClient();
   const [run, setRun] = useState<Run>({ kind: "idle" });
 
-  const signAll = (txs: VersionedTransaction[]) => (signAllTransactions ? signAllTransactions(txs) : Promise.all(txs.map((tx) => signTransaction!(tx))));
+  // Every wallet request is tracked, so a wallet that never opens can be noticed and cancelled.
+  const signAll = (txs: VersionedTransaction[]) => trackWallet(signAllTransactions ? signAllTransactions(txs) : Promise.all(txs.map((tx) => signTransaction!(tx))));
 
   const start = async (build: (nonces: Nonce[]) => Promise<{ id: StepId; tx: VersionedTransaction }[]>): Promise<"done" | "partial" | "none"> => {
     const done: Partial<Record<StepId, string>> = {};

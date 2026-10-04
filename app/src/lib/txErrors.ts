@@ -64,6 +64,9 @@ export function explainTradeError(error: unknown, overrides: ErrorTable = {}): E
   const all = `${message}\n${logs}`;
 
   if (error instanceof PlainError) return { title: error.title, detail: error.detail, retry: false, charged: false };
+  if (error && typeof error === "object" && "walletCancelled" in error) {
+    return { title: "Cancelled", detail: "You stopped waiting for the wallet. Nothing was sent and nothing was spent; it is safe to try again.", retry: true, charged: false };
+  }
   if (/user rejected|rejected the request|declined|cancel/i.test(all)) {
     return { title: "Cancelled in your wallet", detail: "Nothing was sent and nothing was spent.", retry: true, charged: false };
   }

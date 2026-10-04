@@ -12,6 +12,7 @@ import { PlainError, explainTradeError } from "../../lib/txErrors";
 import { removeInstruction } from "../../chain/powers";
 import { ensureNonces, LAND_WITHIN_BLOCKS, NONCE_COUNT } from "../../chain/nonce";
 import { sendSigned, withBackup } from "../../chain/send";
+import { trackWallet } from "../../lib/walletWait";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { Hint } from "../Hint";
 
@@ -40,7 +41,7 @@ function useApprove(launch: ConsoleLaunch) {
       // Several transactions in one approval can take a wallet longer to preview than a blockhash
       // lasts, so they carry durable nonces (chain/nonce), at most eight per approval. Issuers
       // already have their nonce accounts from launching, so this asks for nothing extra.
-      const signAll = (txs: VersionedTransaction[]) => (signAllTransactions ? signAllTransactions(txs) : Promise.all(txs.map((x) => signTransaction!(x))));
+      const signAll = (txs: VersionedTransaction[]) => trackWallet(signAllTransactions ? signAllTransactions(txs) : Promise.all(txs.map((x) => signTransaction!(x))));
       const chunks = approvalChunks(l, publicKey, todo);
       const total = chunks.length;
       let signature = "";

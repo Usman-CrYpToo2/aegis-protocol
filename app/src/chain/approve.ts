@@ -12,6 +12,7 @@ import type { Connection, Keypair, VersionedTransaction } from "@solana/web3.js"
 import { LAND_WITHIN_BLOCKS, loadNonces, NONCE_COUNT, type Nonce } from "./nonce";
 import { confirmSignature, sendSigned, withBackup } from "./send";
 import type { PreparedTx } from "./tx";
+import { trackWallet } from "../lib/walletWait";
 
 /** A blockhash must have at least this many blocks left when the wallet returns, or it is re-asked. */
 const SEND_MARGIN_BLOCKS = 20;
@@ -54,7 +55,7 @@ export async function approveAndSend(
   if (!wallet.signTransaction) {
     // A wallet that can only send for itself: no chance to check the timing in between.
     const prepared = await build();
-    const signature = await wallet.sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed", signers });
+    const signature = await trackWallet(wallet.sendTransaction(prepared.transaction, connection, { preflightCommitment: "confirmed", signers }));
     onSigned?.();
     await confirmSignature(connection, signature, prepared.lastValidBlockHeight);
     return signature;
@@ -63,7 +64,7 @@ export async function approveAndSend(
   for (let attempt = 1; ; attempt++) {
     const prepared = await build(nonce);
     if (signers.length) prepared.transaction.sign(signers);
-    const signed = await wallet.signTransaction(prepared.transaction);
+    const signed = await trackWallet(wallet.signTransaction(prepared.transaction));
     const height = await withBackup(connection, (c) => c.getBlockHeight("confirmed"));
     if (nonce) {
       onSigned?.();

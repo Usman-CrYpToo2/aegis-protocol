@@ -7,6 +7,7 @@ import { useConnectModal } from "../connect/ConnectModal";
 import { ensureNonces, LAND_WITHIN_BLOCKS } from "../../chain/nonce";
 import { approveAndSend } from "../../chain/approve";
 import { sendSigned, withBackup } from "../../chain/send";
+import { trackWallet } from "../../lib/walletWait";
 import { loadAsset } from "../../chain/asset";
 import { GRADUATION_DEPOSIT_LAMPORTS, graduationTransactions } from "../../chain/graduate";
 import type { RegistryEntry } from "../../chain/registry";
@@ -186,7 +187,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
       // carry durable nonces and can't expire meanwhile; the first time, that takes a setup approval.
       const completes = side === "buy" && "fillsSale" in again && (again.fillsSale || again.nextSqrt >= state!.migrationSqrtPrice);
       const nonces = completes && canGraduate && signAllTransactions
-        ? await ensureNonces(connection, publicKey, signAllTransactions, () => setPhase({ kind: "busy", step: "preparing" }))
+        ? await ensureNonces(connection, publicKey, (txs) => trackWallet(signAllTransactions(txs)), () => setPhase({ kind: "busy", step: "preparing" }))
         : null;
       let signature: string;
       let graduated: boolean | null = null;
@@ -194,7 +195,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
         const prepared = await prepareTrade(connection, request, nonces[0]);
         const bundle = graduationTransactions(fresh.launch, publicKey, accounts.data.quoteProgram, prepared.blockhash, [nonces[1]!, nonces[2]!]);
         setPhase({ kind: "busy", step: "signing" });
-        const [buy, ...rest] = await signAllTransactions!([prepared.transaction, ...bundle]);
+        const [buy, ...rest] = await trackWallet(signAllTransactions!([prepared.transaction, ...bundle]));
         setPhase({ kind: "busy", step: "confirming" });
         // Nonce transactions don't expire; this is how long to wait for each before giving up.
         const patience = async () => (await withBackup(connection, (c) => c.getBlockHeight("confirmed"))) + LAND_WITHIN_BLOCKS;
