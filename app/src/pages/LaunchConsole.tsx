@@ -91,7 +91,7 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
 
       </div>
       <div className="hidden border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute sm:grid sm:grid-cols-[minmax(0,1fr)_12rem_9rem] sm:gap-6">
-        <span>SOURCE</span><span className="text-right">AVAILABLE NOW</span><span />
+        <span>SOURCE</span><span className="text-right">AMOUNT</span><span />
       </div>
 
       <Row
@@ -120,7 +120,12 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
         title="Unsold stock"
         body="What the sale didn’t sell"
         hint="It waits in escrow and is paid only from what is above your holders’ backing."
-        amount={<>{formatUnits(l.unsold, launch.decimals, { maxFraction: 2 })} <span className="font-mono text-sm text-mute">{sym}</span></>}
+        amount={
+          // Until the sale ends, nobody knows how much of it goes unsold; "0" would read as "nothing".
+          launch.stage === "Graduated" || l.unsold > 0n
+            ? <>{formatUnits(l.unsold, launch.decimals, { maxFraction: 2 })} <span className="font-mono text-sm text-mute">{sym}</span></>
+            : <span className="font-sans text-[13px] text-mute">Known when the sale ends</span>
+        }
         action={
           l.unsold === 0n ? (
             <span className="text-[13px] text-mute">{launch.stage === "Graduated" ? "—" : "At graduation"}</span>
