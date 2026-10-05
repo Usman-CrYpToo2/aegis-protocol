@@ -311,3 +311,7 @@ What the program cannot prevent, by design:
 - **`initialize_platform` is first-caller-wins.** Initialize the platform in the same script as the deploy and verify `platform_config.admin` before announcing the program.
 
 The platform admin can change fees and bounds for new launches, approve or retire currencies, and pause launches that have not opened their sale. The admin holds no authority over any security, escrow or wrapper.
+
+## License
+
+Aegis is licensed under the [Apache License 2.0](LICENSE). Third-party components it builds on or tests against, Meteora's programs and Upside's programs, remain under their own licenses; see [NOTICE](NOTICE).

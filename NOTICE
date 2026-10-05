@@ -1,0 +1,57 @@
+Aegis Protocol
+Copyright 2026 Usman Atique
+
+Licensed under the Apache License, Version 2.0 (see LICENSE). The Apache License covers the Aegis
+source code in this repository. It does not cover the third-party components listed below, which
+remain under their own licenses.
+
+--------------------------------------------------------------------------------------------------
+Meteora Dynamic Bonding Curve and Meteora DAMM v2
+--------------------------------------------------------------------------------------------------
+
+The aegis program depends on the Meteora Dynamic Bonding Curve crate (Cargo.toml), and the test
+suite loads Meteora program binaries:
+
+  programs/aegis/tests/fixtures/meteora_dbc.so
+  tests/fixtures/damm_v2.so
+  tests/fixtures/damm_v2_configs.json
+
+These are subject to the Meteora Noncommercial Licence:
+
+  https://github.com/MeteoraAg/dynamic-bonding-curve
+  https://github.com/MeteoraAg/damm-v2
+
+Required Notice: All underlying software code is subject to the licence set out at https://github.com/MeteoraAg/dynamic-bonding-curve
+
+--------------------------------------------------------------------------------------------------
+Upside Access Control and Transfer Restrictions
+--------------------------------------------------------------------------------------------------
+
+The Upside IDLs in idls/ and the program binaries
+
+  programs/aegis/tests/fixtures/access_control.so
+  programs/aegis/tests/fixtures/transfer_restrictions.so
+
+come from https://github.com/upsideos/upsideos-solana-rwa, under the MIT License:
+
+MIT License
+
+Copyright (c) 2024 CoMakery, Inc. dba Upside
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

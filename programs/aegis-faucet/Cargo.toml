@@ -3,6 +3,7 @@ name = "aegis-faucet"
 version = "0.1.0"
 description = "Devnet faucet for the test tokens Aegis launches are priced in"
 edition = "2021"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]

@@ -3,6 +3,7 @@ name = "aegis-hook"
 version = "0.1.0"
 description = "Permissive Token-2022 transfer hook for Aegis cRWA"
 edition = "2021"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]
