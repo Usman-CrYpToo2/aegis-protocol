@@ -1,4 +1,15 @@
-# Aegis Protocol
+<div align="center">
+  <img src="docs/assets/banner.png" alt="Aegis. Real world assets, traded freely, backed one for one." width="100%" />
+  <h1>Aegis Protocol</h1>
+  <p>The RWA launchpad on Solana, built on Meteora's Dynamic Bonding Curve.</p>
+  <p>
+    <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-7E2A1E" /></a>
+    <a href="https://explorer.solana.com/address/Hs2JZNwdk6QqMWPkipSe513qLQVQH8EWkU2w8N2vgLUw?cluster=devnet"><img alt="Solana devnet" src="https://img.shields.io/badge/Solana-devnet-7E2A1E?logo=solana&amp;logoColor=white" /></a>
+    <a href="https://www.anchor-lang.com"><img alt="Anchor 1.0.2" src="https://img.shields.io/badge/Anchor-1.0.2-7E2A1E" /></a>
+    <a href="https://colosseum.com/arena/projects/aegis-protocol-4"><img alt="Colosseum Crypto World's Fair" src="https://img.shields.io/badge/Colosseum-Crypto%20World%27s%20Fair-7E2A1E" /></a>
+    <a href="https://x.com/aegis_rwa"><img alt="Follow @aegis_rwa on X" src="https://img.shields.io/badge/@aegis__rwa-7E2A1E?logo=x&amp;logoColor=white" /></a>
+  </p>
+</div>
 
 Aegis is a launchpad for real-world assets on Solana. An issuer locks a regulated security in an on-chain escrow, sells a wrapper token backed one for one by that escrow on a [Meteora Dynamic Bonding Curve](https://github.com/MeteoraAg/dynamic-bonding-curve), and when the sale fills the wrapper graduates into a permanent [Meteora DAMM v2](https://github.com/MeteoraAg/damm-v2) pool. After graduation, approved holders can convert between the wrapper and the security one for one through the Aegis bridge.
 
