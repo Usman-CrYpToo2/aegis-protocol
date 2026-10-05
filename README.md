@@ -4,7 +4,7 @@ Aegis is a launchpad for real-world assets on Solana. An issuer locks a regulate
 
 The security never leaves its compliance rules, which are enforced by [Upside](https://github.com/upsideos/upsideos-solana-rwa)'s Access Control and Transfer Restrictions programs. The wrapper trades freely. The escrow keeps the two equal, and once the wrapper exists the program re-checks that on every instruction that moves either token.
 
-> **Status:** live on Solana devnet. The programs have not been audited. Do not use them with real assets.
+> **Status:** live on Solana devnet.
 
 Aegis is a submission to the [Colosseum Crypto World's Fair](https://colosseum.com/worldsfair) hackathon (September 14 to October 12, 2026): [project page](https://colosseum.com/arena/projects/aegis-protocol-4). It is also built for Meteora's side track, [Best use of Meteora's Dynamic Bonding Curve](https://superteam.fun/earn/listing/meteora-dbc), on Superteam Earn. Follow the project on X at [@aegis_rwa](https://x.com/aegis_rwa).
 
@@ -301,7 +301,7 @@ After changing a program, run `yarn idl` in `app/` to copy the new IDLs from `ta
 
 ## Security
 
-Aegis has not been audited. It runs on devnet and should be treated as test software.
+Aegis has not been audited yet.
 
 What the program cannot prevent, by design:
 
@@ -311,5 +311,3 @@ What the program cannot prevent, by design:
 - **`initialize_platform` is first-caller-wins.** Initialize the platform in the same script as the deploy and verify `platform_config.admin` before announcing the program.
 
 The platform admin can change fees and bounds for new launches, approve or retire currencies, and pause launches that have not opened their sale. The admin holds no authority over any security, escrow or wrapper.
-
-Please report vulnerabilities privately through this repository's Security tab rather than in a public issue.

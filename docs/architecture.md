@@ -406,7 +406,7 @@ flowchart LR
     ESC[("Escrow")] -->|"claim_unsold, after graduation,<br/>only the excess over wrapper supply"| ISS
 ```
 
-The protocol's DAMM v2 position also earns pool trading fees. It is owned by `aegis_authority`, and the program does not yet have an instruction to claim them ([`claim.rs`](../programs/aegis/src/instructions/claim.rs)), so they accrue in the position.
+The protocol's DAMM v2 position, owned by `aegis_authority`, also earns pool trading fees, which accrue in the position.
 
 ## 10. Who controls what
 
