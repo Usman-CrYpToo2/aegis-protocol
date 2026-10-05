@@ -1,6 +1,6 @@
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import type { Activity } from "../chain/activity";
 import type { Holding } from "../chain/holdings";
@@ -9,13 +9,14 @@ import { useConnectModal } from "../components/connect/ConnectModal";
 import { useActivity, useHoldings } from "../hooks/useHoldings";
 import { useNow } from "../hooks/useNow";
 import { useUsdPrices, useUsdTotal } from "../hooks/useUsdPrices";
-import { ShowMore, usePaged } from "../components/ShowMore";
-
-/** Holdings per page: a portfolio stays scannable however many assets it holds. */
-const HOLDINGS_PAGE = 20;
+import { Pager, usePages } from "../components/Pager";
 import type { CurrencyAmount } from "../lib/usd";
 import { useRegistry } from "../hooks/useRegistry";
 import { formatMoney, formatPrice, formatUnits, percentOf, shortAddress } from "../lib/amount";
+
+/** Rows per page. Each list stays one screen or so tall, however much the wallet holds. */
+const HOLDINGS_PAGE = 10;
+const ACTIVITY_PAGE = 10;
 
 // ------------------------------------------------------------------------------------------------
 // Pieces
@@ -170,9 +171,10 @@ function when(time: number | null, now: number) {
 }
 
 function ActivityList({ items, loading, failed, now }: { items: Activity[] | undefined; loading: boolean; failed: boolean; now: number }) {
+  const top = useRef<HTMLElement>(null);
+  const p = usePages(items ?? [], ACTIVITY_PAGE);
   return (
-    <section aria-labelledby="activity-h" className="flex flex-col">
-      <h2 id="activity-h" className="mb-3 font-serif text-4xl">Activity</h2>
+    <section ref={top} aria-label="Your recent activity" className="flex scroll-mt-4 flex-col">
       <div className="hidden border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute md:grid md:grid-cols-[9rem_minmax(0,1fr)_12rem_6rem] md:gap-5">
         <span>WHEN</span><span>WHAT</span><span className="text-right">AMOUNT</span><span />
       </div>
@@ -181,12 +183,12 @@ function ActivityList({ items, loading, failed, now }: { items: Activity[] | und
           {[0, 1, 2].map((i) => <span key={i} className="my-3 h-5 animate-pulse bg-track/70" />)}
         </div>
       ) : failed && !items ? (
-        <p role="alert" className="py-4 text-sm text-ink2">Your recent activity couldn’t be read right now. Your holdings above are unaffected.</p>
+        <p role="alert" className="py-4 text-sm text-ink2">Your recent activity couldn’t be read right now. Your holdings are unaffected.</p>
       ) : !items || items.length === 0 ? (
         <p className="py-4 text-sm text-mute">No activity yet.</p>
       ) : (
         <ul className="flex flex-col">
-          {items.map((a) => {
+          {p.shown.map((a) => {
             const e = a.holding.entry;
             const name = e.label?.name ?? "this asset";
             const sym = a.token === "security" ? e.label?.symbol : e.wrapperLabel?.symbol;
@@ -205,6 +207,7 @@ function ActivityList({ items, loading, failed, now }: { items: Activity[] | und
           })}
         </ul>
       )}
+      <Pager p={p} noun="recent transactions" top={top} />
     </section>
   );
 }
@@ -220,6 +223,11 @@ export function HoldingsPage() {
   const holdings = useHoldings();
   const activity = useActivity(holdings.data);
   const now = useNow();
+  // Holdings and activity are two views of one wallet, so they share the space as tabs rather than
+  // stacking. The tab is in the address, so back and a shared link keep it.
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "activity" ? "activity" : "assets";
+  const listTop = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.title = "My holdings — Aegis";
@@ -254,7 +262,7 @@ export function HoldingsPage() {
     };
     return [...(holdings.data ?? [])].sort((a, b) => usd(b) - usd(a));
   }, [holdings.data, prices.data]);
-  const page = usePaged(ordered, HOLDINGS_PAGE);
+  const page = usePages(ordered, HOLDINGS_PAGE);
 
   const head = (right?: ReactNode) => (
     <section className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
@@ -326,18 +334,33 @@ export function HoldingsPage() {
             <Link to="/registry" className="mt-2 inline-flex min-h-12 items-center bg-blue px-5 font-semibold text-white hover:bg-blue-deep">Browse the registry</Link>
           </div>
         ) : (
-          <section aria-label="Assets you hold" className="flex flex-col">
+          <div ref={listTop} className="flex scroll-mt-4 flex-col gap-2">
+          <div role="tablist" aria-label="Your wallet" className="flex gap-8 border-b border-rule">
+            {([["assets", "Assets", holdings.data.length], ["activity", "Activity", null]] as const).map(([id, label, n]) => (
+              <button key={id} id={`tab-${id}`} role="tab" type="button" aria-selected={tab === id} aria-controls={`panel-${id}`}
+                onClick={() => setParams(id === "assets" ? {} : { tab: id }, { replace: true })}
+                className={`-mb-px cursor-pointer pt-2 pb-3 text-[15px] ${tab === id ? "border-b-2 border-ink font-semibold" : "text-ink2 hover:text-ink"}`}>
+                {label}{n !== null && <span className="font-mono text-xs text-mute num"> · {n}</span>}
+              </button>
+            ))}
+          </div>
+          {tab === "activity" ? (
+            <div id="panel-activity" role="tabpanel" aria-labelledby="tab-activity">
+              <ActivityList items={activity.data} loading={activity.isPending} failed={activity.isError} now={now} />
+            </div>
+          ) : (
+          <section id="panel-assets" role="tabpanel" aria-labelledby="tab-assets" className="flex flex-col">
             <div className="hidden border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)_minmax(0,1.7fr)_12rem] md:gap-8">
               <span>ASSET</span><span>YOU HOLD</span><span>WHAT YOU CAN DO</span><span />
             </div>
             <ul className="flex flex-col">
               {page.shown.map((h) => <HoldingRow key={h.entry.launch.address.toBase58()} h={h} address={publicKey.toBase58()} />)}
             </ul>
-            <ShowMore shown={page.shown.length} total={page.total} pageSize={HOLDINGS_PAGE} more={page.more} noun="holdings" />
-
+            <Pager p={page} noun="holdings" top={listTop} />
           </section>
+          )}
+          </div>
         )}
-        {holdings.data.length > 0 && <ActivityList items={activity.data} loading={activity.isPending} failed={activity.isError} now={now} />}
       </>
     );
   }
