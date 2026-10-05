@@ -53,6 +53,11 @@ export const config = {
   cluster,
   rpcUrl: readRpcUrl(import.meta.env.VITE_RPC_URL, cluster),
   /**
+   * The endpoint's host name, for anything shown on screen. The full address can carry a private
+   * API key in its path, so it is never displayed.
+   */
+  rpcHost: new URL(readRpcUrl(import.meta.env.VITE_RPC_URL, cluster)).host,
+  /**
    * Optional endpoints for listing a program's accounts (getProgramAccounts), comma-separated, tried
    * in order. Some free RPC plans refuse that one call while serving everything else well; this lets
    * the two be split, and a second provider covers the first one's outages. The first is also the

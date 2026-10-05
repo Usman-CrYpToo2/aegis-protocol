@@ -240,13 +240,16 @@ type Tab = "terms" | "proof" | "money" | "rules";
 
 function Details({ entry, tab, onTab }: { entry: RegistryEntry; tab: Tab; onTab: (t: Tab) => void }) {
   const terms = entry.detail.terms ?? null;
-  const tabs: [Tab, string][] = [["terms", "Terms"], ["proof", "Proof of backing"], ...(terms ? [["money", "Where the money goes"] as [Tab, string]] : []), ["rules", "Guarantees"]];
+  // Phones get the short labels, so all four tabs fit across the screen without scrolling sideways.
+  const tabs: [Tab, string, string][] = [["terms", "Terms", "Terms"], ["proof", "Proof of backing", "Backing"], ...(terms ? [["money", "Where the money goes", "Money"] as [Tab, string, string]] : []), ["rules", "Guarantees", "Guarantees"]];
   return (
     <section id="details" className="flex scroll-mt-6 flex-col gap-2">
-      <div role="tablist" aria-label="Details" className="flex gap-6 overflow-x-auto border-b border-rule">
-        {tabs.map(([id, label]) => (
+      <div role="tablist" aria-label="Details" className="flex gap-5 overflow-x-auto border-b border-rule sm:gap-6">
+        {tabs.map(([id, label, short]) => (
           <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => onTab(id)}
-            className={`-mb-px shrink-0 cursor-pointer pt-2 pb-3 text-[15px] ${tab === id ? "border-b-2 border-ink font-semibold" : "text-mute hover:text-ink"}`}>{label}</button>
+            className={`-mb-px shrink-0 cursor-pointer pt-2 pb-3 text-[15px] ${tab === id ? "border-b-2 border-ink font-semibold" : "text-mute hover:text-ink"}`}>
+            <span className="sm:hidden">{short}</span><span className="hidden sm:inline">{label}</span>
+          </button>
         ))}
       </div>
       <div role="tabpanel">
@@ -368,7 +371,7 @@ export function AssetPage() {
     }
     return (
       <Message title="Can’t reach the network">
-        <p>This page reads the asset straight from the chain at <span className="font-mono text-base">{config.rpcUrl}</span>, and that node isn’t answering.</p>
+        <p>This page reads the asset straight from the chain at <span className="font-mono text-base break-all">{config.rpcHost}</span>, and that node isn’t answering.</p>
         <button type="button" onClick={() => void asset.refetch()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center bg-ink px-5 text-sm font-semibold text-paper hover:bg-ink2">
           Try again
         </button>

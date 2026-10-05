@@ -396,7 +396,7 @@ export function RegistryPage() {
     body = (
       <Panel tone="error" title="Can’t reach the network" action={<RetryButton onClick={() => void registry.refetch()} busy={refreshing} />}>
         <p>
-          The registry is read straight from the chain at <span className="font-mono text-[13px]">{config.rpcUrl}</span>, and that node isn’t answering.
+          The registry is read straight from the chain at <span className="font-mono text-[13px] break-all">{config.rpcHost}</span>, and that node isn’t answering.
         </p>
         {config.cluster === "localnet" && (
           <p className="mt-2">

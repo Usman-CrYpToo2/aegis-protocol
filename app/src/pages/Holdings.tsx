@@ -295,7 +295,7 @@ export function HoldingsPage() {
         {holdings.isError || registry.isError ? (
           <div role="alert" className="flex flex-col gap-3 border border-error bg-surface p-6">
             <strong>Your holdings couldn’t be read</strong>
-            <span className="text-sm text-ink2">The network at <span className="font-mono">{config.rpcUrl}</span> isn’t answering. Nothing is wrong with your wallet.</span>
+            <span className="text-sm text-ink2">The network at <span className="font-mono break-all">{config.rpcHost}</span> isn’t answering. Nothing is wrong with your wallet.</span>
             <button type="button" onClick={() => { void registry.refetch(); void holdings.refetch(); }} className="min-h-11 w-fit cursor-pointer bg-ink px-5 text-sm font-semibold text-paper">Try again</button>
           </div>
         ) : (

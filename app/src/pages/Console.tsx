@@ -211,7 +211,7 @@ export function ConsolePage() {
       {console_.isError || registry.isError ? (
         <div role="alert" className="flex flex-col gap-3 border border-error bg-surface p-6">
           <strong>Your launches couldn’t be read</strong>
-          <span className="text-sm text-ink2">The network at <span className="font-mono">{config.rpcUrl}</span> isn’t answering.</span>
+          <span className="text-sm text-ink2">The network at <span className="font-mono break-all">{config.rpcHost}</span> isn’t answering.</span>
           <button type="button" onClick={() => { void registry.refetch(); void console_.refetch(); }} className="min-h-11 w-fit cursor-pointer bg-ink px-5 text-sm font-semibold text-paper">Try again</button>
         </div>
       ) : (
