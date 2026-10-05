@@ -14,31 +14,32 @@ Aegis separates the two jobs. Identity checks apply where the law needs them, wh
 
 ## How it works
 
+```mermaid
+flowchart LR
+    subgraph S1["1 · Launch: issuer, 8 transactions"]
+        direction TB
+        A1["create_rwa<br/>security created, issuer gets every Upside role"] --> A2["Upside setup, steps 2 to 5<br/>register, groups, rules, holders"]
+        A2 --> A3["fund_vault<br/>setup verified, whole issue into escrow"]
+        A3 --> A4["create_rwa_config<br/>curve built, terms fixed in Meteora"]
+        A4 --> A5["launch_pool<br/>wrapper created and verified, sale opens"]
+    end
+    subgraph S2["2 · Sale: anyone"]
+        direction TB
+        B1["Buy and sell the wrapper<br/>swap2_with_transfer_hook on the bonding curve"] --> B2["Curve fills<br/>Meteora removes the wrapper's hook"]
+    end
+    subgraph S3["3 · Graduation: anyone"]
+        direction TB
+        C1["migration_damm_v2<br/>DAMM v2 pool created, liquidity locked"] --> C2["finalize_graduation<br/>unsold wrapper burned, bridge opens"]
+    end
+    subgraph S4["4 · Bridge: approved holders"]
+        direction TB
+        D1["bridge_redeem<br/>wrapper in, security out,<br/>one for one"]
+        D2["bridge_deposit<br/>security in, wrapper out,<br/>one for one"]
+    end
+    S1 --> S2 --> S3 --> S4
 ```
-   Issuer                         Aegis                                  Meteora
-     │
-     │ 1  create_rwa ───────────▶ builds the security (Token-2022,
-     │                            Upside hook, supply cap = issue size),
-     │                            hands the issuer all four Upside roles
-     │
-     │ 2  Upside setup            (issuer signs Upside directly: register,
-     │                            investor and vault groups, transfer rules,
-     │                            holder records)
-     │
-     │ 3  fund_vault ───────────▶ checks the redemption path is open,
-     │                            mints the whole supply into escrow
-     │
-     │ 4  create_rwa_config ────▶ builds the curve from three terms ─────▶ DBC config
-     │                                                                    (transfer-hook variant)
-     │ 5  launch_pool ──────────▶ verifies what Meteora created ─────────▶ wrapper mint + virtual pool
-     │
-   Buyers ── swap2_with_transfer_hook ─────────────────────────────────▶ bonding curve
-     │
-   Anyone ── migration_damm_v2 (when the curve fills) ─────────────────▶ DAMM v2 pool
-   Anyone ── finalize_graduation ─▶ burns unsold wrapper, opens bridge
-     │
-   Approved holders ── bridge_redeem / bridge_deposit ─▶ security ⇄ wrapper, 1 : 1, no fee
-```
+
+An issuer sends eight transactions. Steps 2 to 5 go straight to Upside: Aegis does not configure compliance for the issuer, it verifies it before locking the asset. After graduation the wrapper also trades freely on the DAMM v2 pool. Detailed diagrams of every flow, account and authority are in [docs/architecture.md](docs/architecture.md).
 
 ### Token model
 
@@ -236,6 +237,7 @@ idls/                     Upside IDLs, used by declare_program! for CPI bindings
 tests/                    program test suite (TypeScript, LiteSVM)
 scripts/                  local validator, deploy and end-to-end launch scripts
 app/                      the web app: registry, trading, bridge, issuer console, docs
+docs/architecture.md      diagrams: system, accounts, lifecycle, launch, graduation, bridge, money
 design.md                 original architecture notes and the Meteora constraints behind them
 ```
 
