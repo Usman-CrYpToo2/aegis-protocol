@@ -52,8 +52,9 @@ pub fn handler(ctx: Context<InitializePlatform>) -> Result<()> {
     platform_config.curve_fee_bps = 100; // 1%
     platform_config.issuer_curve_fee_share_pct = 0; // the placement fee is the protocol's
     platform_config.aegis_migration_fee_share_pct = 0; // no second cut of the raise
-                                                       // The only permanently locked liquidity. Keeps a venue alive for holders who cannot use the
-                                                       // bridge, rather than serving as the anti-rug mechanism — the bridge already is that.
+
+    // The only permanently locked liquidity. Keeps a venue alive for holders who cannot use the
+    // bridge, rather than serving as the anti-rug mechanism — the bridge already is that.
     platform_config.aegis_lp_share_pct = 10;
 
     // 6. Bounds on what the issuer may choose.
