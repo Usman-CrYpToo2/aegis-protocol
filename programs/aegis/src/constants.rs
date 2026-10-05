@@ -8,7 +8,8 @@ use anchor_lang::prelude::*;
 pub const METEORA_DBC_PROGRAM_ID: Pubkey = pubkey!("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
 
 /// The official Meteora DAMM v2 Program ID (cp_amm). Migration target once the curve completes.
-pub const METEORA_DAMM_V2_PROGRAM_ID: Pubkey = pubkey!("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG");
+pub const METEORA_DAMM_V2_PROGRAM_ID: Pubkey =
+    pubkey!("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG");
 
 // NOTE: Upside program IDs are intentionally NOT declared here. `declare_program!` in lib.rs
 // reads them from the IDLs in `idls/`, exposing `access_control::ID` and
@@ -45,7 +46,8 @@ pub const ROLE_TRANSFER_ADMIN: u8 = 8;
 /// The three roles Aegis hands the issuer on top of ContractAdmin, which Upside grants the
 /// payer automatically. The issuer ends up with all four: full legal control of the security.
 /// Aegis deliberately holds none of them.
-pub const ISSUER_DELEGATED_ROLES: u8 = ROLE_RESERVE_ADMIN | ROLE_WALLETS_ADMIN | ROLE_TRANSFER_ADMIN;
+pub const ISSUER_DELEGATED_ROLES: u8 =
+    ROLE_RESERVE_ADMIN | ROLE_WALLETS_ADMIN | ROLE_TRANSFER_ADMIN;
 
 // ==========================================
 // UPSIDE TRANSFER GROUPS (Aegis convention)

@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::spl_token_2022::extension::transfer_hook::TransferHook;
 use anchor_spl::token_2022::Token2022;
-use anchor_spl::token_interface::{
-    get_mint_extension_data, Mint, TokenAccount, TokenInterface,
-};
+use anchor_spl::token_interface::{get_mint_extension_data, Mint, TokenAccount, TokenInterface};
 
 use dynamic_bonding_curve::cpi::accounts::InitializeVirtualPoolWithToken2022TransferHookCtx;
 use dynamic_bonding_curve::InitializePoolParameters;
@@ -294,8 +292,7 @@ pub fn handler(ctx: Context<LaunchPool>, args: LaunchPoolArgs) -> Result<()> {
 
     let crwa = {
         let data = crwa_mint_info.try_borrow_data()?;
-        Mint::try_deserialize(&mut &data[..])
-            .map_err(|_| error!(AegisError::CrwaMintMalformed))?
+        Mint::try_deserialize(&mut &data[..]).map_err(|_| error!(AegisError::CrwaMintMalformed))?
     };
 
     // The peg, asserted rather than trusted: every cRWA that now exists is matched by a Real RWA
@@ -382,7 +379,11 @@ pub fn handler(ctx: Context<LaunchPool>, args: LaunchPoolArgs) -> Result<()> {
         crwa_supply: launch.crwa_minted,
     });
 
-    msg!("Aegis: live. cRWA {} pool {}", launch.crwa_mint, launch.virtual_pool);
+    msg!(
+        "Aegis: live. cRWA {} pool {}",
+        launch.crwa_mint,
+        launch.virtual_pool
+    );
     msg!(
         "Backed 1:1 — {} escrowed, {} wrapped",
         launch.real_rwa_locked,

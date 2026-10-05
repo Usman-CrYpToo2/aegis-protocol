@@ -230,9 +230,10 @@ pub fn plan_curve(
     // Meteora applies the authoritative check during config creation; running it here first
     // turns an opaque `InvalidTokenSupply` into a message naming the real problem.
     // ------------------------------------------------------------------
-    let base_tokens_sold: u64 = get_base_token_for_swap(sqrt_start_price, migration_sqrt_price, &curve)?
-        .try_into()
-        .map_err(|_| error!(AegisError::MathOverflow))?;
+    let base_tokens_sold: u64 =
+        get_base_token_for_swap(sqrt_start_price, migration_sqrt_price, &curve)?
+            .try_into()
+            .map_err(|_| error!(AegisError::MathOverflow))?;
     require!(base_tokens_sold > 0, AegisError::CurveSellsNothing);
 
     // Meteora lets buyers overshoot the threshold slightly, so it reserves a buffer above the
@@ -416,8 +417,22 @@ mod tests {
 
     #[test]
     fn a_larger_raise_needs_more_liquidity_and_sells_more_tokens() {
-        let small = plan_curve(ONE, 11_000, 1_000_000_000, RwaCurveArchetype::BookBuilding, u64::MAX).unwrap();
-        let large = plan_curve(ONE, 11_000, 2_000_000_000, RwaCurveArchetype::BookBuilding, u64::MAX).unwrap();
+        let small = plan_curve(
+            ONE,
+            11_000,
+            1_000_000_000,
+            RwaCurveArchetype::BookBuilding,
+            u64::MAX,
+        )
+        .unwrap();
+        let large = plan_curve(
+            ONE,
+            11_000,
+            2_000_000_000,
+            RwaCurveArchetype::BookBuilding,
+            u64::MAX,
+        )
+        .unwrap();
         assert!(large.liquidity > small.liquidity);
         assert!(large.base_tokens_sold > small.base_tokens_sold);
         // Same price band either way — raising more does not move the ceiling.

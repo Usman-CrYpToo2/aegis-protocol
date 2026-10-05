@@ -33,14 +33,14 @@ pub fn handler(ctx: Context<InitializePlatform>) -> Result<()> {
 
     // 1. Assign the caller as the master protocol administrator
     platform_config.admin = ctx.accounts.admin.key();
-    
+
     // 2. Default the fee recipient to the admin's wallet.
     // (In a production environment, this would be updated to a DAO treasury or Squads multi-sig).
     platform_config.fee_recipient = ctx.accounts.admin.key();
-    
+
     // 3. Set the default RWA pool creation fee to 1 SOL (1,000,000,000 lamports).
     platform_config.creation_fee_lamports = 1_000_000_000;
-    
+
     // 4. Set the protocol to active.
     platform_config.is_paused = false;
 
@@ -52,8 +52,8 @@ pub fn handler(ctx: Context<InitializePlatform>) -> Result<()> {
     platform_config.curve_fee_bps = 100; // 1%
     platform_config.issuer_curve_fee_share_pct = 0; // the placement fee is the protocol's
     platform_config.aegis_migration_fee_share_pct = 0; // no second cut of the raise
-    // The only permanently locked liquidity. Keeps a venue alive for holders who cannot use the
-    // bridge, rather than serving as the anti-rug mechanism — the bridge already is that.
+                                                       // The only permanently locked liquidity. Keeps a venue alive for holders who cannot use the
+                                                       // bridge, rather than serving as the anti-rug mechanism — the bridge already is that.
     platform_config.aegis_lp_share_pct = 10;
 
     // 6. Bounds on what the issuer may choose.
@@ -78,7 +78,10 @@ pub fn handler(ctx: Context<InitializePlatform>) -> Result<()> {
 
     msg!("Aegis Protocol Initialized successfully.");
     msg!("Admin Authority: {}", platform_config.admin);
-    msg!("Platform Creation Fee: {} lamports", platform_config.creation_fee_lamports);
+    msg!(
+        "Platform Creation Fee: {} lamports",
+        platform_config.creation_fee_lamports
+    );
 
     Ok(())
 }

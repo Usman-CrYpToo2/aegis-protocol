@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::errors::AegisError;
+use anchor_lang::prelude::*;
 
 use crate::constants::*;
 use crate::state::PlatformConfig;
@@ -77,10 +77,7 @@ pub fn handler(
 
     // Update protocol administrator if supplied.
     if let Some(new_admin) = parameters.admin {
-        require!(
-            new_admin != Pubkey::default(),
-            AegisError::InvalidAdmin
-        );
+        require!(new_admin != Pubkey::default(), AegisError::InvalidAdmin);
 
         platform_config.admin = new_admin;
     }
@@ -151,7 +148,10 @@ pub fn handler(
         platform_config.min_vesting_months = months;
     }
     if let Some(months) = parameters.max_vesting_months {
-        require!(months <= MAX_VESTING_MONTHS, AegisError::InvalidVestingMonths);
+        require!(
+            months <= MAX_VESTING_MONTHS,
+            AegisError::InvalidVestingMonths
+        );
         platform_config.max_vesting_months = months;
     }
     if let Some(bps) = parameters.min_pool_fee_bps {

@@ -461,7 +461,11 @@ pub fn handler(ctx: Context<CreateRwaConfig>, args: CreateRwaConfigArgs) -> Resu
         migration_fee_pct: args.migration_fee_pct,
     });
 
-    msg!("Aegis: config {} for {}", launch.meteora_config, launch.real_rwa_mint);
+    msg!(
+        "Aegis: config {} for {}",
+        launch.meteora_config,
+        launch.real_rwa_mint
+    );
     msg!(
         "Curve: sqrt {} -> {} (sale closes at {})",
         plan.sqrt_start_price,

@@ -233,9 +233,20 @@ pub fn handler(ctx: Context<FundVault>, args: FundVaultArgs) -> Result<()> {
         investor_group: launch.investor_group,
     });
 
-    msg!("Aegis: escrowed {} of {}", total_supply, launch.real_rwa_mint);
-    msg!("Vault {} (group {})", launch.escrow_vault, launch.vault_group);
-    msg!("Redemption open to investor group {}", launch.investor_group);
+    msg!(
+        "Aegis: escrowed {} of {}",
+        total_supply,
+        launch.real_rwa_mint
+    );
+    msg!(
+        "Vault {} (group {})",
+        launch.escrow_vault,
+        launch.vault_group
+    );
+    msg!(
+        "Redemption open to investor group {}",
+        launch.investor_group
+    );
 
     Ok(())
 }

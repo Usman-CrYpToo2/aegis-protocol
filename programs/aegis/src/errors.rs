@@ -50,7 +50,6 @@ pub enum AegisError {
     #[msg("Admin cannot be the default/zero public key.")]
     InvalidAdmin,
 
-
     #[msg("Fee recipient cannot be the default/zero public key.")]
     InvalidFeeRecipient,
 
@@ -184,7 +183,9 @@ pub enum AegisError {
     #[msg("The curve would sell no tokens at all.")]
     CurveSellsNothing,
 
-    #[msg("The token supply is too small for this raise. Lower the target or widen the price band.")]
+    #[msg(
+        "The token supply is too small for this raise. Lower the target or widen the price band."
+    )]
     SupplyTooSmallForCurve,
 
     // ==========================================

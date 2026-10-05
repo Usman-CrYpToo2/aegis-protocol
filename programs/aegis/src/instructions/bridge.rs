@@ -265,7 +265,11 @@ pub fn deposit_handler(ctx: Context<BridgeDeposit>, amount: u64) -> Result<()> {
         crwa_minted: ctx.accounts.launch.crwa_minted,
     });
 
-    msg!("Aegis: wrapped {} of {}", received, ctx.accounts.launch.real_rwa_mint);
+    msg!(
+        "Aegis: wrapped {} of {}",
+        received,
+        ctx.accounts.launch.real_rwa_mint
+    );
     Ok(())
 }
 
@@ -491,7 +495,11 @@ pub fn redeem_handler(ctx: Context<BridgeRedeem>, amount: u64) -> Result<()> {
         crwa_minted: ctx.accounts.launch.crwa_minted,
     });
 
-    msg!("Aegis: unwrapped {} of {}", amount, ctx.accounts.launch.real_rwa_mint);
+    msg!(
+        "Aegis: unwrapped {} of {}",
+        amount,
+        ctx.accounts.launch.real_rwa_mint
+    );
     Ok(())
 }
 

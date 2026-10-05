@@ -23,9 +23,7 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use dynamic_bonding_curve::cpi::accounts::{
-    ClaimTradingFeesCtx, WithdrawMigrationFeeCtx,
-};
+use dynamic_bonding_curve::cpi::accounts::{ClaimTradingFeesCtx, WithdrawMigrationFeeCtx};
 use dynamic_bonding_curve::utils::remaining_accounts::TransferHookAccountsInfo;
 
 use crate::constants::*;
@@ -300,10 +298,7 @@ pub fn claim_migration_fee_handler(ctx: Context<ClaimPartnerQuote>) -> Result<()
                 pool_authority: ctx.accounts.pool_authority.to_account_info(),
                 config: ctx.accounts.meteora_config.to_account_info(),
                 virtual_pool: ctx.accounts.virtual_pool.to_account_info(),
-                token_quote_account: ctx
-                    .accounts
-                    .fee_recipient_quote_account
-                    .to_account_info(),
+                token_quote_account: ctx.accounts.fee_recipient_quote_account.to_account_info(),
                 quote_vault: ctx.accounts.quote_vault.to_account_info(),
                 quote_mint: ctx.accounts.quote_mint.to_account_info(),
                 sender: ctx.accounts.aegis_authority.to_account_info(),
@@ -316,9 +311,15 @@ pub fn claim_migration_fee_handler(ctx: Context<ClaimPartnerQuote>) -> Result<()
         SENDER_FLAG_PARTNER,
     )?;
 
-    finish(&mut ctx.accounts.fee_recipient_quote_account, before, launch_key,
-        RevenueKind::MigrationFee, ctx.accounts.quote_mint.key(), ctx.accounts.fee_recipient.key(),
-        "migration fee")
+    finish(
+        &mut ctx.accounts.fee_recipient_quote_account,
+        before,
+        launch_key,
+        RevenueKind::MigrationFee,
+        ctx.accounts.quote_mint.key(),
+        ctx.accounts.fee_recipient.key(),
+        "migration fee",
+    )
 }
 
 /// Measures what actually arrived rather than trusting the call, and records it.

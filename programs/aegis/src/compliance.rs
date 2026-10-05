@@ -98,11 +98,12 @@ pub fn verify_compliance(input: ComplianceInputs) -> Result<()> {
     // The vault is ours, usable, and unencumbered.
     // ------------------------------------------------------------------
     require_keys_eq!(vault.mint, mint_key, AegisError::VaultMintMismatch);
-    require_keys_eq!(vault.owner, *aegis_authority, AegisError::VaultNotOwnedByAegis);
-    require!(
-        vault.state != AccountState::Frozen,
-        AegisError::VaultFrozen
+    require_keys_eq!(
+        vault.owner,
+        *aegis_authority,
+        AegisError::VaultNotOwnedByAegis
     );
+    require!(vault.state != AccountState::Frozen, AegisError::VaultFrozen);
     // A delegate could move the escrowed asset out from under the peg.
     require!(vault.delegate.is_none(), AegisError::VaultHasDelegate);
 
