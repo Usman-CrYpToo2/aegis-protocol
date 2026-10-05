@@ -1,4 +1,3 @@
-import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { config } from "../config";
@@ -33,7 +32,6 @@ const link = ({ isActive }: { isActive: boolean }) =>
 
 export function Header() {
   const { pathname } = useLocation();
-  const { publicKey } = useWallet();
   const console_ = useConsole();
   const attention = console_.attention.length;
   // Asset pages are part of the registry, so its tab stays marked while one is open.
@@ -53,13 +51,13 @@ export function Header() {
             <NavLink to="/registry" className={() => link({ isActive: inRegistry })} aria-current={inRegistry ? "page" : undefined}>
               Registry
             </NavLink>
-            {publicKey && (
-              <NavLink to="/holdings" className={link}>
-                My holdings
-              </NavLink>
-            )}
-            {/* Only a wallet recorded as some launch's issuer sees the console. Anyone else can start one. */}
-            {publicKey && console_.isIssuer === false && (
+            {/* Shown before a wallet connects too, so a first visit sees what the app does; each page
+                explains itself and offers to connect. */}
+            <NavLink to="/holdings" className={link}>
+              My holdings
+            </NavLink>
+            {/* A wallet recorded as some launch's issuer gets the console instead. Anyone else can start one. */}
+            {!console_.isIssuer && (
               <NavLink to="/launch" className={link}>
                 Launch an asset
               </NavLink>
@@ -106,8 +104,8 @@ export function Header() {
       {menu && (
         <nav id="phone-menu" aria-label="Main" className="shell flex flex-col border-t border-rule pb-3 md:hidden">
           <NavLink to="/registry" className={() => phoneLink(inRegistry)}>Registry</NavLink>
-          {publicKey && <NavLink to="/holdings" className={({ isActive }) => phoneLink(isActive)}>My holdings</NavLink>}
-          {publicKey && console_.isIssuer === false && <NavLink to="/launch" className={({ isActive }) => phoneLink(isActive)}>Launch an asset</NavLink>}
+          <NavLink to="/holdings" className={({ isActive }) => phoneLink(isActive)}>My holdings</NavLink>
+          {!console_.isIssuer && <NavLink to="/launch" className={({ isActive }) => phoneLink(isActive)}>Launch an asset</NavLink>}
           {console_.isIssuer && (
             <NavLink to="/console" className={({ isActive }) => phoneLink(isActive)}>
               Issuer console{attention > 0 && <span className="ml-2 font-mono text-[13px] text-amber">{attention} need you</span>}
