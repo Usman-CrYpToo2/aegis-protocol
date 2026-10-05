@@ -146,7 +146,7 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
         title="Trading fees from the pool"
         body={terms ? <>{(terms.migratedPoolFeeBps / 100).toFixed(2).replace(/\.?0+$/, "")}% of every pool trade</> : "Set with the sale terms"}
         hint="Your pool positions earn fees after graduation. You hold the positions in your wallet and collect the fees on Meteora."
-        amount={<span className="text-base text-mute">—</span>}
+        amount={<span className="text-mute">—</span>}
         action={<span className="text-[13px] text-mute">On Meteora</span>}
       />
 
@@ -155,13 +155,13 @@ function Money({ launch: l }: { launch: ConsoleLaunch }) {
           title="Pool liquidity that unlocks"
           body={<>Over {months} months after graduation</>}
           hint="Released in monthly steps, withdrawn on Meteora. Taking it out makes the market thinner for your buyers."
-          amount={<span className="text-base">{vest.percentage}%</span>}
+          amount={<>{vest.percentage}%</>}
           action={<span className="text-[13px] text-mute">On Meteora</span>}
         />
       )}
 
       {feeShare > 0 && (
-        <Row title="Fees from the sale" body={`${feeShare}% of the platform’s share of each sale trade`} amount={<span className="text-base">{feeShare}%</span>} action={null} />
+        <Row title="Fees from the sale" body={`${feeShare}% of the platform’s share of each sale trade`} amount={<>{feeShare}%</>} action={null} />
       )}
     </section>
   );
