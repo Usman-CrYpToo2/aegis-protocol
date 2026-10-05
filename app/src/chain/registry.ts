@@ -153,11 +153,21 @@ export function buildEntry(launch: LaunchAccount, accounts: Map<string, Info | n
 export const relatedAccounts = (l: LaunchAccount) =>
   [l.realRwaMint, l.crwaMint, l.escrowVault, l.quoteMint, l.virtualPool, l.meteoraConfig].filter(isSet);
 
-export async function loadRegistry(connection: Connection): Promise<Registry> {
-  const program = await connection.getAccountInfo(AEGIS_PROGRAM_ID, "confirmed");
-  if (!program?.executable) throw new ProgramNotDeployedError();
+/** Once the program is found it stays found: the check isn't repeated on every refresh. */
+let deployed = false;
 
-  const { launches, unreadable } = await fetchAllLaunches(connection);
+export async function loadRegistry(connection: Connection): Promise<Registry> {
+  // The deployment check and the listing go out together rather than one after the other.
+  const listing = fetchAllLaunches(connection);
+  if (!deployed) {
+    const program = await connection.getAccountInfo(AEGIS_PROGRAM_ID, "confirmed");
+    if (!program?.executable) {
+      listing.catch(() => undefined);
+      throw new ProgramNotDeployedError();
+    }
+    deployed = true;
+  }
+  const { launches, unreadable } = await listing;
   const keys = launches.flatMap(relatedAccounts);
   const accounts = await readMany(connection, keys);
   return { entries: launches.map((l) => buildEntry(l, accounts)), unreadable, readAt: Date.now() };

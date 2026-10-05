@@ -47,15 +47,19 @@ function readQuoteLabels(value: string | undefined, cluster: Cluster): Map<strin
 }
 
 const cluster = readCluster(import.meta.env.VITE_CLUSTER);
+const indexRpcUrls = (import.meta.env.VITE_INDEX_RPC_URL ?? "").split(",").map((u: string) => u.trim()).filter(Boolean).map((u: string) => readRpcUrl(u, cluster));
 
 export const config = {
   cluster,
   rpcUrl: readRpcUrl(import.meta.env.VITE_RPC_URL, cluster),
   /**
-   * Optional second endpoint for listing a program's accounts (getProgramAccounts). Some free RPC
-   * plans refuse that one call while serving everything else well; this lets the two be split.
+   * Optional endpoints for listing a program's accounts (getProgramAccounts), comma-separated, tried
+   * in order. Some free RPC plans refuse that one call while serving everything else well; this lets
+   * the two be split, and a second provider covers the first one's outages. The first is also the
+   * backup for ordinary requests (chain/send).
    */
-  indexRpcUrl: import.meta.env.VITE_INDEX_RPC_URL ? readRpcUrl(import.meta.env.VITE_INDEX_RPC_URL, cluster) : null,
+  indexRpcUrls,
+  indexRpcUrl: indexRpcUrls[0] ?? null,
   quoteLabels: readQuoteLabels(import.meta.env.VITE_QUOTE_LABELS, cluster),
   /** How often on-chain state is re-read while the page is open. */
   refreshMs: 15_000,

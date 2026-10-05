@@ -8,7 +8,7 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
  * reload injects inline scripts that a strict policy would block.
  *
  * `connect-src` names every server the page talks to and nothing else, so a compromised dependency
- * cannot quietly send data anywhere: the RPC endpoint (and its websocket), the listing endpoint,
+ * cannot quietly send data anywhere: the RPC endpoint (and its websocket), the listing endpoints,
  * Solana's public devnet endpoint (the fallback for listing and for devnet SOL), and the two public
  * price sources (chain/prices). Anything added to the app that talks to a new server must be added
  * here too, or the browser will refuse it in production only.
@@ -19,7 +19,7 @@ function contentSecurityPolicy(env: Record<string, string>): Plugin {
   const origins = [
     rpc.origin,
     ws,
-    env.VITE_INDEX_RPC_URL ? new URL(env.VITE_INDEX_RPC_URL).origin : null,
+    ...(env.VITE_INDEX_RPC_URL ?? "").split(",").map((u) => u.trim()).filter(Boolean).map((u) => new URL(u).origin),
     env.VITE_CLUSTER === "devnet" ? "https://api.devnet.solana.com" : null,
     "https://lite-api.jup.ag",
     "https://api.coinbase.com",
@@ -37,11 +37,16 @@ function contentSecurityPolicy(env: Record<string, string>): Plugin {
     "base-uri 'self'",
     "form-action 'none'",
   ].join("; ");
+  // The RPC servers are known before any script runs, so the browser can open those connections
+  // (DNS, TLS) while the app is still loading instead of on its first request.
+  const preconnect = [...new Set(origins.filter((o) => o!.startsWith("https://")))]
+    .map((o) => `\n    <link rel="preconnect" href="${o}" crossorigin />`)
+    .join("");
   return {
     name: "aegis-csp",
     apply: "build",
     transformIndexHtml: (html) =>
-      html.replace("<head>", `<head>\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`),
+      html.replace("<head>", `<head>\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />${preconnect}`),
   };
 }
 
