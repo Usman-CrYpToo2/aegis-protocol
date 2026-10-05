@@ -1,14 +1,14 @@
 # Aegis Protocol
 
-Aegis is a launchpad for real-world assets on Solana. An issuer locks a regulated security in an on-chain escrow, sells a wrapper token backed one for one by that escrow on a [Meteora Dynamic Bonding Curve](https://github.com/MeteoraAg/dynamic-bonding-curve), and when the sale fills the wrapper graduates into a permanent [Meteora DAMM v2](https://github.com/MeteoraAg/damm-v2) pool. Approved holders can convert between the wrapper and the security at any time, one for one, through the Aegis bridge.
+Aegis is a launchpad for real-world assets on Solana. An issuer locks a regulated security in an on-chain escrow, sells a wrapper token backed one for one by that escrow on a [Meteora Dynamic Bonding Curve](https://github.com/MeteoraAg/dynamic-bonding-curve), and when the sale fills the wrapper graduates into a permanent [Meteora DAMM v2](https://github.com/MeteoraAg/damm-v2) pool. After graduation, approved holders can convert between the wrapper and the security one for one through the Aegis bridge.
 
-The security never leaves its compliance rules, which are enforced by [Upside](https://github.com/upsideos/upsideos-solana-rwa)'s Access Control and Transfer Restrictions programs. The wrapper trades freely. The escrow is what keeps the two equal, and the program checks that on every instruction that moves either token.
+The security never leaves its compliance rules, which are enforced by [Upside](https://github.com/upsideos/upsideos-solana-rwa)'s Access Control and Transfer Restrictions programs. The wrapper trades freely. The escrow keeps the two equal, and once the wrapper exists the program re-checks that on every instruction that moves either token.
 
 > **Status:** live on Solana devnet. The programs have not been audited. Do not use them with real assets.
 
-## The problem
+## Motivation
 
-A tokenised building, bond or fund share is still a security: only holders the issuer has approved may own it, so it cannot trade on an open market. Tokenised assets today either sit in approved wallets with no market and no price discovery, or trade freely with nothing on chain proving what backs them.
+A tokenized building, bond or fund share is still a security: only holders the issuer has approved may own it, so it cannot trade on an open market. Tokenized assets today either sit in approved wallets with no market and no price discovery, or trade freely with nothing on chain proving what backs them.
 
 Aegis separates the two jobs. Identity checks apply where the law needs them, when someone takes ownership of the security. Price discovery and trading happen on an open market in a wrapper whose backing anyone can verify.
 
@@ -21,8 +21,9 @@ Aegis separates the two jobs. Identity checks apply where the law needs them, wh
      │                            Upside hook, supply cap = issue size),
      │                            hands the issuer all four Upside roles
      │
-     │ 2  Upside setup            register, investor and vault groups,
-     │    (issuer signs)          transfer rules, holder records
+     │ 2  Upside setup            (issuer signs Upside directly: register,
+     │                            investor and vault groups, transfer rules,
+     │                            holder records)
      │
      │ 3  fund_vault ───────────▶ checks the redemption path is open,
      │                            mints the whole supply into escrow
@@ -36,29 +37,24 @@ Aegis separates the two jobs. Identity checks apply where the law needs them, wh
    Anyone ── migration_damm_v2 (when the curve fills) ─────────────────▶ DAMM v2 pool
    Anyone ── finalize_graduation ─▶ burns unsold wrapper, opens bridge
      │
-   Approved holders ⇄ bridge_redeem / bridge_deposit (1 : 1, no fee)
+   Approved holders ── bridge_redeem / bridge_deposit ─▶ security ⇄ wrapper, 1 : 1, no fee
 ```
 
-### Two tokens, one escrow
+### Token model
 
-```
-  Security  (Real RWA)              Escrow vault                     Wrapper  (cRWA)
-  Token-2022 + Upside hook   ───▶   owned by the launch's    ───▶    Token-2022, created by Meteora
-  legal claim on the asset          Aegis PDA, holds the             trades on the curve, then on
-  approved holders only             whole issue                      DAMM v2; open to anyone
-```
+The security sits in an escrow vault owned by the launch's `aegis_authority` PDA. The wrapper is backed by that escrow.
 
 | | Security (Real RWA) | Wrapper (cRWA) |
 |---|---|---|
 | Created by | Aegis, through Upside Access Control | Meteora DBC, inside pool creation |
 | Who may hold it | Wallets the issuer approved | Anyone |
 | Transfer rules | Upside Transfer Restrictions, permanently | Aegis's permissive hook during the sale; Meteora removes it at graduation |
-| Mint authority | Upside, under the issuer's Reserve Admin role | The launch's `aegis_authority` PDA, used only by `bridge_deposit` |
+| Who can mint | The issuer, through Upside's Reserve Admin role, up to the supply cap | The launch's `aegis_authority` PDA, used only by `bridge_deposit` |
 | Supply | Capped at the issue size | Never more than the security in escrow |
 
 ### The invariant
 
-Every instruction that moves either token ends by reading the escrow balance and the wrapper supply back from the chain and requiring:
+From `launch_pool` on, every instruction that moves either token ends by reading the escrow balance and the wrapper supply back from the chain and requiring:
 
 ```rust
 // programs/aegis/src/state/launch.rs
@@ -68,23 +64,23 @@ pub fn assert_backing(&self) -> Result<()> {
 }
 ```
 
-It is an inequality on purpose. Anyone can burn wrapper they own or send the security into the escrow, and both leave the launch over-collateralised, which harms nobody. Only the escrow holding less than the wrapper supply is dangerous, and in that case the bridge stops for everyone.
+It is an inequality on purpose. Anyone can burn wrapper they own or send the security into the escrow, and both leave the launch over-collateralized, which harms nobody. Only the escrow holding less than the wrapper supply is dangerous, and in that case the bridge stops for everyone.
 
-## Guarantees
+## Safety properties
 
 These hold for every launch, whoever the issuer is. Each is enforced by the program, not by the app.
 
-| Guarantee | How it is enforced | Where |
+| Property | How it is enforced | Where |
 |---|---|---|
-| Every wrapper is backed | `assert_backing` after every movement of either token | [`state/launch.rs`](programs/aegis/src/state/launch.rs), [`instructions/bridge.rs`](programs/aegis/src/instructions/bridge.rs) |
-| Nobody can print wrappers | After Meteora creates the wrapper, Aegis requires its mint authority to be the launch PDA and its freeze authority to be empty, or the launch reverts | [`instructions/launch_pool.rs`](programs/aegis/src/instructions/launch_pool.rs) |
-| Supply matches the escrow | `fund_vault` mints the whole issue into escrow itself; `launch_pool` requires wrapper supply == issue size == escrow balance | [`instructions/fund_vault.rs`](programs/aegis/src/instructions/fund_vault.rs), [`instructions/launch_pool.rs`](programs/aegis/src/instructions/launch_pool.rs) |
-| The price cannot be rigged | Aegis builds the curve: one segment of constant liquidity, so there is no hidden spike or thin patch, with the price ceiling capped by archetype | [`curve.rs`](programs/aegis/src/curve.rs) |
-| No day-one exit | Graduated liquidity is locked: Aegis's share permanently, the issuer's permanently or vested over months | [`instructions/create_rwa_config.rs`](programs/aegis/src/instructions/create_rwa_config.rs) |
-| Sale terms cannot change | Flat fee, collected only in the quote token, fixed in the Meteora config with every other term | [`instructions/create_rwa_config.rs`](programs/aegis/src/instructions/create_rwa_config.rs) |
-| Holders can always leave | The redemption path is verified before the asset is locked, before the sale opens and on every bridge call | [`compliance.rs`](programs/aegis/src/compliance.rs) |
-| Graduation cannot be blocked | Migration and `finalize_graduation` are permissionless and move no security, so no issuer setting can stop them | [`instructions/finalize_graduation.rs`](programs/aegis/src/instructions/finalize_graduation.rs) |
-| The issuer's losses come first | `claim_unsold` pays only what the escrow holds above the wrapper supply | [`instructions/claim_unsold.rs`](programs/aegis/src/instructions/claim_unsold.rs) |
+| Every wrapper is backed | `assert_backing` at the end of `launch_pool`, both bridge instructions, `finalize_graduation`, `claim_unsold` and `abort_launch` | [`state/launch.rs`](programs/aegis/src/state/launch.rs), [`instructions/bridge.rs`](programs/aegis/src/instructions/bridge.rs) |
+| Wrapper minting is program-only | After Meteora creates the wrapper, Aegis requires its mint authority to be the launch PDA and its freeze authority to be empty, or the launch reverts | [`instructions/launch_pool.rs`](programs/aegis/src/instructions/launch_pool.rs) |
+| Initial supply equals the escrow | `fund_vault` mints the whole issue into escrow itself; `launch_pool` requires wrapper supply == issue size == escrow balance | [`instructions/fund_vault.rs`](programs/aegis/src/instructions/fund_vault.rs), [`instructions/launch_pool.rs`](programs/aegis/src/instructions/launch_pool.rs) |
+| Bounded, monotonic pricing | Aegis builds the curve itself as one segment of constant liquidity, so it cannot hide a price spike or a thin patch, and its ceiling is capped by archetype | [`curve.rs`](programs/aegis/src/curve.rs) |
+| No day-one liquidity withdrawal | Graduated liquidity is locked: Aegis's share permanently, the issuer's split between permanent and vested | [`instructions/create_rwa_config.rs`](programs/aegis/src/instructions/create_rwa_config.rs) |
+| Sale terms are immutable | Flat fee, collected only in the quote token, fixed in the Meteora config with every other term | [`instructions/create_rwa_config.rs`](programs/aegis/src/instructions/create_rwa_config.rs) |
+| Redemption path is checked at every gate | Aegis reads Upside's live rules and refuses to lock the asset, open the sale or run a bridge call if the vault-to-investor path is shut | [`compliance.rs`](programs/aegis/src/compliance.rs) |
+| Graduation cannot be blocked by the issuer | Migration and `finalize_graduation` are permissionless, and settlement moves no security, so no compliance setting can hold it back | [`instructions/finalize_graduation.rs`](programs/aegis/src/instructions/finalize_graduation.rs) |
+| Holders are paid before the issuer | `claim_unsold` pays only what the escrow holds above the wrapper supply | [`instructions/claim_unsold.rs`](programs/aegis/src/instructions/claim_unsold.rs) |
 
 ## Programs
 
@@ -144,7 +140,7 @@ The issuer also signs Upside instructions directly to manage their register (app
 | `bridge_redeem` | Burns wrapper and releases the same amount of security from escrow. Aegis verifies the redeemer is in the investor group itself. Puts a floor under the wrapper's price. |
 | `bridge_deposit` | Takes security into escrow and mints the same amount of wrapper. Puts a ceiling on the wrapper's price. |
 
-Trading during the sale is Meteora's `swap2_with_transfer_hook`, called directly. Aegis is not in the trade path.
+Trading during the sale is Meteora's `swap2_with_transfer_hook`, called directly. The Aegis program is not invoked; Token-2022 calls only the permissive `aegis_hook`.
 
 ## Launch lifecycle
 
@@ -182,7 +178,7 @@ Defaults set by `initialize_platform`, all changeable by the admin for new launc
 
 | Setting | Default |
 |---|---|
-| Placement fee on every sale trade | 1%; the issuer's share of it is 0% |
+| Fee on every curve trade | 1%. Meteora keeps its 20% protocol share; the rest goes to Aegis, with 0% to the issuer |
 | Issuer's cash share of the raise | Issuer's choice, 1% to 90%; the rest seeds the DAMM v2 pool |
 | Protocol share of the migration fee | 0% |
 | Graduated liquidity locked to the protocol | 10%, permanently |
@@ -195,7 +191,7 @@ Anything that protects the backing or the anti-rug guarantees is fixed in the pr
 ## Glossary
 
 - **Security (Real RWA):** the legal token for the asset, created through Upside. Only approved holders can own it.
-- **Wrapper (cRWA):** the tradable token, created by Meteora, backed one for one by the security in escrow. Its symbol is the security's with a `c` in front.
+- **Wrapper (cRWA):** the tradable token, created by Meteora, backed one for one by the security in escrow. The app names it after the security with a `c` in front.
 - **Escrow vault:** the token account holding the security, owned by a PDA with no private key.
 - **Issuer:** the wallet that started the launch. Holds all four Upside roles and full legal control of the security.
 - **Approved holder:** a wallet in the issuer's investor group in the Upside register. Only approved holders can redeem.
@@ -250,7 +246,7 @@ design.md                 original architecture notes and the Meteora constraint
 - Rust 1.93.0 (pinned in `rust-toolchain.toml`)
 - Solana CLI 3.1
 - Anchor CLI 1.0.2
-- Node.js 20 or later, and Yarn
+- Node.js 20.19+ or 22.12+, and Yarn
 
 ### Build
 
@@ -265,7 +261,7 @@ anchor build
 yarn test
 ```
 
-281 tests run in under a minute on [LiteSVM](https://github.com/LiteSVM/litesvm), with no validator. They load the real mainnet binaries of Meteora DBC, DAMM v2 and both Upside programs from the fixtures folders, so every CPI runs against the code deployed on chain. They cover the full lifecycle, pricing, graduation, the bridge, revenue claims, unsold stock, supply caps and a set of attack cases ([`tests/security.test.ts`](tests/security.test.ts)). `anchor build` must run first: the tests load `target/deploy/*.so`.
+281 tests run in under a minute on [LiteSVM](https://github.com/LiteSVM/litesvm), with no validator. They load the real mainnet binaries of Meteora DBC, DAMM v2 and both Upside programs from the fixtures folders, so every CPI runs against the same code that is deployed. They cover the full lifecycle, pricing, graduation, the bridge, revenue claims, unsold stock, supply caps and a set of attack cases ([`tests/security.test.ts`](tests/security.test.ts)). `anchor build` must run first: the tests load `target/deploy/*.so`.
 
 ### Run a local network
 
@@ -308,8 +304,8 @@ What the program cannot prevent, by design:
 - **The issuer's legal powers.** Securities law requires an issuer to be able to freeze, pause, and move or burn the security under a court order. Through Upside the issuer keeps these, and they reach the escrow. Aegis gives them no path through its own instructions, stops the bridge if the escrow ever holds less than the wrapper supply, and takes any loss out of the issuer's unsold stock first.
 - **The issuer's compliance settings.** The issuer owns the register and can close the redemption rule or raise the supply cap. Aegis checks these whenever they matter and refuses to lock an asset, open a sale or run a bridge call that nobody could exit, but it cannot make an issuer reopen a path they closed.
 - **The link to the real asset.** The chain proves every wrapper is matched by the security. It cannot prove the security is matched by a building or a bond; that is the issuer's legal promise.
-- **`initialize_platform` is first-caller-wins.** Initialise the platform in the same script as the deploy and verify `platform_config.admin` before announcing the program.
+- **`initialize_platform` is first-caller-wins.** Initialize the platform in the same script as the deploy and verify `platform_config.admin` before announcing the program.
 
-The platform admin can change fees and bounds for new launches, approve or retire currencies, and pause new launches. The admin holds no authority over any security, escrow or wrapper.
+The platform admin can change fees and bounds for new launches, approve or retire currencies, and pause launches that have not opened their sale. The admin holds no authority over any security, escrow or wrapper.
 
 Please report vulnerabilities privately through this repository's Security tab rather than in a public issue.
