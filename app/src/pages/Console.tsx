@@ -1,5 +1,5 @@
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { config } from "../config";
 import type { Attention, ConsoleLaunch } from "../chain/console";
@@ -8,11 +8,11 @@ import { useConsole } from "../hooks/useConsole";
 import { useNow } from "../hooks/useNow";
 import { useUsdTotal } from "../hooks/useUsdPrices";
 import type { CurrencyAmount } from "../lib/usd";
-import { ShowMore, usePaged } from "../components/ShowMore";
+import { Pager, usePages } from "../components/Pager";
 
 /** Launches per page, and to-do items shown before "show more": the console stays a working list. */
 const LAUNCH_PAGE = 10;
-const ATTENTION_PAGE = 8;
+const ATTENTION_PAGE = 5;
 import { Hint } from "../components/Hint";
 import { useRegistry } from "../hooks/useRegistry";
 import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
@@ -158,8 +158,9 @@ export function ConsolePage() {
     const rank = (l: ConsoleLaunch) => (needs.has(l.entry.launch.address.toBase58()) ? 0 : l.entry.launch.stage === "Live" ? 1 : l.entry.launch.stage === "Graduated" ? 2 : 3);
     return [...list].sort((a, b) => rank(a) - rank(b) || name(a).localeCompare(name(b)));
   }, [console_.data, console_.attention]);
-  const launchesPage = usePaged(ordered, LAUNCH_PAGE);
-  const attentionPage = usePaged(console_.attention, ATTENTION_PAGE);
+  const launchesPage = usePages(ordered, LAUNCH_PAGE);
+  const attentionPage = usePages(console_.attention, ATTENTION_PAGE);
+  const launchesTop = useRef<HTMLElement>(null);
 
   const readyUsd = useUsdTotal(console_.data ? totals.ready : null);
   const atGraduationUsd = useUsdTotal(console_.data ? totals.atGraduation : null);
@@ -268,7 +269,7 @@ export function ConsolePage() {
     </section>
 
     <div className="grid grid-cols-1 items-start gap-10 xl:grid-cols-[minmax(0,1fr)_28rem]">
-      <section aria-label="Launches" className="flex flex-col">
+      <section ref={launchesTop} aria-label="Launches" className="flex scroll-mt-4 flex-col">
         <div className="flex flex-wrap items-baseline justify-between gap-2 pb-3">
           <h2 className="font-serif text-4xl">{count} in your name</h2>
           <Link to="/launch" className="inline-flex min-h-10 items-center bg-blue px-4 text-sm font-semibold text-white hover:bg-blue-deep">Start a new launch</Link>
@@ -296,7 +297,7 @@ export function ConsolePage() {
             </li>
           ))}
         </ul>
-        <ShowMore shown={launchesPage.shown.length} total={launchesPage.total} pageSize={LAUNCH_PAGE} more={launchesPage.more} noun="launches" />
+        <Pager p={launchesPage} noun="launches" top={launchesTop} />
       </section>
 
       {/* On a phone the to-do comes before the list of launches: it's what the issuer came to act on. */}
@@ -310,7 +311,7 @@ export function ConsolePage() {
         ) : (
           <>
             <ul>{attentionPage.shown.map((a) => <AttentionItem key={`${a.kind}-${a.launch.entry.launch.address.toBase58()}`} a={a} />)}</ul>
-            <div className="px-5"><ShowMore shown={attentionPage.shown.length} total={attentionPage.total} pageSize={ATTENTION_PAGE} more={attentionPage.more} noun="items" /></div>
+            <div className="px-5"><Pager p={attentionPage} noun="items" compact /></div>
           </>
         )}
 

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { config, explorerUrl } from "../config";
 import type { Backing } from "../chain/backing";
 import { ProgramNotDeployedError, type Registry, type RegistryEntry } from "../chain/registry";
 import { Hint } from "../components/Hint";
-import { ShowMore, usePaged } from "../components/ShowMore";
+import { Pager, usePages } from "../components/Pager";
 import { useRegistry } from "../hooks/useRegistry";
 import { useUsdTotal } from "../hooks/useUsdPrices";
 import type { CurrencyAmount } from "../lib/usd";
@@ -21,7 +21,7 @@ const SORTS: { id: Sort; label: string }[] = [
   { id: "name", label: "Name, A to Z" },
 ];
 /** Rows per page: enough to scan, few enough that a thousand assets stay quick on a phone. */
-const PAGE = 25;
+const PAGE = 20;
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
@@ -372,7 +372,8 @@ export function RegistryPage() {
     });
   }, [sorted, filter, query]);
 
-  const page = usePaged(visible, PAGE, `${filter}|${query}|${sort}`);
+  const page = usePages(visible, PAGE, `${filter}|${query}|${sort}`);
+  const listTop = useRef<HTMLElement>(null);
   const data = registry.data;
   const notDeployed = registry.error instanceof ProgramNotDeployedError;
   const refreshing = registry.isFetching;
@@ -499,7 +500,7 @@ export function RegistryPage() {
         </div>
       )}
 
-      <section aria-label="Assets" className="flex flex-col">
+      <section ref={listTop} aria-label="Assets" className="flex scroll-mt-4 flex-col">
         {data && data.entries.length > 0 && (
         <div className="flex flex-col gap-4 pb-4 lg:flex-row lg:items-center lg:justify-between">
           <div role="group" aria-label="Filter by stage" className="flex flex-wrap gap-2">
@@ -546,7 +547,7 @@ export function RegistryPage() {
         )}
 
         {body}
-        <ShowMore shown={page.shown.length} total={page.total} pageSize={PAGE} more={page.more} noun="assets" />
+        {data && visible.length > 0 && <Pager p={page} noun="assets" top={listTop} />}
 
         {data && (
           <p className="mt-3 flex items-center gap-3 font-mono text-xs text-mute">

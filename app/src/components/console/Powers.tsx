@@ -2,6 +2,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
+import { Pager, usePages } from "../Pager";
 import { config, explorerUrl } from "../../config";
 import type { ConsoleLaunch } from "../../chain/console";
 import { loadRegister } from "../../chain/investors";
@@ -40,6 +41,7 @@ export function Powers({ launch }: { launch: ConsoleLaunch }) {
   const paused = useQuery({ queryKey: ["register", "paused", config.rpcUrl, mint.toBase58()], queryFn: () => loadPaused(connection, mint), refetchInterval: config.refreshMs });
   const register = useQuery({ queryKey: ["register", config.rpcUrl, l.address.toBase58()], queryFn: () => loadRegister(connection, l), refetchInterval: config.refreshMs });
   const frozen = (register.data ?? []).filter((w) => w.frozen);
+  const frozenPages = usePages(frozen, 10);
   const candidates = (register.data ?? []).filter((w) => !w.frozen && !w.owner.equals(l.issuer));
   const picked = candidates.find((w) => w.owner.toBase58() === pick);
   const busy = tx.phase.kind === "busy";
@@ -83,8 +85,9 @@ export function Powers({ launch }: { launch: ConsoleLaunch }) {
       <Card title="Freeze one holder" hint={`For a sanctioned or compromised wallet. Their ${sym} stops moving; nobody else is affected.`}
         status={register.data === undefined ? "…" : frozen.length ? <span className="font-semibold text-amber">{frozen.length} frozen</span> : <span className="text-mute">None frozen</span>}>
         {frozen.length > 0 && (
+          <div className="flex flex-col">
           <ul className="flex flex-col border-t border-rule">
-            {frozen.map((w) => (
+            {frozenPages.shown.map((w) => (
               <li key={w.owner.toBase58()} className="flex items-center justify-between gap-3 border-b border-rule py-2.5 text-sm">
                 <a href={explorerUrl("address", w.owner.toBase58())} target="_blank" rel="noopener noreferrer" className="font-mono underline decoration-line underline-offset-2">{shortAddress(w.owner.toBase58())}</a>
                 <span className="text-mute num">{formatUnits(w.security, l.decimals, { maxFraction: 2 })} {sym}</span>
@@ -92,6 +95,8 @@ export function Powers({ launch }: { launch: ConsoleLaunch }) {
               </li>
             ))}
           </ul>
+          <Pager p={frozenPages} noun="frozen wallets" compact />
+          </div>
         )}
         <div className="flex flex-wrap items-center gap-3">
           <label className="sr-only" htmlFor="freeze-pick">Holder to freeze</label>

@@ -1,7 +1,8 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { PublicKey, VersionedTransaction } from "@solana/web3.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { Pager, usePages } from "../Pager";
 import { config, explorerUrl } from "../../config";
 import type { ConsoleLaunch } from "../../chain/console";
 import { alreadyApproved, approvalChunks, approvalDeposit, approvalTransactions, loadRegister } from "../../chain/investors";
@@ -142,6 +143,8 @@ function Waiting({ launch }: { launch: ConsoleLaunch }) {
   const picked = waiting.filter((w) => selected.has(w.owner.toBase58()));
   const busy = flow.phase.kind === "busy";
   const allOn = waiting.length > 0 && picked.length === waiting.length;
+  const waitingTop = useRef<HTMLDivElement>(null);
+  const p = usePages(waiting, 20);
   const toggle = (k: string) => setSelected((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
   const copy = (k: string) => void navigator.clipboard?.writeText(k).then(() => { setCopied(k); setTimeout(() => setCopied(null), 1500); });
 
@@ -150,13 +153,13 @@ function Waiting({ launch }: { launch: ConsoleLaunch }) {
       {waiting.length === 0 ? (
         <p className="border border-rule bg-surface p-5 text-sm text-ink2">{flow.approved.length ? "Approved. Every holder can redeem now." : `No one is waiting. Every ${wsym} holder can redeem.`}</p>
       ) : (
-        <div className="flex flex-col">
+        <div ref={waitingTop} className="flex scroll-mt-4 flex-col">
           <div className="grid grid-cols-[28px_minmax(0,1fr)_auto] gap-4 border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute sm:grid-cols-[28px_minmax(0,1fr)_14rem_12rem]">
             <input type="checkbox" aria-label="Select every waiting wallet" checked={allOn} disabled={busy} onChange={() => setSelected(allOn ? new Set() : new Set(waiting.map((w) => w.owner.toBase58())))} className="size-4 cursor-pointer accent-blue" />
             <span>WALLET</span><span className="text-right">HOLDS</span><span className="hidden sm:block" />
           </div>
           <ul>
-            {waiting.map((w) => {
+            {p.shown.map((w) => {
               const k = w.owner.toBase58();
               return (
                 <li key={k} className="grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-4 border-b border-rule py-3 sm:grid-cols-[28px_minmax(0,1fr)_14rem_12rem]">
@@ -171,6 +174,7 @@ function Waiting({ launch }: { launch: ConsoleLaunch }) {
               );
             })}
           </ul>
+          <Pager p={p} noun="wallets" top={waitingTop} />
           <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
             <span className="text-[13px] text-mute">{picked.length ? `${picked.length} selected` : "Select wallets to approve several at once"}</span>
             <button type="button" disabled={!picked.length || busy} onClick={() => void flow.approve(picked.map((w) => w.owner)).then((ok) => ok && setSelected(new Set()))} className={primary}>
@@ -194,6 +198,8 @@ function Paste({ launch, registered }: { launch: ConsoleLaunch; registered: Set<
   const deposit = useQuery({ queryKey: ["approval-deposit", config.rpcUrl], queryFn: () => approvalDeposit(connection), staleTime: Infinity });
   const perWallet = deposit.data !== undefined ? Number(deposit.data) / LAMPORTS : null;
   const busy = flow.phase.kind === "busy";
+  const listTop = useRef<HTMLUListElement>(null);
+  const p = usePages(list, 10);
 
   // Adds what was typed or pasted: one address, or several separated by lines, commas or spaces.
   const add = () => {
@@ -226,11 +232,12 @@ function Paste({ launch, registered }: { launch: ConsoleLaunch; registered: Set<
       </div>
 
       {list.length > 0 && (
-        <ul aria-label="Wallets to approve" className="flex max-w-3xl flex-col border-t border-ink">
-          {list.map((w, i) => (
+        <div className="flex max-w-3xl flex-col">
+        <ul ref={listTop} aria-label="Wallets to approve" className="flex scroll-mt-4 flex-col border-t border-ink">
+          {p.shown.map((w, i) => (
             <li key={w.toBase58()} className="flex items-center justify-between gap-3 border-b border-rule py-2">
               <span className="flex min-w-0 items-center gap-3">
-                <span className="w-6 text-right font-mono text-xs text-mute">{i + 1}</span>
+                <span className="w-8 text-right font-mono text-xs text-mute">{p.from + i}</span>
                 <span className="truncate font-mono text-sm" title={w.toBase58()}>{w.toBase58()}</span>
               </span>
               <button type="button" disabled={busy} onClick={() => setList((prev) => prev.filter((x) => !x.equals(w)))} aria-label={`Remove ${w.toBase58()} from the list`}
@@ -238,6 +245,8 @@ function Paste({ launch, registered }: { launch: ConsoleLaunch; registered: Set<
             </li>
           ))}
         </ul>
+        <Pager p={p} noun="wallets" top={listTop} />
+        </div>
       )}
 
       <div className="flex max-w-3xl flex-wrap items-center justify-between gap-3">
@@ -266,7 +275,8 @@ function Register({ launch, register }: { launch: ConsoleLaunch; register: Retur
   const sym = launch.entry.label?.symbol ?? "the security";
   const all = register.data ?? [];
   const shown = find.trim() ? all.filter((w) => w.owner.toBase58().toLowerCase().includes(find.trim().toLowerCase())) : all;
-  const LIMIT = 50;
+  const top = useRef<HTMLDivElement>(null);
+  const p = usePages(shown, 20, find.trim());
   return (
     <Section id="register-h" title="The register">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -278,7 +288,7 @@ function Register({ launch, register }: { launch: ConsoleLaunch; register: Retur
       ) : !register.data ? (
         <span aria-busy="true" className="h-32 animate-pulse bg-track/70" />
       ) : (
-        <div className="flex flex-col">
+        <div ref={top} className="flex scroll-mt-4 flex-col">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_5rem_5.5rem] gap-4 border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute">
             <span>WALLET</span><span className="text-right">HOLDS {sym}</span><span className="text-right">STATUS</span><span />
           </div>
@@ -286,7 +296,7 @@ function Register({ launch, register }: { launch: ConsoleLaunch; register: Retur
             <p className="py-4 text-sm text-mute">{find ? "No approved wallet matches." : "No one is approved yet."}</p>
           ) : (
             <ul>
-              {shown.slice(0, LIMIT).map((w) => {
+              {p.shown.map((w) => {
                 const k = w.owner.toBase58();
                 return (
                   <li key={k} className="grid grid-cols-[minmax(0,1fr)_auto_5rem_5.5rem] items-center gap-4 border-b border-rule py-3 text-sm">
@@ -305,7 +315,7 @@ function Register({ launch, register }: { launch: ConsoleLaunch; register: Retur
               })}
             </ul>
           )}
-          {shown.length > LIMIT && <p className="pt-3 text-[13px] text-mute">Showing {LIMIT} of {shown.length}. Search to find a wallet.</p>}
+          <Pager p={p} noun="wallets" top={top} />
           {removing && (
             <ConfirmDialog open title={`Remove ${shortAddress(removing.toBase58())}?`} symbol={launch.entry.label?.symbol ?? ""} action="Remove from register" busy={tx.phase.kind === "busy"}
               points={[`It can no longer receive ${sym} or redeem.`, `What it already holds stays with it. Freeze it to stop that moving.`]}
