@@ -6,7 +6,7 @@ The security never leaves its compliance rules, which are enforced by [Upside](h
 
 > **Status:** live on Solana devnet. The programs have not been audited. Do not use them with real assets.
 
-Aegis is a submission to the [Colosseum Crypto World's Fair](https://colosseum.com/worldsfair) hackathon (September 14 to October 12, 2026): [project page](https://colosseum.com/arena/projects/aegis-protocol-4). It is also entered in Meteora's side track, [Best use of Meteora's Dynamic Bonding Curve](https://superteam.fun/earn/listing/meteora-dbc), on Superteam Earn. Follow the project on X at [@aegis_rwa](https://x.com/aegis_rwa).
+Aegis is a submission to the [Colosseum Crypto World's Fair](https://colosseum.com/worldsfair) hackathon (September 14 to October 12, 2026): [project page](https://colosseum.com/arena/projects/aegis-protocol-4). It is also built for Meteora's side track, [Best use of Meteora's Dynamic Bonding Curve](https://superteam.fun/earn/listing/meteora-dbc), on Superteam Earn. Follow the project on X at [@aegis_rwa](https://x.com/aegis_rwa).
 
 ## Motivation
 
