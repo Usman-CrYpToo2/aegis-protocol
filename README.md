@@ -3,6 +3,7 @@
   <h1>Aegis Protocol</h1>
   <p>The RWA launchpad on Solana, built on Meteora's Dynamic Bonding Curve.</p>
   <p>
+    <a href="https://aegis-rwa.netlify.app"><img alt="Live app" src="https://img.shields.io/badge/live%20app-aegis--rwa.netlify.app-7E2A1E" /></a>
     <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-7E2A1E" /></a>
     <a href="https://explorer.solana.com/address/Hs2JZNwdk6QqMWPkipSe513qLQVQH8EWkU2w8N2vgLUw?cluster=devnet"><img alt="Solana devnet" src="https://img.shields.io/badge/Solana-devnet-7E2A1E?logo=solana&amp;logoColor=white" /></a>
     <a href="https://www.anchor-lang.com"><img alt="Anchor 1.0.2" src="https://img.shields.io/badge/Anchor-1.0.2-7E2A1E" /></a>
@@ -15,7 +16,7 @@ Aegis is a launchpad for real-world assets on Solana. An issuer locks a regulate
 
 The security never leaves its compliance rules, which are enforced by [Upside](https://github.com/upsideos/upsideos-solana-rwa)'s Access Control and Transfer Restrictions programs. The wrapper trades freely. The escrow keeps the two equal, and once the wrapper exists the program re-checks that on every instruction that moves either token.
 
-> **Status:** live on Solana devnet.
+> **Status:** live on Solana devnet. Try the app at **[aegis-rwa.netlify.app](https://aegis-rwa.netlify.app)**; the [faucet](https://aegis-rwa.netlify.app/faucet) gives you test USDC and SOL.
 
 Aegis is a submission to the [Colosseum Crypto World's Fair](https://colosseum.com/worldsfair) hackathon (September 14 to October 12, 2026): [project page](https://colosseum.com/arena/projects/aegis-protocol-4). It is also built for Meteora's side track, [Best use of Meteora's Dynamic Bonding Curve](https://superteam.fun/earn/listing/meteora-dbc), on Superteam Earn. Follow the project on X at [@aegis_rwa](https://x.com/aegis_rwa).
 
@@ -298,6 +299,8 @@ yarn dev                     # http://localhost:5173
 yarn test                    # 122 unit tests (Vitest)
 yarn build                   # production build in app/dist
 ```
+
+The live site is a static deploy on Netlify: `netlify.toml` builds `app/`, and `app/public/_redirects` and `app/public/_headers` add single-page routing and security headers.
 
 The app is a static React and Vite site that reads everything from the chain; there is no backend. Configure it in `app/.env.local`:
 

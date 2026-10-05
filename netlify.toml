@@ -1,0 +1,10 @@
+# Netlify settings for the web app in app/. The app is static: it reads everything from the chain.
+# Set VITE_CLUSTER, VITE_RPC_URL and VITE_INDEX_RPC_URL in the site's environment variables
+# (see the README) when building on Netlify.
+[build]
+  base = "app"
+  command = "yarn build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"

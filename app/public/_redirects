@@ -1,0 +1,3 @@
+# The app is a single page: every route (/asset/..., /console, /docs/...) is served index.html,
+# and the router takes it from there.
+/*    /index.html    200
