@@ -5,8 +5,12 @@ import type { Backing } from "../chain/backing";
 import { ProgramNotDeployedError, type Registry, type RegistryEntry } from "../chain/registry";
 import { Hint } from "../components/Hint";
 import { Pager, usePages } from "../components/Pager";
+import { Ticker } from "../components/Ticker";
+import { RefreshBar } from "../components/LiveCheck";
+import { PriceTrail } from "../components/PriceTrail";
 import { useRegistry } from "../hooks/useRegistry";
 import { useUsdTotal } from "../hooks/useUsdPrices";
+import { useChangeFlash } from "../hooks/useChangeFlash";
 import type { CurrencyAmount } from "../lib/usd";
 import { formatMoney, formatPrice, formatUnits, percentOf, shortAddress } from "../lib/amount";
 import { GROUP_ORDER, STAGE, type StageGroup } from "../lib/stage";
@@ -119,17 +123,26 @@ function StageCell({ entry }: { entry: RegistryEntry }) {
   );
 }
 
-function PriceCell({ entry }: { entry: RegistryEntry }) {
+function PriceCell({ entry, at, trail = "" }: { entry: RegistryEntry; at: number; trail?: string }) {
+  // A price that moves between refreshes flashes the way it moved, as on the asset page.
+  const flash = useChangeFlash(entry.price);
+  let figure: ReactNode = <span className="text-mute" aria-label="No price yet">—</span>;
   if (entry.price !== null && entry.quote) {
-    return (
+    figure = (
       <span className="font-mono text-base num">
-        {formatPrice(entry.price, entry.quote.decimals)}{" "}
+        <span key={flash} className={`-mx-1 px-1 ${flash}`}>{formatPrice(entry.price, entry.quote.decimals)}</span>{" "}
         <span className="text-xs text-mute">{entry.quote.symbol}</span>
       </span>
     );
+  } else if (entry.launch.stage === "Graduated") {
+    figure = <span className="text-sm text-mute">On Meteora</span>;
   }
-  if (entry.launch.stage === "Graduated") return <span className="text-sm text-mute">On Meteora</span>;
-  return <span className="text-mute" aria-label="No price yet">—</span>;
+  return (
+    <span className="flex items-center justify-between gap-4">
+      {figure}
+      <PriceTrail entry={entry} at={at} className={trail} />
+    </span>
+  );
 }
 
 function RaiseCell({ entry }: { entry: RegistryEntry }) {
@@ -155,7 +168,7 @@ function RaiseCell({ entry }: { entry: RegistryEntry }) {
         aria-valuenow={pct}
         className="block h-1 w-full max-w-80 bg-track"
       >
-        <span className="block h-1 bg-ink" style={{ width: `${pct}%` }} />
+        <span className="bar-grow block h-1 bg-ink" style={{ width: `${pct}%` }} />
       </span>
     </span>
   );
@@ -233,11 +246,11 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
     <section aria-label="Registry totals" className="grid grid-cols-2 border-y border-ink">
       <div className={cell}>
         <span className="kicker">Assets registered</span>
-        {stats ? <span className={value}>{stats.assets}</span> : skeleton}
+        {stats ? <span className={value}><Ticker text={String(stats.assets)} /></span> : skeleton}
       </div>
       <div className={`${cell} border-l border-rule pl-6`}>
         <span className="kicker">Offerings open now</span>
-        {stats ? <span className={value}>{stats.open}</span> : skeleton}
+        {stats ? <span className={value}><Ticker text={String(stats.open)} /></span> : skeleton}
       </div>
       <div className={`${cell} border-t border-rule`}>
         <span className="flex items-center gap-1 kicker">Raised through Aegis<Hint>Every sale’s raise, added up in US dollars at today’s prices. Each sale shows its own currency on its page.</Hint></span>
@@ -245,7 +258,7 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
           skeleton
         ) : (
           <>
-            <span className={value}>{raisedUsd.text}</span>
+            <span className={value}><Ticker text={raisedUsd.text} /></span>
             {raisedUsd.note && <span className="text-[12px] text-mute">{raisedUsd.note}</span>}
           </>
         )}
@@ -261,7 +274,10 @@ function Totals({ registry, failed }: { registry: Registry | undefined; failed: 
         ) : stats.assets === 0 ? (
           <span className={`${value} text-mute`}>—</span>
         ) : (
-          <span className={`${value} text-green`}>all 1 : 1</span>
+          <>
+            <span className={`${value} text-green`}>all 1 : 1</span>
+            <RefreshBar at={registry!.readAt} every={config.refreshMs} className="mt-1 w-24" />
+          </>
         )}
       </div>
     </section>
@@ -442,12 +458,12 @@ export function RegistryPage() {
               <th scope="col" className="py-2.5 text-right font-normal">BACKING</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="rows-in">
             {page.shown.map((e) => (
               <tr key={e.launch.address.toBase58()} onClick={(ev) => openRow(ev, e.launch.realRwaMint.toBase58())} className={`cursor-pointer border-b border-rule align-middle hover:bg-surface ${e.launch.stage === "Aborted" ? "opacity-60" : ""}`}>
                 <td className="max-w-[26rem] py-5 pr-6"><AssetCell entry={e} /></td>
                 <td className="py-5 pr-6"><StageCell entry={e} /></td>
-                <td className="py-5 pr-6"><PriceCell entry={e} /></td>
+                <td className="py-5 pr-6"><PriceCell entry={e} at={data!.readAt} trail="hidden lg:block" /></td>
                 <td className="py-5 pr-6"><RaiseCell entry={e} /></td>
                 <td className="py-5 text-right text-[13px]"><BackingCell backing={e.backing} decimals={e.launch.decimals} /></td>
               </tr>
@@ -456,7 +472,7 @@ export function RegistryPage() {
         </table>
 
         {/* Narrow screens: one card per asset, no sideways scrolling. */}
-        <ul className="flex flex-col md:hidden">
+        <ul className="rows-in flex flex-col md:hidden">
           {page.shown.map((e) => (
             <li key={e.launch.address.toBase58()} className={`flex flex-col gap-3 border-b border-rule py-5 ${e.launch.stage === "Aborted" ? "opacity-60" : ""}`}>
               <AssetCell entry={e} />
@@ -464,7 +480,7 @@ export function RegistryPage() {
                 <StageCell entry={e} />
                 <span className="text-[13px]"><BackingCell backing={e.backing} decimals={e.launch.decimals} /></span>
               </div>
-              {e.price !== null && <PriceCell entry={e} />}
+              {e.price !== null && <PriceCell entry={e} at={data!.readAt} />}
               <RaiseCell entry={e} />
             </li>
           ))}
