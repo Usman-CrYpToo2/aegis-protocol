@@ -6,6 +6,7 @@ import { METEORA_PROTOCOL_FEE_PCT } from "../chain/meteora";
 import { ProgramNotDeployedError } from "../chain/registry";
 import { LogoMark } from "../components/Logo";
 import { Rosette } from "../components/landing/Rosette";
+import { HeroBackdrop } from "../components/landing/HeroBackdrop";
 import { useNow } from "../hooks/useNow";
 import { usePlatform } from "../hooks/usePlatform";
 import { useRegistry } from "../hooks/useRegistry";
@@ -425,13 +426,14 @@ function Proof() {
   const id = AEGIS_PROGRAM_ID.toBase58();
   return (
     <section id="proof" className={`${wrap} lp-reveal scroll-mt-28 pt-20 sm:pt-28 lg:pt-36`}>
-      <div className="grid items-center gap-8 rounded-3xl bg-ink p-6 text-paper sm:rounded-[32px] sm:p-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16 lg:p-[72px]">
+      <div className="relative isolate grid items-center gap-8 overflow-hidden rounded-3xl bg-ink p-6 text-paper sm:rounded-[32px] sm:p-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16 lg:p-[72px]">
+        <HeroBackdrop variant="dark" className="inset-0" />
         <div className="flex flex-col gap-5">
           <span className={`${kb} text-[#E8B4A8]`}>Proof</span>
           <h2 className="m-0 font-serif text-[40px] leading-[0.95] sm:text-[56px] lg:text-[68px]">Don’t trust us.<br />Read the check.</h2>
           <p className="m-0 text-[17px] leading-relaxed text-line">Every instruction that moves either token ends with this check. If the escrow would hold less than the wrappers in existence, the whole transaction fails.</p>
           <div className="mt-3 grid grid-cols-3 gap-4 sm:gap-8">
-            {[["270+", "tests, attacks included"], ["Open", "source code"], ["Real", "Meteora in the tests"]].map(([big, small]) => (
+            {[["280+", "tests, attacks included"], ["Open", "source code"], ["Real", "Meteora in the tests"]].map(([big, small]) => (
               <div key={big} className="flex flex-col gap-1"><span className="font-serif text-[32px] leading-none num sm:text-[44px]">{big}</span><span className="text-[13px] text-line">{small}</span></div>
             ))}
           </div>
@@ -582,7 +584,8 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="overflow-x-clip bg-paper">
+    <div className="page-enter relative isolate overflow-x-clip bg-paper">
+      <HeroBackdrop className="top-10 h-[1000px]" />
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-surface focus:px-4 focus:py-2">Skip to content</a>
       <Banner summary={summary} />
       <Nav />
