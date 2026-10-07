@@ -8,10 +8,11 @@ const RPC_CONFIG = rpcConfig();
 import type { WalletError } from "@solana/wallet-adapter-base";
 import { useCallback, useRef, useState } from "react";
 import { ConnectModalProvider } from "./components/connect/ConnectModal";
-import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { config } from "./config";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
+import { PageChange } from "./components/PageChange";
 import { Toast, type ToastMessage } from "./components/Toast";
 import { RegistryPage } from "./pages/Registry";
 import { LandingPage } from "./pages/Landing";
@@ -37,6 +38,10 @@ const queryClient = new QueryClient({
 });
 
 function AppShell() {
+  // Each page arrives with a short rise. The docs keep one key, so turning a page there swaps only
+  // the article (Docs.tsx) and the sidebar stays put.
+  const { pathname } = useLocation();
+  const page = pathname.startsWith("/docs") ? "/docs" : pathname;
   return (
     <div className="flex min-h-dvh flex-col">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-surface focus:px-4 focus:py-2">
@@ -44,7 +49,9 @@ function AppShell() {
       </a>
       <Header />
       <main id="main" tabIndex={-1} className="flex-1 outline-none">
-        <Outlet />
+        <div key={page} className="page-enter">
+          <Outlet />
+        </div>
       </main>
       <Footer />
       <WalletWaitNotice />
@@ -76,6 +83,7 @@ export function App() {
         <WalletProvider wallets={[]} autoConnect onError={onWalletError}>
           <ConnectModalProvider errorRef={inDialog}>
             <BrowserRouter>
+              <PageChange />
               <Routes>
                 {/* The landing page brings its own header and footer; every app page shares these. */}
                 <Route path="/" element={<LandingPage />} />
