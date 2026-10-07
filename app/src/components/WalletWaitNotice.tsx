@@ -19,7 +19,7 @@ export function WalletWaitNotice() {
   }, [since]);
   if (since === null || now - since < SLOW_MS) return null;
   return (
-    <div role="alert" className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-xl flex-col gap-3 border border-ink bg-surface p-5 shadow-[0_12px_32px_rgb(22_20_15/0.18)] sm:inset-x-auto sm:right-6 sm:left-6">
+    <div role="alert" className="pop-in fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-xl flex-col gap-3 border border-ink bg-surface p-5 shadow-[0_12px_32px_rgb(22_20_15/0.18)] sm:inset-x-auto sm:right-6 sm:left-6">
       <strong className="text-[15px]">Waiting for your wallet</strong>
       <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[14px] leading-relaxed text-ink2">
         {/* Observed with Phantom: in Chrome's side panel, approval requests can take minutes to

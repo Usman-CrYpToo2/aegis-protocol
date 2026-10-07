@@ -79,7 +79,80 @@
 @media (width < 40rem) { .connect-sheet { animation-name: sheet-slide; } }
 @keyframes sheet-slide { from { transform: translateY(100%); } }
 
-/* Landing page. The app screens stay still; this page moves, and every motion says something:
+/* App motion. Quick, and always an answer to something: a page arrives, a button gives under the
+   finger, data lands, a panel opens. Nothing on the app screens loops for decoration; the ambient
+   motion lives on the landing page. Animations use `backwards` fill so nothing keeps a transform
+   once it has arrived (a lingering transform would break fixed and sticky children). */
+@layer base {
+  a, button, input, select, textarea, summary, [role="tab"] {
+    transition-property: color, background-color, border-color, box-shadow, opacity, scale;
+    transition-duration: 0.16s;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* A press gives slightly. Inline text links are unaffected: scale does not apply to inline boxes. */
+  :is(button, a):not(:disabled):active { scale: 0.97; }
+}
+/* Between the landing page and the app the whole screen cross-fades (PageChange.tsx). */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.34s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+.page-enter { animation: page-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes page-in { from { opacity: 0; translate: 0 12px; } }
+.tab-fade { animation: tab-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes tab-in { from { opacity: 0; translate: 0 6px; } }
+.pop-in { animation: pop-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes pop-in { from { opacity: 0; translate: 0 10px; scale: 0.98; } }
+.menu-in { animation: menu-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes menu-in { from { opacity: 0; translate: 0 -6px; } }
+/* Rows of a list arrive one after another, the first ones only, so a long page never waits. */
+.rows-in > * { animation: row-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes row-in { from { opacity: 0; translate: 0 8px; } }
+.rows-in > :nth-child(2) { animation-delay: 0.04s; } .rows-in > :nth-child(3) { animation-delay: 0.08s; }
+.rows-in > :nth-child(4) { animation-delay: 0.12s; } .rows-in > :nth-child(5) { animation-delay: 0.16s; }
+.rows-in > :nth-child(6) { animation-delay: 0.2s; } .rows-in > :nth-child(7) { animation-delay: 0.24s; }
+.rows-in > :nth-child(8) { animation-delay: 0.28s; } .rows-in > :nth-child(n + 9) { animation-delay: 0.32s; }
+/* A progress bar fills from empty when it first appears; later changes slide (bar-fill). */
+.bar-grow { transform-origin: left; animation: bar-grow 1s 0.15s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes bar-grow { from { scale: 0 1; } }
+/* Loading blocks shimmer, so a wait reads as work in progress rather than a frozen page. */
+.animate-pulse { position: relative; overflow: hidden; }
+.animate-pulse::after {
+  content: ""; position: absolute; inset: 0; translate: -100% 0;
+  background: linear-gradient(90deg, transparent, rgb(251 250 246 / 0.6), transparent);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+@keyframes shimmer { to { translate: 100% 0; } }
+/* Dialogs rise in over a fading backdrop. */
+dialog[open]:not(.connect-sheet) { animation: pop-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+dialog[open]::backdrop { animation: fade-in 0.26s ease-out backwards; }
+@keyframes fade-in { from { opacity: 0; } }
+.fade-in { animation: fade-in 0.18s ease-out backwards; }
+/* Live checks: the tick redraws each time the backing is verified again, and a hairline fills
+   toward the next check, so "checked live" is something you can watch rather than a claim. */
+.check-draw path { stroke-dasharray: 1; animation: check-draw 0.6s 0.1s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes check-draw { from { stroke-dashoffset: 1; } }
+.refresh-fill { transform-origin: left; animation: refresh-fill linear both; }
+@keyframes refresh-fill { from { scale: 0 1; } }
+
+/* Network chip: one ring leaves the dot each time a new slot is read. */
+.beat { animation: chart-ping 1.6s ease-out both; }
+
+/* Main navigation: the underline draws itself under the current page and previews on hover. */
+.nav-tab { position: relative; }
+.nav-tab::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--color-ink); scale: 0 1; transition: scale 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.16s;
+}
+.nav-tab[aria-current="page"]::after { scale: 1 1; }
+@media (hover: hover) { .nav-tab:not([aria-current="page"]):hover::after { scale: 1 1; background: var(--color-line); } }
+
+/* Landing page hero backdrop: engraved lines, like a share certificate's, drifting slowly across
+   the page behind the headline, over a faint paper grain and two soft lights. */
+.lp-flow { animation: lp-flow 90s linear infinite; }
+.lp-flow-rev { animation: lp-flow 140s linear infinite reverse; }
+@keyframes lp-flow { to { translate: -50% 0; } }
+.lp-glow { animation: lp-glow 18s ease-in-out infinite alternate; }
+@keyframes lp-glow { to { translate: 6% 4%; scale: 1.12; } }
+
+/* Landing page. This is where the ambient motion lives, and every motion says something:
    the seal's rings turn like a banknote's, tokens travel the bridge, the sale climbs to its
    ceiling, the steps of a launch light in order. All of it stops for reduced motion (above). */
 .lp-ease { transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }

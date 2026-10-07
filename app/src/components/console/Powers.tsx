@@ -115,7 +115,7 @@ export function Powers({ launch }: { launch: ConsoleLaunch }) {
       </Card>
 
       {tx.phase.kind === "done" && !pending && (
-        <p role="status" className="pt-4 text-sm text-green">Done. <a href={explorerUrl("tx", tx.phase.signature)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">View the transaction ↗</a></p>
+        <p role="status" className="pop-in pt-4 text-sm text-green">Done. <a href={explorerUrl("tx", tx.phase.signature)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">View the transaction ↗</a></p>
       )}
 
       {dialog && (

@@ -97,7 +97,7 @@ function Feedback({ phase, progress, doneText }: { phase: ReturnType<typeof useA
   if (phase.kind === "busy" && progress && progress.of > 1) return <p role="status" className="text-[13px] text-mute">Confirming {progress.at} of {progress.of}…</p>;
   if (phase.kind === "done") {
     return (
-      <p role="status" className="text-[13px] text-green">
+      <p role="status" className="pop-in text-[13px] text-green">
         {doneText} <a href={explorerUrl("tx", phase.signature)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">View the transaction ↗</a>
       </p>
     );
@@ -158,7 +158,7 @@ function Waiting({ launch }: { launch: ConsoleLaunch }) {
             <input type="checkbox" aria-label="Select every waiting wallet" checked={allOn} disabled={busy} onChange={() => setSelected(allOn ? new Set() : new Set(waiting.map((w) => w.owner.toBase58())))} className="size-4 cursor-pointer accent-blue" />
             <span>WALLET</span><span className="text-right">HOLDS</span><span className="hidden sm:block" />
           </div>
-          <ul>
+          <ul className="rows-in">
             {p.shown.map((w) => {
               const k = w.owner.toBase58();
               return (
@@ -295,7 +295,7 @@ function Register({ launch, register }: { launch: ConsoleLaunch; register: Retur
           {shown.length === 0 ? (
             <p className="py-4 text-sm text-mute">{find ? "No approved wallet matches." : "No one is approved yet."}</p>
           ) : (
-            <ul>
+            <ul className="rows-in">
               {p.shown.map((w) => {
                 const k = w.owner.toBase58();
                 return (

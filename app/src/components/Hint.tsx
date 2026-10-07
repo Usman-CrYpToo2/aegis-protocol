@@ -24,7 +24,7 @@ export function Hint({ children, label = "More information" }: { children: React
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.3" /><path d="M8 7v4.5M8 4.6v.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
       </button>
       {open && (
-        <span id={id} role="tooltip" className="absolute top-6 left-1/2 z-40 w-64 -translate-x-1/2 border border-ink bg-surface p-3 text-left font-sans text-[13px] leading-relaxed font-normal tracking-normal text-ink2 normal-case shadow-[0_8px_24px_rgb(22_20_15/0.12)]">
+        <span id={id} role="tooltip" className="fade-in absolute top-6 left-1/2 z-40 w-64 -translate-x-1/2 border border-ink bg-surface p-3 text-left font-sans text-[13px] leading-relaxed font-normal tracking-normal text-ink2 normal-case shadow-[0_8px_24px_rgb(22_20_15/0.12)]">
           {children}
         </span>
       )}

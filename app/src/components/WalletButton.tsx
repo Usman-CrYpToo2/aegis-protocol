@@ -95,7 +95,7 @@ export function WalletButton() {
         </svg>
       </button>
       {open && (
-        <div id={menuId} role="menu" className="absolute right-0 z-40 mt-2 w-76 border border-ink bg-surface shadow-[0_12px_32px_rgb(22_20_15/0.14)]">
+        <div id={menuId} role="menu" className="menu-in absolute right-0 z-40 mt-2 w-76 border border-ink bg-surface shadow-[0_12px_32px_rgb(22_20_15/0.14)]">
           <div className="flex flex-col gap-1 border-b border-rule px-4 py-4">
             <div className="flex items-center gap-2">
               {icon && <img src={icon} alt="" width={20} height={20} className="size-5 rounded" />}

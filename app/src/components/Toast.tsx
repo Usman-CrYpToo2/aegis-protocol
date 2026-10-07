@@ -15,7 +15,7 @@ export function Toast({ message, onDismiss }: { message: ToastMessage | null; on
       {message && (
         <div
           role={message.tone === "error" ? "alert" : "status"}
-          className={`pointer-events-auto flex max-w-md items-start gap-4 border bg-surface px-4 py-3 text-sm shadow-[0_12px_32px_rgb(22_20_15/0.14)] ${
+          className={`pop-in pointer-events-auto flex max-w-md items-start gap-4 border bg-surface px-4 py-3 text-sm shadow-[0_12px_32px_rgb(22_20_15/0.14)] ${
             message.tone === "error" ? "border-error" : "border-ink"
           }`}
         >

@@ -117,7 +117,7 @@ export function BridgeBox({ entry }: { entry: RegistryEntry }) {
 
       <div className="flex flex-col gap-4 p-5">
         {phase.kind === "done" ? (
-          <div role="status" className="flex flex-col gap-3">
+          <div role="status" className="pop-in flex flex-col gap-3">
             <span className="kicker text-green">Exchanged</span>
             <span className="font-serif text-4xl leading-tight">{phase.amount} {phase.direction === "redeem" ? sym : wsym}</span>
             <a href={explorerUrl("tx", phase.signature)} target="_blank" rel="noopener noreferrer" className="w-fit text-sm text-blue underline underline-offset-2">View the transaction ↗</a>
