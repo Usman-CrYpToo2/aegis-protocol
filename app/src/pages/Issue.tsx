@@ -202,9 +202,9 @@ function Frame({ at, title, children, side }: { at: number; title: string; child
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-5">
         <Stepper at={at} />
-        <h1 className="font-serif text-5xl leading-none sm:text-6xl">{title}</h1>
+        <h1 key={at} className="tab-fade font-serif text-5xl leading-none sm:text-6xl">{title}</h1>
       </div>
-      <div className={`grid grid-cols-1 items-start gap-10 ${side ? "xl:grid-cols-[minmax(0,1fr)_24rem]" : "max-w-4xl"}`}>
+      <div key={at} className={`tab-fade grid grid-cols-1 items-start gap-10 ${side ? "xl:grid-cols-[minmax(0,1fr)_24rem]" : "max-w-4xl"}`}>
         <div className="flex min-w-0 flex-col gap-6">{children}</div>
         {side && <aside className="flex flex-col gap-4 xl:sticky xl:top-6">{side}</aside>}
       </div>

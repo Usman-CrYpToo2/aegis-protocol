@@ -8,6 +8,7 @@ import { config, explorerUrl } from "../config";
 import { dripInstructions, faucetKind, MAX_WHOLE_PER_CLAIM, requestSol } from "../chain/faucet";
 import { rpcConfig } from "../chain/rpc";
 import { useConnectModal } from "../components/connect/ConnectModal";
+import { Ticker } from "../components/Ticker";
 import { usePlatform } from "../hooks/usePlatform";
 import { TX_STEP, useTxRunner } from "../hooks/useTxRunner";
 import { formatUnits } from "../lib/amount";
@@ -183,7 +184,7 @@ export function FaucetPage() {
                   {text.trim() && !to
                     ? "That isn’t a Solana address."
                     : to && balance.data !== undefined
-                      ? <>Balance <span className="font-mono num">{formatUnits(balance.data, token.decimals, { maxFraction: 4 })} {token.symbol}</span></>
+                      ? <>Balance <span className="font-mono num"><Ticker key={`${token.symbol}-${text}`} mode="change" text={`${formatUnits(balance.data, token.decimals, { maxFraction: 4 })} ${token.symbol}`} /></span></>
                       : " "}
                 </span>
               </div>
@@ -206,7 +207,7 @@ export function FaucetPage() {
               )}
 
               {done && (
-                <p role="status" className="text-[14px] text-green">
+                <p role="status" className="pop-in text-[14px] text-green">
                   Sent {label}.{" "}
                   <a href={explorerUrl("tx", done)} target="_blank" rel="noopener noreferrer" className="text-blue underline underline-offset-2">
                     View the transaction<span className="sr-only"> (opens Solana Explorer)</span> ↗

@@ -14,6 +14,7 @@ import { Pager, usePages } from "../components/Pager";
 const LAUNCH_PAGE = 10;
 const ATTENTION_PAGE = 5;
 import { Hint } from "../components/Hint";
+import { Ticker } from "../components/Ticker";
 import { useRegistry } from "../hooks/useRegistry";
 import { formatMoney, formatUnits, percentOf, shortAddress } from "../lib/amount";
 import { STAGE } from "../lib/stage";
@@ -39,7 +40,7 @@ function StageCell({ l }: { l: ConsoleLaunch }) {
     return (
       <span className="flex flex-col gap-1.5">
         <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue"><span className="size-2 rounded-full bg-blue" aria-hidden="true" />Offering open</span>
-        <span role="progressbar" aria-label="Raise" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="block h-1 w-32 bg-track"><span className="block h-1 bg-ink" style={{ width: `${pct}%` }} /></span>
+        <span role="progressbar" aria-label="Raise" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="block h-1 w-32 bg-track"><span className="bar-grow block h-1 bg-ink" style={{ width: `${pct}%` }} /></span>
       </span>
     );
   }
@@ -228,7 +229,7 @@ export function ConsolePage() {
       <span className="mt-1 block h-9 w-28 animate-pulse bg-track" aria-label="Loading" />
     ) : (
       <>
-        <span className={`${big} ${total.text === "$0" ? "text-mute" : ""}`}>{total.text}</span>
+        <span className={`${big} ${total.text === "$0" ? "text-mute" : ""}`}><Ticker text={total.text} /></span>
         {total.note && <span className="text-[12px] text-mute">{total.note}</span>}
       </>
     );
@@ -258,7 +259,7 @@ export function ConsolePage() {
       </div>
       <div className={`${cell} border-t border-rule xl:border-t-0 xl:border-l xl:pl-6`}>
         <span className="kicker">Holders waiting for approval</span>
-        <span className={`${big} ${totals.waiting ? "text-amber" : ""}`}>{totals.waiting}</span>
+        <span className={`${big} ${totals.waiting ? "text-amber" : ""}`}><Ticker text={String(totals.waiting)} /></span>
         <span className="text-[13px] text-mute">They hold the wrapper but can’t redeem</span>
       </div>
       <div className={`${cell} border-t border-rule sm:border-l sm:pl-6 xl:border-t-0`}>
@@ -277,7 +278,7 @@ export function ConsolePage() {
         <div className="hidden border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,2fr)_7rem] md:gap-6">
           <span>ASSET</span><span>STAGE</span><span>WAITING FOR YOU</span><span />
         </div>
-        <ul className="flex flex-col">
+        <ul className="rows-in flex flex-col">
           {launchesPage.shown.map((l) => (
             <li key={l.entry.launch.address.toBase58()} className="grid grid-cols-1 gap-3 border-b border-rule py-5 md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,2fr)_7rem] md:items-center md:gap-6">
               <span className="flex flex-col gap-0.5">
@@ -310,7 +311,7 @@ export function ConsolePage() {
           <p className="px-5 py-6 text-sm text-ink2">Nothing needs you right now.</p>
         ) : (
           <>
-            <ul>{attentionPage.shown.map((a) => <AttentionItem key={`${a.kind}-${a.launch.entry.launch.address.toBase58()}`} a={a} />)}</ul>
+            <ul className="rows-in">{attentionPage.shown.map((a) => <AttentionItem key={`${a.kind}-${a.launch.entry.launch.address.toBase58()}`} a={a} />)}</ul>
             <div className="px-5"><Pager p={attentionPage} noun="items" compact /></div>
           </>
         )}

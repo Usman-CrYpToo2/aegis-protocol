@@ -30,7 +30,7 @@ function Status({ phase }: { phase: TxPhase }) {
   }
   if (phase.kind === "done") {
     return (
-      <p role="status" className="text-[13px] text-green">
+      <p role="status" className="pop-in text-[13px] text-green">
         Collected. <a href={explorerUrl("tx", phase.signature)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">View the transaction ↗</a>
       </p>
     );
@@ -282,11 +282,11 @@ export function LaunchConsolePage() {
     {!mine ? (
       <span aria-busy="true" aria-label="Loading" className="h-64 animate-pulse bg-track/70" />
     ) : tab === "investors" ? (
-      <Investors launch={mine} />
+      <div key="investors" className="tab-fade"><Investors launch={mine} /></div>
     ) : tab === "powers" ? (
-      <Powers launch={mine} />
+      <div key="powers" className="tab-fade"><Powers launch={mine} /></div>
     ) : (
-      <div className="grid grid-cols-1 gap-12 xl:grid-cols-[minmax(0,1fr)_26rem]">
+      <div key="money" className="tab-fade grid grid-cols-1 gap-12 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <Money launch={mine} />
         <Health launch={mine} />
       </div>

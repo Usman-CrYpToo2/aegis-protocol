@@ -63,7 +63,7 @@ export function DocsPage() {
         <div className="pt-2 pb-5"><Sidebar current={slug} onPick={() => { if (menu.current) menu.current.open = false; }} /></div>
       </details>
 
-      <article className="min-w-0 pb-4">
+      <article key={slug} className="tab-fade min-w-0 pb-4">
         <p className="kicker m-0">{page.group}</p>
         <h1 className="m-0 mt-2 font-serif text-[44px] leading-[1.02] font-normal sm:text-[56px]">{page.title}</h1>
         <div className="mt-5">{page.body(f)}</div>

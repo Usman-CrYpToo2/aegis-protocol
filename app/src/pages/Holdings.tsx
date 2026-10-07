@@ -10,6 +10,7 @@ import { useActivity, useHoldings } from "../hooks/useHoldings";
 import { useNow } from "../hooks/useNow";
 import { useUsdPrices, useUsdTotal } from "../hooks/useUsdPrices";
 import { Pager, usePages } from "../components/Pager";
+import { Ticker } from "../components/Ticker";
 import type { CurrencyAmount } from "../lib/usd";
 import { useRegistry } from "../hooks/useRegistry";
 import { formatMoney, formatPrice, formatUnits, percentOf, shortAddress } from "../lib/amount";
@@ -187,7 +188,7 @@ function ActivityList({ items, loading, failed, now }: { items: Activity[] | und
       ) : !items || items.length === 0 ? (
         <p className="py-4 text-sm text-mute">No activity yet.</p>
       ) : (
-        <ul className="flex flex-col">
+        <ul className="rows-in flex flex-col">
           {p.shown.map((a) => {
             const e = a.holding.entry;
             const name = e.label?.name ?? "this asset";
@@ -314,7 +315,7 @@ export function HoldingsPage() {
         ) : worthUsd.loading ? (
           <span className="mt-1 block h-12 w-40 animate-pulse bg-track" aria-label="Loading" />
         ) : (
-          <span className="font-serif text-5xl leading-none num lg:text-6xl">{worthUsd.text}</span>
+          <span className="font-serif text-5xl leading-none num lg:text-6xl"><Ticker text={worthUsd.text} /></span>
         )}
         {!worthUsd.loading && worthUsd.note && <span className="text-[12px] text-mute">{worthUsd.note}</span>}
         <span className={`text-[13px] ${totals.short ? "text-error" : "text-mute"}`}>
@@ -345,15 +346,15 @@ export function HoldingsPage() {
             ))}
           </div>
           {tab === "activity" ? (
-            <div id="panel-activity" role="tabpanel" aria-labelledby="tab-activity">
+            <div id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" className="tab-fade">
               <ActivityList items={activity.data} loading={activity.isPending} failed={activity.isError} now={now} />
             </div>
           ) : (
-          <section id="panel-assets" role="tabpanel" aria-labelledby="tab-assets" className="flex flex-col">
+          <section id="panel-assets" role="tabpanel" aria-labelledby="tab-assets" className="tab-fade flex flex-col">
             <div className="hidden border-b border-ink py-2.5 font-mono text-xs tracking-[0.04em] text-mute md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)_minmax(0,1.7fr)_12rem] md:gap-8">
               <span>ASSET</span><span>YOU HOLD</span><span>WHAT YOU CAN DO</span><span />
             </div>
-            <ul className="flex flex-col">
+            <ul className="rows-in flex flex-col">
               {page.shown.map((h) => <HoldingRow key={h.entry.launch.address.toBase58()} h={h} address={publicKey.toBase58()} />)}
             </ul>
             <Pager p={page} noun="holdings" top={listTop} />
