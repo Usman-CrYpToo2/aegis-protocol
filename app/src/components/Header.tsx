@@ -4,22 +4,35 @@ import { config } from "../config";
 import { ProgramNotDeployedError } from "../chain/registry";
 import { useRegistry } from "../hooks/useRegistry";
 import { useConsole } from "../hooks/useConsole";
+import { useSlot } from "../hooks/useSlot";
+import { Ticker } from "./Ticker";
 import { LogoMark } from "./Logo";
 import { WalletButton } from "./WalletButton";
 
 function NetworkChip() {
   const registry = useRegistry();
+  const slot = useSlot();
   // "Not deployed" is an answer from a working node, so it does not count as offline.
   const offline = registry.isError && !registry.data && !(registry.error instanceof ProgramNotDeployedError);
   const name = config.cluster === "devnet" ? "Devnet" : "Localnet";
+  const live = !offline && slot.data !== undefined;
   return (
     <span
       className={`inline-flex h-7 min-w-7 items-center justify-center gap-1.5 rounded-full border bg-surface px-2 text-xs sm:px-2.5 sm:text-[13px] ${offline ? "border-amber text-amber" : "border-line text-ink2"}`}
-      title={offline ? `Can't reach ${config.rpcHost}` : `Reading from ${config.rpcHost}`}
+      title={offline ? `Can't reach ${config.rpcHost}` : live ? `Slot ${slot.data!.toLocaleString("en-US")}, read live from ${config.rpcHost}` : `Reading from ${config.rpcHost}`}
     >
-      <span className={`size-2 rounded-full ${offline ? "bg-amber" : "bg-green"}`} aria-hidden="true" />
+      {/* The dot sends out one ring each time a new slot is read: a heartbeat of the chain. */}
+      <span className="relative flex size-2" aria-hidden="true">
+        {live && <span key={slot.dataUpdatedAt} className="beat absolute inset-0 rounded-full bg-green" />}
+        <span className={`relative size-2 rounded-full ${offline ? "bg-amber" : "bg-green"}`} />
+      </span>
       {/* On a phone the dot alone carries it; the name stays for screen readers. */}
       <span className="sr-only sm:not-sr-only">{name}</span>
+      {live && (
+        <span className="num hidden border-l border-rule pl-1.5 font-mono text-[12px] text-mute xl:inline" aria-hidden="true">
+          <Ticker mode="change" ms={700} text={slot.data!.toLocaleString("en-US")} />
+        </span>
+      )}
       {offline && <span className="sr-only"> (not reachable)</span>}
     </span>
   );
@@ -28,7 +41,7 @@ function NetworkChip() {
 const phoneLink = (active: boolean) => `flex min-h-12 items-center border-b border-rule text-[17px] last:border-b-0 ${active ? "font-semibold text-ink" : "text-ink2"}`;
 
 const link = ({ isActive }: { isActive: boolean }) =>
-  `inline-flex h-18 items-center border-b-2 text-[15px] ${isActive ? "border-ink font-semibold text-ink" : "border-transparent text-mute hover:text-ink"}`;
+  `nav-tab inline-flex h-18 items-center text-[15px] ${isActive ? "font-semibold text-ink" : "text-mute hover:text-ink"}`;
 
 export function Header() {
   const { pathname } = useLocation();
@@ -102,7 +115,7 @@ export function Header() {
       </div>
       {/* A phone has no room for the main nav in the bar, so it lives here. Closes on any navigation. */}
       {menu && (
-        <nav id="phone-menu" aria-label="Main" className="shell flex flex-col border-t border-rule pb-3 md:hidden">
+        <nav id="phone-menu" aria-label="Main" className="menu-in shell flex flex-col border-t border-rule pb-3 md:hidden">
           <NavLink to="/registry" className={() => phoneLink(inRegistry)}>Registry</NavLink>
           <NavLink to="/holdings" className={({ isActive }) => phoneLink(isActive)}>My holdings</NavLink>
           {!console_.isIssuer && <NavLink to="/launch" className={({ isActive }) => phoneLink(isActive)}>Launch an asset</NavLink>}
