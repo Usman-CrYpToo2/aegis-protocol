@@ -14,7 +14,11 @@ type Props = {
   baseDecimals: number;
   quote: { symbol: string; decimals: number };
   wrapperSymbol: string;
+  /** Where the price would land after the trade being typed into the trade panel, if any. */
+  preview?: TradePreview | null;
 };
+
+export type TradePreview = { sqrt: bigint; side: "buy" | "sell" };
 
 const H = 300;
 const LABEL = { font: "11px IBM Plex Mono, monospace", paintOrder: "stroke", stroke: "#FBFAF6", strokeWidth: 4, strokeLinejoin: "round" } as const;
@@ -27,7 +31,7 @@ const KEY_STEPS = 40;
  * anywhere (mouse, finger or arrow keys) to see the price there and what it would take to get
  * there from now. Only the drawing uses floating point; every number shown comes from bigint maths.
  */
-export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingLabel, baseDecimals, quote, wrapperSymbol }: Props) {
+export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingLabel, baseDecimals, quote, wrapperSymbol, preview = null }: Props) {
   // Drawn at the real on-screen width, so labels stay at reading size on a phone.
   const box = useRef<HTMLDivElement>(null);
   const [W, setW] = useState(800);
@@ -133,6 +137,27 @@ export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingL
     `Price curve: opens at ${fmtPrice(first.price)} ${quote.symbol} and rises to ${fmtPrice(last.price)} when ${fmtSold(last.sold)} ${wrapperSymbol} are sold, never above the ${ceilingLabel} ceiling of ${fmtPrice(ceiling)}.` +
     (finished ? " The sale is complete." : soldNow !== null && priceNow !== null ? ` ${fmtSold(soldNow)} sold so far; price now ${fmtPrice(priceNow)}.` : " The sale has not opened.");
 
+  // The trade being typed, drawn as where it would move the price: the stretch of curve it buys
+  // (or sells back), and a marker that glides as the amount changes.
+  const ahead = useMemo(() => {
+    if (!preview || finished || soldNow === null || priceNow === null) return null;
+    const end = terms.migrationSqrtPrice;
+    const sqrt = preview.sqrt < end ? preview.sqrt : end;
+    const sold = walkCurve(model.start, terms.curve, sqrt).base;
+    if (sold === soldNow) return null;
+    const price = sqrtPriceToQuoteAtoms(sqrt, baseDecimals);
+    const [from, to] = sold > soldNow ? [soldNow, sold] : [sold, soldNow];
+    const fromPrice = sold > soldNow ? priceNow : price;
+    const toPrice = sold > soldNow ? price : priceNow;
+    const between = model.points.filter((p) => p.sold > from && p.sold < to).map((p) => `L${x(p.sold).toFixed(1)} ${y(p.price).toFixed(1)}`).join("");
+    const area = `M${x(from)} ${model.baseline}L${x(from)} ${y(fromPrice)}${between}L${x(to)} ${y(toPrice)}L${x(to)} ${model.baseline}Z`;
+    const px = x(sold);
+    const buy = sold > soldNow;
+    // A buy's label sits to the right of its marker and a sell's to the left, unless that edge is near.
+    const flip = buy ? px > W - PAD.right - 190 : px > PAD.left + 190;
+    return { sold, price, area, buy, flip };
+  }, [preview, finished, soldNow, priceNow, terms, model, baseDecimals, x, y, W]);
+
   const cx = readout ? x(readout.sold) : 0;
   const cy = readout ? y(readout.price) : 0;
   // Keep the tooltip inside the chart: flip to the left of the cursor near the right edge.
@@ -190,6 +215,8 @@ export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingL
               fillOpacity="0.14"
             />
           )}
+          {/* the trade being typed */}
+          {ahead && !readout && <path d={ahead.area} fill={ahead.buy ? "#1D3A8A" : "#7E2A1E"} fillOpacity="0.16" className="fade-in" />}
           <path d={model.line} fill="none" stroke="#16140F" strokeWidth="2" pathLength={1} className="chart-draw" />
 
           {/* graduation */}
@@ -202,8 +229,34 @@ export function CurveChart({ terms, sqrtNow, finished = false, ceiling, ceilingL
               <circle cx={x(soldNow)} cy={y(priceNow)} r="6" fill="none" stroke="#1D3A8A" strokeWidth="2" className="chart-ping" />
               <circle cx={x(soldNow)} cy={y(priceNow)} r="6" fill="#FBFAF6" stroke="#1D3A8A" strokeWidth="2" />
               {!readout && (
-                <text x={x(soldNow)} y={y(priceNow) - 14} textAnchor="middle" fill="#1D3A8A" style={LABEL}>now · {fmtPrice(priceNow)}</text>
+                // Moved aside, away from a trade being previewed, so the two labels never touch.
+                <text
+                  x={x(soldNow) + (ahead ? (ahead.buy ? -10 : 10) : 0)}
+                  y={y(priceNow) - 14}
+                  textAnchor={ahead ? (ahead.buy ? "end" : "start") : "middle"}
+                  fill="#1D3A8A"
+                  style={LABEL}
+                >
+                  now · {fmtPrice(priceNow)}
+                </text>
               )}
+            </g>
+          )}
+
+          {/* where the typed trade would leave the price; the marker glides as the amount changes */}
+          {ahead && !readout && (
+            <g style={{ transform: `translate(${x(ahead.sold)}px, ${y(ahead.price)}px)`, transition: "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)" }}>
+              <circle r="6" fill="#FBFAF6" stroke={ahead.buy ? "#1D3A8A" : "#7E2A1E"} strokeWidth="2" strokeDasharray="3 2" />
+              {/* Beside the marker, on the side away from "now", and turned inward near an edge. */}
+              <text
+                x={ahead.flip ? -12 : 12}
+                y={ahead.buy ? 18 : -10}
+                textAnchor={ahead.flip ? "end" : "start"}
+                fill={ahead.buy ? "#1D3A8A" : "#7E2A1E"}
+                style={LABEL}
+              >
+                after your {ahead.buy ? "buy" : "sell"} · {fmtPrice(ahead.price)}
+              </text>
             </g>
           )}
 

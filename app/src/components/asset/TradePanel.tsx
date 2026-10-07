@@ -1,9 +1,10 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { config, explorerUrl } from "../../config";
 import { useConnectModal } from "../connect/ConnectModal";
+import { Ticker } from "../Ticker";
 import { ensureNonces, LAND_WITHIN_BLOCKS } from "../../chain/nonce";
 import { approveAndSend } from "../../chain/approve";
 import { sendSigned, withBackup } from "../../chain/send";
@@ -11,6 +12,7 @@ import { trackWallet } from "../../lib/walletWait";
 import { loadAsset } from "../../chain/asset";
 import { GRADUATION_DEPOSIT_LAMPORTS, graduationTransactions } from "../../chain/graduate";
 import type { RegistryEntry } from "../../chain/registry";
+import type { TradePreview } from "./CurveChart";
 import { loadTradeAccounts, prepareTrade, type Side } from "../../chain/trade";
 import { useRentRate, useWalletBalances } from "../../hooks/useWalletBalances";
 import { FEE_ALLOWANCE, isNativeMint, planSolBuy, rentFor, solReserve, spendableSol, WRAPPER_ACCOUNT_BYTES, type SolWallet } from "../../chain/wsol";
@@ -65,7 +67,7 @@ function Line({ label, children, strong }: { label: ReactNode; children: ReactNo
  * re-quoted against a fresh read right before the wallet opens, and it is simulated before the
  * user is asked to sign, so a trade that would fail is explained instead of signed.
  */
-export function TradePanel({ entry }: { entry: RegistryEntry }) {
+export function TradePanel({ entry, onPreview }: { entry: RegistryEntry; onPreview?: (preview: TradePreview | null) => void }) {
   const { launch, quote, detail } = entry;
   const { connection } = useConnection();
   const { publicKey, sendTransaction, signAllTransactions, signTransaction } = useWallet();
@@ -112,6 +114,13 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
     const s = quoteSell(state, parsed.atoms);
     return s && { spend: parsed.atoms, out: s.out, fee: s.fee, nextSqrt: s.nextSqrt, fillsSale: false, refunds: false };
   }, [state, parsed.ok, parsed.ok && parsed.atoms, side]);
+
+  // Tells the chart where this trade would leave the price, so it can draw it as you type.
+  const previewSqrt = preview?.nextSqrt ?? null;
+  useEffect(() => {
+    onPreview?.(previewSqrt === null ? null : { sqrt: previewSqrt, side });
+  }, [onPreview, previewSqrt, side]);
+  useEffect(() => () => onPreview?.(null), [onPreview]);
 
   if (!state) return null;
   // The raise is complete: the curve accepts no more trades until Meteora moves it to its pool.
@@ -273,7 +282,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
 
       <div className="flex flex-col gap-4 p-5">
         {phase.kind === "done" ? (
-          <div role="status" className="flex flex-col gap-3">
+          <div role="status" className="pop-in flex flex-col gap-3">
             <span className="kicker text-green">{phase.side === "buy" ? "Purchase complete" : "Sale complete"}</span>
             <span className="font-serif text-4xl leading-tight">{phase.received}</span>
             <span className="text-sm text-ink2">for {phase.paid}. It’s in your wallet now.</span>
@@ -304,7 +313,7 @@ export function TradePanel({ entry }: { entry: RegistryEntry }) {
                 <label htmlFor={inputId} className="text-sm font-semibold">You pay</label>
                 {bal && (
                   <span className="font-mono text-xs text-mute" title={isSol && side === "buy" && bal.quote > 0n ? `${fmtIn(bal.sol)} SOL and ${fmtIn(bal.quote)} wrapped SOL` : undefined}>
-                    Balance {fmtIn(have ?? 0n)} {inSymbol}
+                    <Ticker key={inSymbol} mode="change" text={`Balance ${fmtIn(have ?? 0n)} ${inSymbol}`} />
                     {isSol && side === "buy" && bal.quote > 0n && <span> · incl. {fmtIn(bal.quote)} wrapped</span>}
                   </span>
                 )}

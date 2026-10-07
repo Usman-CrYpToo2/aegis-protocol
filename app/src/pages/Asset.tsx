@@ -9,13 +9,15 @@ import { AssetNotFoundError } from "../chain/asset";
 import { METEORA_PROTOCOL_FEE_PCT, type DbcConfig } from "../chain/meteora";
 import { ProgramNotDeployedError, type RegistryEntry } from "../chain/registry";
 import { loadPaused } from "../chain/powers";
-import { CurveChart } from "../components/asset/CurveChart";
+import { CurveChart, type TradePreview } from "../components/asset/CurveChart";
 import { Seal } from "../components/asset/Seal";
 import { BridgeBox } from "../components/asset/BridgeBox";
 import { GraduatePanel } from "../components/asset/GraduatePanel";
 import { Hint } from "../components/Hint";
 import { STAGE } from "../lib/stage";
 import { TradePanel } from "../components/asset/TradePanel";
+import { Ticker } from "../components/Ticker";
+import { CheckDraw, RefreshBar } from "../components/LiveCheck";
 import { useAsset } from "../hooks/useAsset";
 import { useChangeFlash } from "../hooks/useChangeFlash";
 import { useNow } from "../hooks/useNow";
@@ -72,14 +74,19 @@ function Stats({ entry, readAt, onProof }: { entry: RegistryEntry; readAt: numbe
       <Stat label={launch.stage === "Live" ? "Price" : launch.stage === "Graduated" ? "Final sale price" : "Opening price"} hint={`Price of one ${wsym} in ${quote?.symbol ?? "the quote token"}, on Meteora’s bonding curve.`}>
         <span key={flash} className={`-mx-1 px-1 ${flash}`}>{price !== null && quote ? formatPrice(price, quote.decimals) : "—"}</span> <span className="font-sans text-sm text-mute">{quote?.symbol}</span>
       </Stat>
-      <Stat label="Raised" sub={raise ? <span className="flex items-center gap-2"><span className="block h-1 w-20 bg-track"><span className="bar-fill block h-1 bg-ink" style={{ width: `${pct}%` }} /></span>{pct}% of {q(raise.target)}</span> : "Opens with the sale"}>
-        {raise ? q(raise.raised) : "—"} <span className="font-sans text-sm text-mute">{quote?.symbol}</span>
+      <Stat label="Raised" sub={raise ? <span className="flex items-center gap-2"><span className="block h-1 w-20 bg-track"><span className="bar-fill bar-grow block h-1 bg-ink" style={{ width: `${pct}%` }} /></span>{pct}% of {q(raise.target)}</span> : "Opens with the sale"}>
+        {raise ? <Ticker text={q(raise.raised)} /> : "—"} <span className="font-sans text-sm text-mute">{quote?.symbol}</span>
       </Stat>
       <Stat label="Backing" hint={`Every ${wsym} is backed by one ${sym} in escrow. Checked from the chain every few seconds.`}
-        sub={<button type="button" onClick={onProof} className="cursor-pointer underline decoration-line underline-offset-2 hover:text-ink">Checked {Math.max(0, Math.round((now - readAt) / 1000))}s ago</button>}>
-        <span className={ok ? "text-green" : backing.kind === "short" ? "text-error" : "text-mute"}>{ok ? "1 : 1 ✓" : backing.kind === "short" ? "Short" : "—"}</span>
+        sub={
+          <span className="flex flex-col items-start gap-1.5">
+            <button type="button" onClick={onProof} className="cursor-pointer underline decoration-line underline-offset-2 hover:text-ink">Checked {Math.max(0, Math.round((now - readAt) / 1000))}s ago</button>
+            {ok && <RefreshBar at={readAt} every={8_000} />}
+          </span>
+        }>
+        <span className={ok ? "text-green" : backing.kind === "short" ? "text-error" : "text-mute"}>{ok ? <>1 : 1 <CheckDraw key={readAt} /></> : backing.kind === "short" ? "Short" : "—"}</span>
       </Stat>
-      <Stat label="Supply" hint="Fixed for good. No more can ever be issued.">{formatUnits(launch.totalSupply, d, { maxFraction: 0 })}</Stat>
+      <Stat label="Supply" hint="Fixed for good. No more can ever be issued."><Ticker text={formatUnits(launch.totalSupply, d, { maxFraction: 0 })} /></Stat>
     </section>
   );
 }
@@ -252,7 +259,7 @@ function Details({ entry, tab, onTab }: { entry: RegistryEntry; tab: Tab; onTab:
           </button>
         ))}
       </div>
-      <div role="tabpanel">
+      <div key={tab} role="tabpanel" className="tab-fade">
         {tab === "terms" && <Terms entry={entry} terms={terms} />}
         {tab === "proof" && <Proof entry={entry} />}
         {tab === "money" && terms && <Money entry={entry} terms={terms} />}
@@ -263,7 +270,7 @@ function Details({ entry, tab, onTab }: { entry: RegistryEntry; tab: Tab; onTab:
 }
 
 /** Chart of the curve, in its own card. */
-function Chart({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) {
+function Chart({ entry, terms, preview }: { entry: RegistryEntry; terms: DbcConfig; preview: TradePreview | null }) {
   const { launch, quote, raise } = entry;
   if (!quote) return null;
   const cap = ARCHETYPE_CEILING[launch.archetype];
@@ -281,6 +288,7 @@ function Chart({ entry, terms }: { entry: RegistryEntry; terms: DbcConfig }) {
         baseDecimals={d}
         quote={quote}
         wrapperSymbol={entry.wrapperLabel?.symbol ?? "the wrapper"}
+        preview={live ? preview : null}
       />
     </div>
   );
@@ -347,6 +355,8 @@ export function AssetPage() {
     refetchInterval: config.refreshMs,
   });
   const [tab, setTab] = useState<Tab>(() => (typeof location !== "undefined" && location.hash === "#proof" ? "proof" : "terms"));
+  // The trade being typed in the panel, drawn on the chart.
+  const [tradePreview, setTradePreview] = useState<TradePreview | null>(null);
 
   useEffect(() => {
     document.title = entry?.label?.name ? `${entry.label.name} — Aegis` : "Aegis";
@@ -422,7 +432,7 @@ export function AssetPage() {
           {launch.stage !== "Aborted" && <Stats entry={entry} readAt={entry.readAt} onProof={showProof} />}
         </div>
         <div className="order-3 flex min-w-0 flex-col gap-8 lg:order-none lg:col-start-1 lg:row-start-2">
-          {configured && detail.terms && <Chart entry={entry} terms={detail.terms} />}
+          {configured && detail.terms && <Chart entry={entry} terms={detail.terms} preview={tradePreview} />}
           <Details entry={entry} tab={tab} onTab={setTab} />
         </div>
 
@@ -430,7 +440,7 @@ export function AssetPage() {
           {/* Stays mounted after graduation so the buyer who completed the sale keeps their receipt;
               it renders nothing once the sale is filled unless it holds one. */}
           {(launch.stage === "Live" || launch.stage === "Graduated") && (
-            <div id="trade" className="scroll-mt-6 empty:hidden"><TradePanel entry={entry} /></div>
+            <div id="trade" className="scroll-mt-6 empty:hidden"><TradePanel entry={entry} onPreview={setTradePreview} /></div>
           )}
           <GraduatePanel entry={entry} />
           {launch.stage === "Graduated" && <PoolCard entry={entry} />}
